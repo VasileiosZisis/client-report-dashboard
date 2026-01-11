@@ -38,6 +38,17 @@
     return m + 'm ' + s + 's';
   }
 
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // ---- Rendering: KPIs, Devices, Top Pages ----
+
   function renderKPIs(report) {
     const totals = report.totals || {};
     const map = {
@@ -59,31 +70,24 @@
     if (!tbody) return;
 
     const devices = report.devices || {};
-    const rows = ['desktop', 'mobile', 'tablet'].map(function (k) {
-      const val = devices[k] || 0;
-      return (
-        '<tr>' +
-        '<td>' +
-        k.charAt(0).toUpperCase() +
-        k.slice(1) +
-        '</td>' +
-        '<td>' +
-        formatNumber(val) +
-        '</td>' +
-        '</tr>'
-      );
-    });
+    const order = ['desktop', 'mobile', 'tablet'];
 
-    tbody.innerHTML = rows.join('');
-  }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+    tbody.innerHTML = order
+      .map(function (k) {
+        const val = devices[k] || 0;
+        return (
+          '<tr>' +
+          '<td>' +
+          k.charAt(0).toUpperCase() +
+          k.slice(1) +
+          '</td>' +
+          '<td>' +
+          formatNumber(val) +
+          '</td>' +
+          '</tr>'
+        );
+      })
+      .join('');
   }
 
   function renderTopPages(report) {
@@ -116,17 +120,87 @@
       .join('');
   }
 
-  function renderChartPlaceholder(report) {
-    // Milestone 4: still placeholder (Chart.js comes next milestone).
-    const el = $('#cliredas-sessions-chart');
-    if (!el) return;
+  // ---- Chart.js ----
 
-    const points = (report.timeseries || []).length;
-    el.textContent =
-      'Mock chart data loaded (' +
-      points +
-      ' points). Chart.js wiring comes next.';
+  let sessionsChart = null;
+
+  function getChartCtx() {
+    const canvas = $('#cliredas-sessions-chart');
+    if (!canvas) return null;
+    return canvas.getContext('2d');
   }
+
+  function buildChartData(report) {
+    const series = report.timeseries || [];
+    const labels = series.map(function (p) {
+      return p.date;
+    });
+    const values = series.map(function (p) {
+      return p.sessions;
+    });
+
+    return { labels, values };
+  }
+
+  function renderOrUpdateSessionsChart(report) {
+    const ctx = getChartCtx();
+    if (!ctx) return;
+
+    if (typeof window.Chart === 'undefined') {
+      // Chart.js not loaded (shouldn't happen if enqueued correctly)
+      return;
+    }
+
+    const data = buildChartData(report);
+
+    if (!sessionsChart) {
+      sessionsChart = new window.Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [
+            {
+              label: 'Sessions',
+              data: data.values,
+              tension: 0.25,
+              pointRadius: 0,
+              borderWidth: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: true },
+          },
+          scales: {
+            x: {
+              ticks: {
+                maxRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 10,
+              },
+              grid: { display: false },
+            },
+            y: {
+              ticks: { precision: 0 },
+              grid: { drawBorder: false },
+            },
+          },
+        },
+      });
+      return;
+    }
+
+    // Update existing chart
+    sessionsChart.data.labels = data.labels;
+    sessionsChart.data.datasets[0].data = data.values;
+    sessionsChart.update();
+  }
+
+  // ---- AJAX ----
 
   async function fetchReport(rangeKey) {
     const cfg = window.CLIREDAS_DASHBOARD;
@@ -159,12 +233,23 @@
     renderKPIs(report);
     renderDevices(report);
     renderTopPages(report);
-    renderChartPlaceholder(report);
+    renderOrUpdateSessionsChart(report);
   }
 
   onReady(function () {
     const rangeSelect = $('#cliredas-date-range');
     if (!rangeSelect) return;
+
+    // Render chart from server-rendered data by fetching once on load.
+    // (Keeps things consistent and avoids needing embedded JSON.)
+    (async function initialLoad() {
+      try {
+        const report = await fetchReport(rangeSelect.value);
+        renderAll(report);
+      } catch (e) {
+        // Non-fatal: server-rendered tables still show.
+      }
+    })();
 
     rangeSelect.addEventListener('change', async function () {
       const range = rangeSelect.value;
@@ -178,7 +263,5 @@
         setStatus(e && e.message ? e.message : 'Error loading report.');
       }
     });
-
-    // Optionally: render initial hint in placeholder with server-rendered data already present.
   });
 })();

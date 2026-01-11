@@ -67,10 +67,18 @@ final class CLIREDAS_Dashboard_Page
             CLIREDAS_VERSION
         );
 
+        wp_register_script(
+            'cliredas-chartjs',
+            CLIREDAS_PLUGIN_URL . 'assets/vendor/chartjs/chart.umd.min.js',
+            array(),
+            '4.5.1',
+            true
+        );
+
         wp_enqueue_script(
             'cliredas-dashboard',
             CLIREDAS_PLUGIN_URL . 'assets/js/dashboard.js',
-            array(),
+            array('cliredas-chartjs'),
             CLIREDAS_VERSION,
             true
         );
@@ -205,8 +213,8 @@ final class CLIREDAS_Dashboard_Page
                 <div class="cliredas-card cliredas-card-wide">
                     <h2 class="cliredas-card-title"><?php echo esc_html__('Sessions over time', 'client-report-dashboard'); ?></h2>
 
-                    <div class="cliredas-chart-placeholder" id="cliredas-sessions-chart">
-                        <?php echo esc_html__('Chart will render here.', 'client-report-dashboard'); ?>
+                    <div class="cliredas-chart-wrap">
+                        <canvas id="cliredas-sessions-chart" height="90"></canvas>
                     </div>
                 </div>
 

@@ -101,6 +101,17 @@
   opacity: 0.9;
 }
 
+.cliredas-chart-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+}
+
+#cliredas-sessions-chart {
+  width: 100% !important;
+  height: 220px !important;
+}
+
 .cliredas-table th,
 .cliredas-table td {
   vertical-align: top;
