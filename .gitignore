@@ -1,0 +1,22 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+
+# Build artifacts / packaged releases
+*.zip
+dist/
+build/
+
+# Dependency dirs (only if you introduce them later)
+node_modules/
+vendor/
+
+# Local env files
+.env
+.env.*
