@@ -29,6 +29,13 @@ final class CLIREDAS_Plugin
     const OPTION_KEY = 'cliredas_settings';
 
     /**
+     * Settings instance.
+     *
+     * @var CLIREDAS_Settings|null
+     */
+    private $settings = null;
+
+    /**
      * Get singleton instance.
      *
      * @return CLIREDAS_Plugin
@@ -88,6 +95,15 @@ final class CLIREDAS_Plugin
         add_action('init', array($this, 'on_init'), 10);
 
         if (is_admin()) {
+            /**
+             * Bootstrap admin components early enough so their admin_menu hooks
+             * register before WordPress fires admin_menu.
+             */
+            add_action('init', array($this, 'bootstrap_admin'), 9);
+
+            /**
+             * Keep admin_init for admin-init specific behavior and add-on extension.
+             */
             add_action('admin_init', array($this, 'on_admin_init'), 10);
         }
     }
@@ -129,7 +145,43 @@ final class CLIREDAS_Plugin
     }
 
     /**
+     * Bootstrap admin components early (before admin_menu runs).
+     *
+     * Uses __DIR__ so loading remains stable even when the plugin folder is a symlink.
+     *
+     * @return void
+     */
+    public function bootstrap_admin()
+    {
+        static $bootstrapped = false;
+
+        if ($bootstrapped) {
+            return;
+        }
+        $bootstrapped = true;
+
+        require_once __DIR__ . '/class-cliredas-settings.php';
+        require_once __DIR__ . '/class-cliredas-dashboard-page.php';
+        require_once __DIR__ . '/class-cliredas-upgrade-page.php';
+        require_once __DIR__ . '/class-cliredas-admin-menu.php';
+
+        $this->settings = new CLIREDAS_Settings();
+
+        $dashboard_page = new CLIREDAS_Dashboard_Page($this->settings);
+        $upgrade_page   = new CLIREDAS_Upgrade_Page();
+
+        new CLIREDAS_Admin_Menu(
+            $this->settings,
+            $dashboard_page,
+            $upgrade_page
+        );
+    }
+
+    /**
      * Fires on admin_init.
+     *
+     * Keep this method focused on admin_init-specific tasks and as an extension
+     * point for add-ons (Pro).
      *
      * @return void
      */
