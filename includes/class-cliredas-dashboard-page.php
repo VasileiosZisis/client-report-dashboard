@@ -19,6 +19,13 @@ final class CLIREDAS_Dashboard_Page
     private $settings;
 
     /**
+     * Data provider.
+     *
+     * @var CLIREDAS_Data_Provider
+     */
+    private $provider;
+
+    /**
      * Dashboard screen id.
      *
      * @var string
@@ -26,13 +33,16 @@ final class CLIREDAS_Dashboard_Page
     private $screen_id = 'toplevel_page_cliredas-client-report';
 
     /**
-     * @param CLIREDAS_Settings $settings Settings service.
+     * @param CLIREDAS_Settings      $settings  Settings service.
+     * @param CLIREDAS_Data_Provider $provider  Data provider.
      */
-    public function __construct(CLIREDAS_Settings $settings)
+    public function __construct(CLIREDAS_Settings $settings, CLIREDAS_Data_Provider $provider)
     {
         $this->settings = $settings;
+        $this->provider = $provider;
 
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+        add_action('wp_ajax_cliredas_get_report', array($this, 'ajax_get_report'));
     }
 
     /**
@@ -69,9 +79,45 @@ final class CLIREDAS_Dashboard_Page
             'cliredas-dashboard',
             'CLIREDAS_DASHBOARD',
             array(
+                'ajaxUrl'      => admin_url('admin-ajax.php'),
+                'nonce'        => wp_create_nonce('cliredas_dashboard'),
                 'selectedRange' => $this->get_current_range_key(),
-                'ranges'        => $this->get_date_ranges(),
-                'upgradeUrl'    => 'https://example.com/client-report-dashboard-pro',
+                'ranges'       => $this->get_date_ranges(),
+                'upgradeUrl'   => 'https://example.com/client-report-dashboard-pro',
+            )
+        );
+    }
+
+    /**
+     * AJAX: Get report data.
+     *
+     * @return void
+     */
+    public function ajax_get_report()
+    {
+        $capability = $this->settings->get_required_capability('dashboard');
+
+        if (! current_user_can($capability)) {
+            wp_send_json_error(
+                array('message' => __('Permission denied.', 'client-report-dashboard')),
+                403
+            );
+        }
+
+        check_ajax_referer('cliredas_dashboard', 'nonce');
+
+        $ranges = $this->get_date_ranges();
+        $range  = isset($_POST['range']) ? sanitize_key(wp_unslash($_POST['range'])) : $this->get_current_range_key();
+
+        if (! array_key_exists($range, $ranges)) {
+            $range = $this->get_current_range_key();
+        }
+
+        $report = $this->provider->get_report($range);
+
+        wp_send_json_success(
+            array(
+                'report' => $report,
             )
         );
     }
@@ -89,35 +135,31 @@ final class CLIREDAS_Dashboard_Page
             wp_die(esc_html__('You do not have permission to view this page.', 'client-report-dashboard'));
         }
 
-        $ranges        = $this->get_date_ranges();
-        $selected_key  = $this->get_current_range_key();
+        $ranges         = $this->get_date_ranges();
+        $selected_key   = $this->get_current_range_key();
         $selected_label = isset($ranges[$selected_key]) ? $ranges[$selected_key] : reset($ranges);
 
-        /**
-         * Filters KPI definitions (Free provides the default 3).
-         *
-         * Later, Pro can add more KPIs here.
-         *
-         * Each KPI:
-         * - label: string
-         * - value: string (placeholder for now)
-         */
+        // Initial server-rendered report (so the page is usable without JS).
+        $report = $this->provider->get_report($selected_key);
+
         $kpis = apply_filters(
             'cliredas_kpis',
             array(
                 'sessions' => array(
                     'label' => __('Sessions', 'client-report-dashboard'),
-                    'value' => '—',
+                    'value' => number_format_i18n((int) $report['totals']['sessions']),
                 ),
                 'users'    => array(
                     'label' => __('Users', 'client-report-dashboard'),
-                    'value' => '—',
+                    'value' => number_format_i18n((int) $report['totals']['users']),
                 ),
                 'engagement_time' => array(
                     'label' => __('Avg engagement time', 'client-report-dashboard'),
-                    'value' => '—',
+                    'value' => $this->format_duration((int) $report['totals']['avg_engagement_seconds']),
                 ),
-            )
+            ),
+            $report,
+            $selected_key
         );
 
 ?>
@@ -141,12 +183,14 @@ final class CLIREDAS_Dashboard_Page
                     <span class="cliredas-range-hint">
                         <?php echo esc_html(sprintf(__('Showing: %s', 'client-report-dashboard'), $selected_label)); ?>
                     </span>
+
+                    <span class="cliredas-status" id="cliredas-status" aria-live="polite"></span>
                 </div>
             </div>
 
-            <?php do_action('cliredas_dashboard_before_kpis'); ?>
+            <?php do_action('cliredas_dashboard_before_kpis', $report, $selected_key); ?>
 
-            <div class="cliredas-kpis">
+            <div class="cliredas-kpis" id="cliredas-kpis">
                 <?php foreach ($kpis as $kpi_key => $kpi) : ?>
                     <div class="cliredas-kpi" data-kpi="<?php echo esc_attr($kpi_key); ?>">
                         <div class="cliredas-kpi-label"><?php echo esc_html($kpi['label']); ?></div>
@@ -155,20 +199,21 @@ final class CLIREDAS_Dashboard_Page
                 <?php endforeach; ?>
             </div>
 
-            <?php do_action('cliredas_dashboard_after_kpis'); ?>
+            <?php do_action('cliredas_dashboard_after_kpis', $report, $selected_key); ?>
 
             <div class="cliredas-grid">
                 <div class="cliredas-card cliredas-card-wide">
                     <h2 class="cliredas-card-title"><?php echo esc_html__('Sessions over time', 'client-report-dashboard'); ?></h2>
+
                     <div class="cliredas-chart-placeholder" id="cliredas-sessions-chart">
-                        <?php echo esc_html__('Chart will render here (mock for now).', 'client-report-dashboard'); ?>
+                        <?php echo esc_html__('Chart will render here.', 'client-report-dashboard'); ?>
                     </div>
                 </div>
 
                 <div class="cliredas-card">
                     <h2 class="cliredas-card-title"><?php echo esc_html__('Device breakdown', 'client-report-dashboard'); ?></h2>
 
-                    <table class="widefat striped cliredas-table">
+                    <table class="widefat striped cliredas-table" id="cliredas-devices">
                         <thead>
                             <tr>
                                 <th><?php echo esc_html__('Device', 'client-report-dashboard'); ?></th>
@@ -176,18 +221,12 @@ final class CLIREDAS_Dashboard_Page
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td><?php echo esc_html__('Desktop', 'client-report-dashboard'); ?></td>
-                                <td>—</td>
-                            </tr>
-                            <tr>
-                                <td><?php echo esc_html__('Mobile', 'client-report-dashboard'); ?></td>
-                                <td>—</td>
-                            </tr>
-                            <tr>
-                                <td><?php echo esc_html__('Tablet', 'client-report-dashboard'); ?></td>
-                                <td>—</td>
-                            </tr>
+                            <?php foreach ((array) $report['devices'] as $device => $count) : ?>
+                                <tr>
+                                    <td><?php echo esc_html(ucfirst((string) $device)); ?></td>
+                                    <td><?php echo esc_html(number_format_i18n((int) $count)); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
@@ -204,20 +243,19 @@ final class CLIREDAS_Dashboard_Page
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td colspan="3"><?php echo esc_html__('Top pages will render here (mock for now).', 'client-report-dashboard'); ?></td>
-                            </tr>
+                            <?php foreach ((array) $report['top_pages'] as $row) : ?>
+                                <tr>
+                                    <td><?php echo esc_html((string) $row['title']); ?></td>
+                                    <td><code><?php echo esc_html((string) $row['url']); ?></code></td>
+                                    <td><?php echo esc_html(number_format_i18n((int) $row['sessions'])); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <?php
-            /**
-             * Action for additional dashboard sections (Pro can add more here).
-             */
-            do_action('cliredas_dashboard_sections');
-            ?>
+            <?php do_action('cliredas_dashboard_sections', $report, $selected_key); ?>
 
             <div class="cliredas-footer">
                 <?php
@@ -238,7 +276,7 @@ final class CLIREDAS_Dashboard_Page
     /**
      * Get date ranges (Free defaults). Pro can add more via filter.
      *
-     * @return array<string,string> key => label
+     * @return array<string,string>
      */
     private function get_date_ranges()
     {
@@ -247,16 +285,8 @@ final class CLIREDAS_Dashboard_Page
             'last_30_days' => __('Last 30 days', 'client-report-dashboard'),
         );
 
-        /**
-         * Filter available date ranges.
-         *
-         * Pro can add extra ranges here.
-         *
-         * @param array<string,string> $ranges Ranges.
-         */
         $ranges = apply_filters('cliredas_date_ranges', $ranges);
 
-        // Ensure it remains a non-empty associative array.
         if (! is_array($ranges) || empty($ranges)) {
             $ranges = array(
                 'last_7_days' => __('Last 7 days', 'client-report-dashboard'),
@@ -285,5 +315,30 @@ final class CLIREDAS_Dashboard_Page
         }
 
         return $range;
+    }
+
+    /**
+     * Format seconds as Xm Ys.
+     *
+     * @param int $seconds Seconds.
+     * @return string
+     */
+    private function format_duration($seconds)
+    {
+        $seconds = max(0, (int) $seconds);
+
+        $minutes = (int) floor($seconds / 60);
+        $remain  = (int) ($seconds % 60);
+
+        if ($minutes <= 0) {
+            return sprintf(_n('%d second', '%d seconds', $remain, 'client-report-dashboard'), $remain);
+        }
+
+        return sprintf(
+            /* translators: 1: minutes, 2: seconds */
+            __('%1$dm %2$ds', 'client-report-dashboard'),
+            $minutes,
+            $remain
+        );
     }
 }

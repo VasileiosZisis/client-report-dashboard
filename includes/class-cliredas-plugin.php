@@ -161,13 +161,15 @@ final class CLIREDAS_Plugin
         $bootstrapped = true;
 
         require_once __DIR__ . '/class-cliredas-settings.php';
+        require_once __DIR__ . '/class-cliredas-data-provider.php';
         require_once __DIR__ . '/class-cliredas-dashboard-page.php';
         require_once __DIR__ . '/class-cliredas-upgrade-page.php';
         require_once __DIR__ . '/class-cliredas-admin-menu.php';
 
         $this->settings = new CLIREDAS_Settings();
 
-        $dashboard_page = new CLIREDAS_Dashboard_Page($this->settings);
+        $data_provider  = new CLIREDAS_Data_Provider();
+        $dashboard_page = new CLIREDAS_Dashboard_Page($this->settings, $data_provider);
         $upgrade_page   = new CLIREDAS_Upgrade_Page();
 
         new CLIREDAS_Admin_Menu(

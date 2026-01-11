@@ -10,6 +10,12 @@
   margin-bottom: 16px;
 }
 
+.cliredas-status {
+  margin-left: 8px;
+  opacity: 0.8;
+  font-style: italic;
+}
+
 .cliredas-title {
   margin: 0;
 }
