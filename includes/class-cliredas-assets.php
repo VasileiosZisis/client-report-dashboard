@@ -21,7 +21,7 @@ final class CLIREDAS_Assets
     {
         wp_enqueue_style(
             'cliredas-dashboard',
-            CLIREDAS_PLUGIN_URL . 'assets/css/dashboard.css',
+            CLIREDAS_PLUGIN_URL . 'assets/css/cliredas-dashboard.css',
             array(),
             CLIREDAS_VERSION
         );
@@ -36,7 +36,7 @@ final class CLIREDAS_Assets
 
         wp_enqueue_script(
             'cliredas-dashboard',
-            CLIREDAS_PLUGIN_URL . 'assets/js/dashboard.js',
+            CLIREDAS_PLUGIN_URL . 'assets/js/cliredas-dashboard.js',
             array('cliredas-chartjs'),
             CLIREDAS_VERSION,
             true
