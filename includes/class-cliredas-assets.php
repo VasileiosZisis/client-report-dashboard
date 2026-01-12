@@ -30,7 +30,7 @@ final class CLIREDAS_Assets
             'cliredas-chartjs',
             CLIREDAS_PLUGIN_URL . 'assets/vendor/chartjs/chart.umd.min.js',
             array(),
-            '4.4.0',
+            '4.5.1',
             true
         );
 

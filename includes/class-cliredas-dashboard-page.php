@@ -165,6 +165,20 @@ final class CLIREDAS_Dashboard_Page
                 </div>
             </div>
 
+            <div id="cliredas-notice" class="notice notice-error is-dismissible" style="display:none;">
+                <p></p>
+            </div>
+
+            <?php if (! $this->settings->is_ga4_connected()) : ?>
+                <div class="notice notice-info">
+                    <p>
+                        <?php echo esc_html__('GA4 is not connected yet, so you are seeing mock data.', 'client-report-dashboard'); ?>
+                        <br>
+                        <?php echo esc_html__('Connection setup will be added in a future update.', 'client-report-dashboard'); ?>
+                    </p>
+                </div>
+            <?php endif; ?>
+
             <?php do_action('cliredas_dashboard_before_kpis', $report, $selected_key); ?>
 
             <div class="cliredas-kpis" id="cliredas-kpis">

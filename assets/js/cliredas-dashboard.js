@@ -22,6 +22,32 @@
     el.textContent = msg || '';
   }
 
+  function setLoading(isLoading) {
+    const controls = $('.cliredas-controls');
+    const select = $('#cliredas-date-range');
+    if (controls) controls.classList.toggle('is-loading', !!isLoading);
+    if (select) select.disabled = !!isLoading;
+
+    setStatus(isLoading ? 'Loading…' : '');
+  }
+
+  function showError(message) {
+    const notice = $('#cliredas-notice');
+    if (!notice) return;
+
+    const p = $('p', notice);
+    if (p) p.textContent = message || 'An error occurred.';
+    notice.style.display = 'block';
+  }
+
+  function clearError() {
+    const notice = $('#cliredas-notice');
+    if (!notice) return;
+    notice.style.display = 'none';
+    const p = $('p', notice);
+    if (p) p.textContent = '';
+  }
+
   function formatNumber(n) {
     try {
       return new Intl.NumberFormat().format(n);
@@ -147,7 +173,6 @@
     if (!ctx) return;
 
     if (typeof window.Chart === 'undefined') {
-      // Chart.js not loaded (shouldn't happen if enqueued correctly)
       return;
     }
 
@@ -194,7 +219,6 @@
       return;
     }
 
-    // Update existing chart
     sessionsChart.data.labels = data.labels;
     sessionsChart.data.datasets[0].data = data.values;
     sessionsChart.update();
@@ -240,28 +264,40 @@
     const rangeSelect = $('#cliredas-date-range');
     if (!rangeSelect) return;
 
-    // Render chart from server-rendered data by fetching once on load.
-    // (Keeps things consistent and avoids needing embedded JSON.)
-    (async function initialLoad() {
-      try {
-        const report = await fetchReport(rangeSelect.value);
-        renderAll(report);
-      } catch (e) {
-        // Non-fatal: server-rendered tables still show.
-      }
-    })();
+    // Render immediately from embedded initial report (no initial AJAX).
+    clearError();
+    if (window.CLIREDAS_DASHBOARD.initialReport) {
+      renderAll(window.CLIREDAS_DASHBOARD.initialReport);
+    }
 
     rangeSelect.addEventListener('change', async function () {
       const range = rangeSelect.value;
-      setStatus('Loading…');
+
+      clearError();
+      setLoading(true);
 
       try {
         const report = await fetchReport(range);
         renderAll(report);
-        setStatus('');
+        setLoading(false);
       } catch (e) {
-        setStatus(e && e.message ? e.message : 'Error loading report.');
+        setLoading(false);
+        showError(e && e.message ? e.message : 'Error loading report.');
       }
     });
+
+    // WP dismissible notice behavior (optional; WP core adds handlers for .is-dismissible)
+    const notice = $('#cliredas-notice');
+    if (notice) {
+      notice.addEventListener('click', function (ev) {
+        if (
+          ev.target &&
+          ev.target.classList &&
+          ev.target.classList.contains('notice-dismiss')
+        ) {
+          notice.style.display = 'none';
+        }
+      });
+    }
   });
 })();

@@ -39,6 +39,7 @@ final class CLIREDAS_Settings
      */
     private $defaults = array(
         'allow_editors' => 0,
+        'ga4_connected' => 0, // Placeholder. Real integration later.
     );
 
     public function __construct()
@@ -62,6 +63,21 @@ final class CLIREDAS_Settings
                 'sanitize_callback' => array($this, 'sanitize_settings'),
                 'default'           => $this->defaults,
             )
+        );
+
+        add_settings_section(
+            'cliredas_section_connection',
+            __('GA4 Connection', 'client-report-dashboard'),
+            array($this, 'render_connection_section'),
+            self::SETTINGS_PAGE_SLUG
+        );
+
+        add_settings_field(
+            'cliredas_connection_status',
+            __('Status', 'client-report-dashboard'),
+            array($this, 'render_connection_status_field'),
+            self::SETTINGS_PAGE_SLUG,
+            'cliredas_section_connection'
         );
 
         add_settings_section(
@@ -148,13 +164,14 @@ final class CLIREDAS_Settings
      */
     public function sanitize_settings($input)
     {
-        $sanitized = $this->defaults;
+        $existing  = $this->get_settings();
+        $sanitized = $existing;
 
         if (is_array($input)) {
             $sanitized['allow_editors'] = ! empty($input['allow_editors']) ? 1 : 0;
         }
 
-        return $sanitized;
+        return wp_parse_args($sanitized, $this->defaults);
     }
 
     /**
@@ -208,6 +225,58 @@ final class CLIREDAS_Settings
                 ?>
             </form>
         </div>
+    <?php
+    }
+
+    /**
+     * Render GA4 connection section description.
+     *
+     * @return void
+     */
+    public function render_connection_section()
+    {
+        echo '<p>' . esc_html__('Connect Google Analytics 4 to display real analytics data. (Connection UI will be enabled in a future update.)', 'client-report-dashboard') . '</p>';
+    }
+
+    /**
+     * Render GA4 connection status field.
+     *
+     * @return void
+     */
+    public function render_connection_status_field()
+    {
+        $settings = $this->get_settings();
+        $connected = ! empty($settings['ga4_connected']);
+
+        $status_text = $connected
+            ? __('Connected', 'client-report-dashboard')
+            : __('Not connected', 'client-report-dashboard');
+
+    ?>
+        <p>
+            <strong><?php echo esc_html($status_text); ?></strong>
+        </p>
+
+        <p>
+            <button type="button" class="button" disabled>
+                <?php echo esc_html__('Connect GA4 (Coming soon)', 'client-report-dashboard'); ?>
+            </button>
+        </p>
+
+        <p class="description">
+            <?php echo esc_html__('GA4 OAuth + property selection will be added later. For now, the dashboard uses mock data.', 'client-report-dashboard'); ?>
+        </p>
 <?php
+    }
+
+    /**
+     * Check if GA4 is connected (placeholder flag for now).
+     *
+     * @return bool
+     */
+    public function is_ga4_connected()
+    {
+        $settings = $this->get_settings();
+        return ! empty($settings['ga4_connected']);
     }
 }
