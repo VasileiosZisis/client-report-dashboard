@@ -165,6 +165,8 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-dashboard-page.php';
         require_once __DIR__ . '/class-cliredas-upgrade-page.php';
         require_once __DIR__ . '/class-cliredas-admin-menu.php';
+        require_once __DIR__ . '/class-cliredas-admin-screens.php';
+        require_once __DIR__ . '/class-cliredas-assets.php';
 
         $this->settings = new CLIREDAS_Settings();
 

@@ -26,13 +26,6 @@ final class CLIREDAS_Dashboard_Page
     private $provider;
 
     /**
-     * Dashboard screen id.
-     *
-     * @var string
-     */
-    private $screen_id = 'toplevel_page_cliredas-client-report';
-
-    /**
      * @param CLIREDAS_Settings      $settings  Settings service.
      * @param CLIREDAS_Data_Provider $provider  Data provider.
      */
@@ -53,45 +46,21 @@ final class CLIREDAS_Dashboard_Page
      */
     public function enqueue_assets($hook_suffix)
     {
-        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-        $screen_id = ($screen && ! empty($screen->id)) ? $screen->id : '';
-
-        if ($this->screen_id !== $screen_id) {
+        if (! CLIREDAS_Admin_Screens::is_dashboard_screen()) {
             return;
         }
 
-        wp_enqueue_style(
-            'cliredas-dashboard',
-            CLIREDAS_PLUGIN_URL . 'assets/css/dashboard.css',
-            array(),
-            CLIREDAS_VERSION
-        );
+        $selected_range = $this->get_current_range_key();
+        $initial_report = $this->provider->get_report($selected_range);
 
-        wp_register_script(
-            'cliredas-chartjs',
-            CLIREDAS_PLUGIN_URL . 'assets/vendor/chartjs/chart.umd.min.js',
-            array(),
-            '4.5.1',
-            true
-        );
-
-        wp_enqueue_script(
-            'cliredas-dashboard',
-            CLIREDAS_PLUGIN_URL . 'assets/js/dashboard.js',
-            array('cliredas-chartjs'),
-            CLIREDAS_VERSION,
-            true
-        );
-
-        wp_localize_script(
-            'cliredas-dashboard',
-            'CLIREDAS_DASHBOARD',
+        CLIREDAS_Assets::enqueue_dashboard_assets(
             array(
-                'ajaxUrl'      => admin_url('admin-ajax.php'),
-                'nonce'        => wp_create_nonce('cliredas_dashboard'),
-                'selectedRange' => $this->get_current_range_key(),
-                'ranges'       => $this->get_date_ranges(),
-                'upgradeUrl'   => 'https://example.com/client-report-dashboard-pro',
+                'ajaxUrl'       => admin_url('admin-ajax.php'),
+                'nonce'         => wp_create_nonce('cliredas_dashboard'),
+                'selectedRange' => $selected_range,
+                'ranges'        => $this->get_date_ranges(),
+                'upgradeUrl'    => 'https://example.com/client-report-dashboard-pro',
+                'initialReport' => $initial_report,
             )
         );
     }
