@@ -163,6 +163,15 @@ final class CLIREDAS_Dashboard_Page
 
                     <span class="cliredas-status" id="cliredas-status" aria-live="polite"></span>
                 </div>
+                <?php if (current_user_can('manage_options')) : ?>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="cliredas-clear-cache-form">
+                        <input type="hidden" name="action" value="cliredas_clear_cache">
+                        <?php wp_nonce_field('cliredas_clear_cache'); ?>
+                        <button type="submit" class="button">
+                            <?php echo esc_html__('Clear cache', 'client-report-dashboard'); ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
             </div>
 
             <div id="cliredas-notice" class="notice notice-error is-dismissible" style="display:none;">
@@ -175,6 +184,22 @@ final class CLIREDAS_Dashboard_Page
                         <?php echo esc_html__('GA4 is not connected yet, so you are seeing mock data.', 'client-report-dashboard'); ?>
                         <br>
                         <?php echo esc_html__('Connection setup will be added in a future update.', 'client-report-dashboard'); ?>
+                    </p>
+                </div>
+            <?php endif; ?>
+
+            <?php if (current_user_can('manage_options') && isset($_GET['cliredas_cache_cleared'])) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p>
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %d: number of cache entries cleared */
+                                __('Cache cleared (%d entries).', 'client-report-dashboard'),
+                                absint(wp_unslash($_GET['cliredas_cache_cleared']))
+                            )
+                        );
+                        ?>
                     </p>
                 </div>
             <?php endif; ?>

@@ -14,6 +14,11 @@ final class CLIREDAS_Data_Provider
 {
 
     /**
+     * Cache index option key (stores list of transient keys to clear).
+     */
+    const CACHE_INDEX_OPTION = 'cliredas_cache_keys';
+
+    /**
      * Get a full report for a date range key.
      *
      * @param string $range_key Range key (e.g. last_7_days).
@@ -185,6 +190,63 @@ final class CLIREDAS_Data_Provider
     }
 
     /**
+     * Record a transient key in the cache index option.
+     *
+     * @param string $transient_key Transient key.
+     * @return void
+     */
+    private function record_cache_key($transient_key)
+    {
+        $transient_key = sanitize_key($transient_key);
+
+        $keys = get_option(self::CACHE_INDEX_OPTION, array());
+        if (! is_array($keys)) {
+            $keys = array();
+        }
+
+        if (! in_array($transient_key, $keys, true)) {
+            $keys[] = $transient_key;
+            update_option(self::CACHE_INDEX_OPTION, $keys, false);
+        }
+    }
+
+    /**
+     * Clear all known cached reports tracked in the cache index.
+     *
+     * @return int Number of keys cleared.
+     */
+    public function clear_all_cache()
+    {
+        $keys = get_option(self::CACHE_INDEX_OPTION, array());
+        if (! is_array($keys)) {
+            $keys = array();
+        }
+
+        $cleared = 0;
+
+        foreach ($keys as $key) {
+            $key = sanitize_key($key);
+            if ('' === $key) {
+                continue;
+            }
+
+            delete_transient($key);
+            $cleared++;
+        }
+
+        delete_option(self::CACHE_INDEX_OPTION);
+
+        /**
+         * Fires after cache is cleared.
+         *
+         * @param int $cleared Count.
+         */
+        do_action('cliredas_cache_cleared', $cleared);
+
+        return $cleared;
+    }
+
+    /**
      * Set cached report (transient).
      *
      * @param string $range_key Range key.
@@ -199,6 +261,11 @@ final class CLIREDAS_Data_Provider
         }
 
         $ttl = (int) apply_filters('cliredas_cache_ttl', 15 * MINUTE_IN_SECONDS, $range_key, $report);
-        set_transient($this->get_cache_key($range_key), $report, $ttl);
+        $key = $this->get_cache_key($range_key);
+
+        set_transient($key, $report, $ttl);
+
+        // Record key in an index so we can clear everything later (even with many variants).
+        $this->record_cache_key($key);
     }
 }

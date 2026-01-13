@@ -217,6 +217,22 @@ final class CLIREDAS_Settings
         <div class="wrap">
             <h1><?php echo esc_html__('Client Report Settings', 'client-report-dashboard'); ?></h1>
 
+            <?php if (isset($_GET['cliredas_cache_cleared'])) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p>
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %d: number of cache entries cleared */
+                                __('Cache cleared (%d entries).', 'client-report-dashboard'),
+                                absint(wp_unslash($_GET['cliredas_cache_cleared']))
+                            )
+                        );
+                        ?>
+                    </p>
+                </div>
+            <?php endif; ?>
+
             <form method="post" action="options.php">
                 <?php
                 settings_fields(self::SETTINGS_GROUP);
@@ -225,6 +241,16 @@ final class CLIREDAS_Settings
                 ?>
             </form>
         </div>
+
+        <hr />
+
+        <h2><?php echo esc_html__('Tools', 'client-report-dashboard'); ?></h2>
+
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+            <input type="hidden" name="action" value="cliredas_clear_cache">
+            <?php wp_nonce_field('cliredas_clear_cache'); ?>
+            <?php submit_button(__('Clear cached reports', 'client-report-dashboard'), 'secondary', 'submit', false); ?>
+        </form>
     <?php
     }
 
