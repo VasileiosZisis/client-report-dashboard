@@ -169,9 +169,11 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-admin-screens.php';
         require_once __DIR__ . '/class-cliredas-assets.php';
         require_once __DIR__ . '/class-cliredas-cache-manager.php';
+        require_once __DIR__ . '/class-cliredas-ga4-auth.php';
 
         $this->settings = new CLIREDAS_Settings();
 
+        new CLIREDAS_GA4_Auth($this->settings);
         $data_provider  = CLIREDAS_Provider_Factory::get_provider();
         new CLIREDAS_Cache_Manager($data_provider);
         $dashboard_page = new CLIREDAS_Dashboard_Page($this->settings, $data_provider);

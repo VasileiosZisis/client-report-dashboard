@@ -38,8 +38,14 @@ final class CLIREDAS_Settings
      * @var array
      */
     private $defaults = array(
-        'allow_editors' => 0,
-        'ga4_connected' => 0, // Placeholder. Real integration later.
+        'allow_editors'      => 0,
+        'ga4_connected'      => 0,
+        'ga4_client_id'      => '',
+        'ga4_client_secret'  => '',
+        'ga4_property_id'    => '',
+        'ga4_refresh_token'  => '',
+        'ga4_access_token'   => '',
+        'ga4_token_expires'  => 0,
     );
 
     public function __construct()
@@ -70,6 +76,30 @@ final class CLIREDAS_Settings
             __('GA4 Connection', 'client-report-dashboard'),
             array($this, 'render_connection_section'),
             self::SETTINGS_PAGE_SLUG
+        );
+
+        add_settings_field(
+            'cliredas_ga4_client_id',
+            __('OAuth Client ID', 'client-report-dashboard'),
+            array($this, 'render_ga4_client_id_field'),
+            self::SETTINGS_PAGE_SLUG,
+            'cliredas_section_connection'
+        );
+
+        add_settings_field(
+            'cliredas_ga4_client_secret',
+            __('OAuth Client Secret', 'client-report-dashboard'),
+            array($this, 'render_ga4_client_secret_field'),
+            self::SETTINGS_PAGE_SLUG,
+            'cliredas_section_connection'
+        );
+
+        add_settings_field(
+            'cliredas_ga4_redirect_uri',
+            __('Redirect URI', 'client-report-dashboard'),
+            array($this, 'render_ga4_redirect_uri_field'),
+            self::SETTINGS_PAGE_SLUG,
+            'cliredas_section_connection'
         );
 
         add_settings_field(
@@ -169,6 +199,18 @@ final class CLIREDAS_Settings
 
         if (is_array($input)) {
             $sanitized['allow_editors'] = ! empty($input['allow_editors']) ? 1 : 0;
+
+            if (isset($input['ga4_client_id'])) {
+                $sanitized['ga4_client_id'] = sanitize_text_field(wp_unslash($input['ga4_client_id']));
+            }
+
+            // Only update secret when user actually enters a new one.
+            if (isset($input['ga4_client_secret'])) {
+                $new_secret = trim((string) wp_unslash($input['ga4_client_secret']));
+                if ('' !== $new_secret) {
+                    $sanitized['ga4_client_secret'] = sanitize_text_field($new_secret);
+                }
+            }
         }
 
         return wp_parse_args($sanitized, $this->defaults);
@@ -212,7 +254,6 @@ final class CLIREDAS_Settings
         if (! current_user_can('manage_options')) {
             wp_die(esc_html__('You do not have permission to access this page.', 'client-report-dashboard'));
         }
-
     ?>
         <div class="wrap">
             <h1><?php echo esc_html__('Client Report Settings', 'client-report-dashboard'); ?></h1>
@@ -224,33 +265,51 @@ final class CLIREDAS_Settings
                         echo esc_html(
                             sprintf(
                                 /* translators: %d: number of cache entries cleared */
-                                __('Cache cleared (%d entries).', 'client-report-dashboard'),
+                                __('Cached reports cleared (%d).', 'client-report-dashboard'),
                                 absint(wp_unslash($_GET['cliredas_cache_cleared']))
                             )
                         );
                         ?>
                     </p>
                 </div>
+
+                <script>
+                    (function() {
+                        try {
+                            var url = new URL(window.location.href);
+                            url.searchParams.delete('cliredas_cache_cleared');
+                            window.history.replaceState({}, document.title, url.toString());
+                        } catch (e) {}
+                    })();
+                </script>
             <?php endif; ?>
+
+            <?php
+            // Only show errors (not the success message).
+            if (isset($_GET['settings-updated'])) {
+                // Do nothing; let core show the success notice (or your own).
+            } else {
+                settings_errors();
+            }
+            ?>
 
             <form method="post" action="options.php">
                 <?php
-                settings_fields(self::SETTINGS_GROUP);
-                do_settings_sections(self::SETTINGS_PAGE_SLUG);
+                settings_fields(self::SETTINGS_GROUP);          // <-- REQUIRED
+                do_settings_sections(self::SETTINGS_PAGE_SLUG); // <-- REQUIRED
                 submit_button();
                 ?>
             </form>
+
+            <hr />
+
+            <h2><?php echo esc_html__('Tools', 'client-report-dashboard'); ?></h2>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="cliredas_clear_cache">
+                <?php wp_nonce_field('cliredas_clear_cache'); ?>
+                <?php submit_button(__('Clear cached reports', 'client-report-dashboard'), 'secondary', 'submit', false); ?>
+            </form>
         </div>
-
-        <hr />
-
-        <h2><?php echo esc_html__('Tools', 'client-report-dashboard'); ?></h2>
-
-        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <input type="hidden" name="action" value="cliredas_clear_cache">
-            <?php wp_nonce_field('cliredas_clear_cache'); ?>
-            <?php submit_button(__('Clear cached reports', 'client-report-dashboard'), 'secondary', 'submit', false); ?>
-        </form>
     <?php
     }
 
@@ -271,28 +330,50 @@ final class CLIREDAS_Settings
      */
     public function render_connection_status_field()
     {
-        $settings = $this->get_settings();
-        $connected = ! empty($settings['ga4_connected']);
+        $settings    = $this->get_settings();
+        $connected   = ! empty($settings['ga4_connected']);
+
+        $client_id   = isset($settings['ga4_client_id']) ? trim((string) $settings['ga4_client_id']) : '';
+        $can_connect = ('' !== $client_id);
 
         $status_text = $connected
             ? __('Connected', 'client-report-dashboard')
             : __('Not connected', 'client-report-dashboard');
 
+        $connect_url = wp_nonce_url(
+            admin_url('admin-post.php?action=cliredas_ga4_connect'),
+            'cliredas_ga4_connect'
+        );
+
+        $disconnect_url = wp_nonce_url(
+            admin_url('admin-post.php?action=cliredas_ga4_disconnect'),
+            'cliredas_ga4_disconnect'
+        );
+
     ?>
-        <p>
-            <strong><?php echo esc_html($status_text); ?></strong>
-        </p>
+        <p><strong><?php echo esc_html($status_text); ?></strong></p>
 
         <p>
-            <button type="button" class="button" disabled>
-                <?php echo esc_html__('Connect GA4 (Coming soon)', 'client-report-dashboard'); ?>
-            </button>
+            <?php if (! $connected) : ?>
+                <?php if ($can_connect) : ?>
+                    <a class="button button-primary" href="<?php echo esc_url($connect_url); ?>">
+                        <?php echo esc_html__('Connect Google Analytics', 'client-report-dashboard'); ?>
+                    </a>
+                <?php else : ?>
+                    <a class="button button-primary disabled" href="#" aria-disabled="true" onclick="return false;">
+                        <?php echo esc_html__('Connect Google Analytics', 'client-report-dashboard'); ?>
+                    </a>
+                    <span class="description" style="margin-left:8px;">
+                        <?php echo esc_html__('Save your Client ID first.', 'client-report-dashboard'); ?>
+                    </span>
+                <?php endif; ?>
+            <?php else : ?>
+                <a class="button" href="<?php echo esc_url($disconnect_url); ?>">
+                    <?php echo esc_html__('Disconnect', 'client-report-dashboard'); ?>
+                </a>
+            <?php endif; ?>
         </p>
-
-        <p class="description">
-            <?php echo esc_html__('GA4 OAuth + property selection will be added later. For now, the dashboard uses mock data.', 'client-report-dashboard'); ?>
-        </p>
-<?php
+    <?php
     }
 
     /**
@@ -304,5 +385,49 @@ final class CLIREDAS_Settings
     {
         $settings = $this->get_settings();
         return ! empty($settings['ga4_connected']);
+    }
+
+    public function render_ga4_client_id_field()
+    {
+        $settings = $this->get_settings();
+        $value    = isset($settings['ga4_client_id']) ? (string) $settings['ga4_client_id'] : '';
+    ?>
+        <input type="text"
+            class="regular-text"
+            name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_client_id]"
+            value="<?php echo esc_attr($value); ?>"
+            placeholder="<?php echo esc_attr__('1234-abc.apps.googleusercontent.com', 'client-report-dashboard'); ?>" />
+        <p class="description">
+            <?php echo esc_html__('From Google Cloud Console → OAuth consent screen / Credentials.', 'client-report-dashboard'); ?>
+        </p>
+    <?php
+    }
+
+    public function render_ga4_client_secret_field()
+    {
+        $settings = $this->get_settings();
+        $has_secret = ! empty($settings['ga4_client_secret']);
+    ?>
+        <input type="password"
+            class="regular-text"
+            name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_client_secret]"
+            value=""
+            autocomplete="new-password"
+            placeholder="<?php echo esc_attr($has_secret ? __('Saved (enter to replace)', 'client-report-dashboard') : __('Enter client secret', 'client-report-dashboard')); ?>" />
+        <p class="description">
+            <?php echo esc_html__('Leave blank to keep the currently saved secret.', 'client-report-dashboard'); ?>
+        </p>
+    <?php
+    }
+
+    public function render_ga4_redirect_uri_field()
+    {
+        $redirect_uri = admin_url('admin-post.php?action=cliredas_ga4_oauth_callback');
+    ?>
+        <input type="text" class="large-text code" readonly value="<?php echo esc_attr($redirect_uri); ?>" />
+        <p class="description">
+            <?php echo esc_html__('Add this exact URL as an Authorized redirect URI in your Google OAuth client.', 'client-report-dashboard'); ?>
+        </p>
+<?php
     }
 }

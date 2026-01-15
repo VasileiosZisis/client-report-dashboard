@@ -103,8 +103,7 @@ final class CLIREDAS_Admin_Menu
             __('Settings', 'client-report-dashboard'),
             __('Settings', 'client-report-dashboard'),
             'manage_options',
-            CLIREDAS_Settings::SETTINGS_PAGE_SLUG,
-            array($this->settings, 'render_settings_page')
+            'options-general.php?page=' . CLIREDAS_Settings::SETTINGS_PAGE_SLUG
         );
 
         /**
@@ -113,5 +112,11 @@ final class CLIREDAS_Admin_Menu
          * Pro add-on can hook here to add submenu pages.
          */
         do_action('cliredas_after_register_menus');
+    }
+
+    public function redirect_to_settings()
+    {
+        wp_safe_redirect(admin_url('options-general.php?page=' . CLIREDAS_Settings::SETTINGS_PAGE_SLUG));
+        exit;
     }
 }
