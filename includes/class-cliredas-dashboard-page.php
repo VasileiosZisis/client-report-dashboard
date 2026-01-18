@@ -202,6 +202,16 @@ final class CLIREDAS_Dashboard_Page
                         ?>
                     </p>
                 </div>
+
+                <script>
+                    (function() {
+                        try {
+                            var url = new URL(window.location.href);
+                            url.searchParams.delete('cliredas_cache_cleared');
+                            window.history.replaceState({}, document.title, url.toString());
+                        } catch (e) {}
+                    })();
+                </script>
             <?php endif; ?>
 
             <?php do_action('cliredas_dashboard_before_kpis', $report, $selected_key); ?>

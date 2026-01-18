@@ -249,20 +249,73 @@ final class CLIREDAS_Settings
      *
      * @return void
      */
-    public function render_settings_page()
-    {
-        if (! current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to access this page.', 'client-report-dashboard'));
-        }
-    ?>
-        <div class="wrap">
-            <h1><?php echo esc_html__('Client Report Settings', 'client-report-dashboard'); ?></h1>
+	    public function render_settings_page()
+	    {
+	        if (! current_user_can('manage_options')) {
+	            wp_die(esc_html__('You do not have permission to access this page.', 'client-report-dashboard'));
+	        }
+	    ?>
+	        <div class="wrap">
+	            <h1><?php echo esc_html__('Client Report Settings', 'client-report-dashboard'); ?></h1>
 
-            <?php if (isset($_GET['cliredas_cache_cleared'])) : ?>
-                <div class="notice notice-success is-dismissible">
-                    <p>
-                        <?php
-                        echo esc_html(
+	            <?php
+	            $ga4_notice = isset($_GET['cliredas_ga4_notice']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_notice'])) : '';
+	            $ga4_error  = isset($_GET['cliredas_ga4_error']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_error'])) : '';
+
+	            $ga4_notice_message = '';
+	            $ga4_notice_class   = '';
+
+	            if ('' !== $ga4_error) {
+	                $ga4_notice_class = 'notice notice-error is-dismissible';
+
+	                switch ($ga4_error) {
+	                    case 'missing_client_id':
+	                        $ga4_notice_message = __('Missing OAuth Client ID. Save your Client ID first, then click Connect again.', 'client-report-dashboard');
+	                        break;
+	                    default:
+	                        $ga4_notice_message = __('GA4 connection failed. Please try again.', 'client-report-dashboard');
+	                        break;
+	                }
+	            } elseif ('' !== $ga4_notice) {
+	                $ga4_notice_class = 'notice notice-success is-dismissible';
+
+	                switch ($ga4_notice) {
+	                    case 'callback_reached':
+	                        $ga4_notice_class   = 'notice notice-info is-dismissible';
+	                        $ga4_notice_message = __('Google OAuth callback received. Token exchange will be implemented in the next milestone.', 'client-report-dashboard');
+	                        break;
+	                    case 'disconnected':
+	                        $ga4_notice_message = __('Disconnected from Google Analytics.', 'client-report-dashboard');
+	                        break;
+	                    default:
+	                        $ga4_notice_message = __('GA4 status updated.', 'client-report-dashboard');
+	                        break;
+	                }
+	            }
+	            ?>
+
+	            <?php if ('' !== $ga4_notice_message) : ?>
+	                <div class="<?php echo esc_attr($ga4_notice_class); ?>">
+	                    <p><?php echo esc_html($ga4_notice_message); ?></p>
+	                </div>
+
+	                <script>
+	                    (function() {
+	                        try {
+	                            var url = new URL(window.location.href);
+	                            url.searchParams.delete('cliredas_ga4_notice');
+	                            url.searchParams.delete('cliredas_ga4_error');
+	                            window.history.replaceState({}, document.title, url.toString());
+	                        } catch (e) {}
+	                    })();
+	                </script>
+	            <?php endif; ?>
+
+	            <?php if (isset($_GET['cliredas_cache_cleared'])) : ?>
+	                <div class="notice notice-success is-dismissible">
+	                    <p>
+	                        <?php
+	                        echo esc_html(
                             sprintf(
                                 /* translators: %d: number of cache entries cleared */
                                 __('Cached reports cleared (%d).', 'client-report-dashboard'),

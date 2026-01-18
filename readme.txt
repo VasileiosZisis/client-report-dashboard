@@ -1,5 +1,5 @@
 === Client Reporting Dashboard ===
-Contributors: yourname
+Contributors: Vasilis Zisis
 Tags: analytics, dashboard, reporting, ga4, agency
 Requires at least: 6.0
 Tested up to: 6.9
@@ -25,7 +25,7 @@ GA4 connection is planned; the plugin currently uses mock data while the structu
 == Installation ==
 1. Upload the plugin folder to /wp-content/plugins/ or install via Plugins > Add New (when published).
 2. Activate the plugin.
-3. Go to “Client Report” in the admin menu.
+3. Go to Client Report in the admin menu.
 4. Configure settings under Settings > Client Report.
 
 == Frequently Asked Questions ==
