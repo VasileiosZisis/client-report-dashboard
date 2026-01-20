@@ -198,18 +198,44 @@ final class CLIREDAS_Settings
         $sanitized = $existing;
 
         if (is_array($input)) {
+            $clear_secret = ! empty($input['_cliredas_clear_ga4_client_secret']);
+
             $sanitized['allow_editors'] = ! empty($input['allow_editors']) ? 1 : 0;
 
             if (isset($input['ga4_client_id'])) {
                 $sanitized['ga4_client_id'] = sanitize_text_field(wp_unslash($input['ga4_client_id']));
             }
 
-            // Only update secret when user actually enters a new one.
-            if (isset($input['ga4_client_secret'])) {
+            // Client secret: don't wipe on blank saves, but allow explicit clearing.
+            if ($clear_secret) {
+                $sanitized['ga4_client_secret'] = '';
+            } elseif (isset($input['ga4_client_secret'])) {
+                // Only update secret when user actually enters a new one.
                 $new_secret = trim((string) wp_unslash($input['ga4_client_secret']));
                 if ('' !== $new_secret) {
                     $sanitized['ga4_client_secret'] = sanitize_text_field($new_secret);
                 }
+            }
+
+            // Internal GA4 auth fields (set by the OAuth flow / programmatic updates).
+            if (isset($input['ga4_connected'])) {
+                $sanitized['ga4_connected'] = ! empty($input['ga4_connected']) ? 1 : 0;
+            }
+
+            if (isset($input['ga4_property_id'])) {
+                $sanitized['ga4_property_id'] = sanitize_text_field(wp_unslash($input['ga4_property_id']));
+            }
+
+            if (isset($input['ga4_refresh_token'])) {
+                $sanitized['ga4_refresh_token'] = sanitize_text_field(wp_unslash($input['ga4_refresh_token']));
+            }
+
+            if (isset($input['ga4_access_token'])) {
+                $sanitized['ga4_access_token'] = sanitize_text_field(wp_unslash($input['ga4_access_token']));
+            }
+
+            if (isset($input['ga4_token_expires'])) {
+                $sanitized['ga4_token_expires'] = absint(wp_unslash($input['ga4_token_expires']));
             }
         }
 
@@ -261,6 +287,7 @@ final class CLIREDAS_Settings
 	            <?php
 	            $ga4_notice = isset($_GET['cliredas_ga4_notice']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_notice'])) : '';
 	            $ga4_error  = isset($_GET['cliredas_ga4_error']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_error'])) : '';
+	            $ga4_error_desc = isset($_GET['cliredas_ga4_error_desc']) ? sanitize_text_field(wp_unslash($_GET['cliredas_ga4_error_desc'])) : '';
 
 	            $ga4_notice_message = '';
 	            $ga4_notice_class   = '';
@@ -268,12 +295,52 @@ final class CLIREDAS_Settings
 	            if ('' !== $ga4_error) {
 	                $ga4_notice_class = 'notice notice-error is-dismissible';
 
+	                if (0 === strpos($ga4_error, 'oauth_') && 'oauth_access_denied' !== $ga4_error) {
+	                    $oauth_code = substr($ga4_error, strlen('oauth_'));
+	                    $oauth_code = sanitize_key($oauth_code);
+
+	                    $ga4_notice_message = sprintf(
+	                        /* translators: %s: Google OAuth error code */
+	                        __('Google OAuth error: %s', 'client-report-dashboard'),
+	                        $oauth_code ? $oauth_code : __('unknown', 'client-report-dashboard')
+	                    );
+	                }
+
 	                switch ($ga4_error) {
 	                    case 'missing_client_id':
 	                        $ga4_notice_message = __('Missing OAuth Client ID. Save your Client ID first, then click Connect again.', 'client-report-dashboard');
 	                        break;
+	                    case 'missing_client_secret':
+	                        $ga4_notice_message = __('Missing OAuth Client Secret. Save your Client Secret first, then click Connect again.', 'client-report-dashboard');
+	                        break;
+	                    case 'missing_code':
+	                        $ga4_notice_message = __('OAuth callback did not include an authorization code. Please try connecting again.', 'client-report-dashboard');
+	                        break;
+	                    case 'missing_state':
+	                        $ga4_notice_message = __('OAuth callback is missing state verification. Please try connecting again.', 'client-report-dashboard');
+	                        break;
+	                    case 'invalid_state':
+	                        $ga4_notice_message = __('OAuth state verification failed. Please try connecting again.', 'client-report-dashboard');
+	                        break;
+	                    case 'missing_refresh_token':
+	                        $ga4_notice_message = __('Connected, but Google did not return a refresh token. Please reconnect and approve access again.', 'client-report-dashboard');
+	                        break;
+	                    case 'token_exchange_failed':
+	                        $ga4_notice_message = __('Token exchange failed. Please try connecting again.', 'client-report-dashboard');
+	                        break;
+	                    case 'token_response_invalid':
+	                        $ga4_notice_message = __('Token exchange failed due to an invalid response. Please try again.', 'client-report-dashboard');
+	                        break;
+	                    case 'token_missing_access_token':
+	                        $ga4_notice_message = __('Token exchange failed (missing access token). Please try again.', 'client-report-dashboard');
+	                        break;
+	                    case 'oauth_access_denied':
+	                        $ga4_notice_message = __('You denied access on the Google consent screen.', 'client-report-dashboard');
+	                        break;
 	                    default:
-	                        $ga4_notice_message = __('GA4 connection failed. Please try again.', 'client-report-dashboard');
+	                        if ('' === $ga4_notice_message) {
+	                            $ga4_notice_message = __('GA4 connection failed. Please try again.', 'client-report-dashboard');
+	                        }
 	                        break;
 	                }
 	            } elseif ('' !== $ga4_notice) {
@@ -283,6 +350,12 @@ final class CLIREDAS_Settings
 	                    case 'callback_reached':
 	                        $ga4_notice_class   = 'notice notice-info is-dismissible';
 	                        $ga4_notice_message = __('Google OAuth callback received. Token exchange will be implemented in the next milestone.', 'client-report-dashboard');
+	                        break;
+	                    case 'connected':
+	                        $ga4_notice_message = __('Connected to Google Analytics.', 'client-report-dashboard');
+	                        break;
+	                    case 'secret_cleared':
+	                        $ga4_notice_message = __('Client secret cleared. GA4 has been disconnected.', 'client-report-dashboard');
 	                        break;
 	                    case 'disconnected':
 	                        $ga4_notice_message = __('Disconnected from Google Analytics.', 'client-report-dashboard');
@@ -297,6 +370,9 @@ final class CLIREDAS_Settings
 	            <?php if ('' !== $ga4_notice_message) : ?>
 	                <div class="<?php echo esc_attr($ga4_notice_class); ?>">
 	                    <p><?php echo esc_html($ga4_notice_message); ?></p>
+	                    <?php if ('' !== $ga4_error_desc && '' !== $ga4_error) : ?>
+	                        <p class="description"><?php echo esc_html($ga4_error_desc); ?></p>
+	                    <?php endif; ?>
 	                </div>
 
 	                <script>
@@ -305,6 +381,7 @@ final class CLIREDAS_Settings
 	                            var url = new URL(window.location.href);
 	                            url.searchParams.delete('cliredas_ga4_notice');
 	                            url.searchParams.delete('cliredas_ga4_error');
+	                            url.searchParams.delete('cliredas_ga4_error_desc');
 	                            window.history.replaceState({}, document.title, url.toString());
 	                        } catch (e) {}
 	                    })();
@@ -384,7 +461,7 @@ final class CLIREDAS_Settings
     public function render_connection_status_field()
     {
         $settings    = $this->get_settings();
-        $connected   = ! empty($settings['ga4_connected']);
+        $connected   = $this->is_ga4_connected();
 
         $client_id   = isset($settings['ga4_client_id']) ? trim((string) $settings['ga4_client_id']) : '';
         $can_connect = ('' !== $client_id);
@@ -437,7 +514,21 @@ final class CLIREDAS_Settings
     public function is_ga4_connected()
     {
         $settings = $this->get_settings();
-        return ! empty($settings['ga4_connected']);
+
+        if (! empty($settings['ga4_connected'])) {
+            return true;
+        }
+
+        // Fallback: treat as connected if token data exists (covers cases where the flag wasn't persisted).
+        if (! empty($settings['ga4_refresh_token'])) {
+            return true;
+        }
+
+        if (! empty($settings['ga4_access_token']) && ! empty($settings['ga4_token_expires'])) {
+            return true;
+        }
+
+        return false;
     }
 
     public function render_ga4_client_id_field()
@@ -456,22 +547,40 @@ final class CLIREDAS_Settings
     <?php
     }
 
-    public function render_ga4_client_secret_field()
-    {
-        $settings = $this->get_settings();
-        $has_secret = ! empty($settings['ga4_client_secret']);
-    ?>
-        <input type="password"
-            class="regular-text"
-            name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_client_secret]"
-            value=""
-            autocomplete="new-password"
-            placeholder="<?php echo esc_attr($has_secret ? __('Saved (enter to replace)', 'client-report-dashboard') : __('Enter client secret', 'client-report-dashboard')); ?>" />
-        <p class="description">
-            <?php echo esc_html__('Leave blank to keep the currently saved secret.', 'client-report-dashboard'); ?>
-        </p>
-    <?php
-    }
+	    public function render_ga4_client_secret_field()
+	    {
+	        $settings = $this->get_settings();
+	        $has_secret = ! empty($settings['ga4_client_secret']);
+	        $clear_url = wp_nonce_url(
+	            admin_url('admin-post.php?action=cliredas_ga4_clear_secret'),
+	            'cliredas_ga4_clear_secret'
+	        );
+	    ?>
+	        <p style="margin-top:0;">
+	            <strong><?php echo esc_html__('Client secret:', 'client-report-dashboard'); ?></strong>
+	            <?php echo esc_html($has_secret ? __('Saved', 'client-report-dashboard') : __('Not set', 'client-report-dashboard')); ?>
+	        </p>
+
+	        <input type="password"
+	            class="regular-text"
+	            name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_client_secret]"
+	            value=""
+	            autocomplete="new-password"
+	            placeholder="<?php echo esc_attr($has_secret ? __('Enter to replace', 'client-report-dashboard') : __('Enter client secret', 'client-report-dashboard')); ?>" />
+	        <p class="description">
+	            <?php echo esc_html__('Leave blank to keep the currently saved secret.', 'client-report-dashboard'); ?>
+	        </p>
+
+	        <?php if ($has_secret) : ?>
+	            <p>
+	                <a class="button button-secondary" href="<?php echo esc_url($clear_url); ?>"
+	                    onclick="return confirm('<?php echo esc_js(__('This will clear the saved client secret and disconnect GA4. Continue?', 'client-report-dashboard')); ?>');">
+	                    <?php echo esc_html__('Clear secret', 'client-report-dashboard'); ?>
+	                </a>
+	            </p>
+	        <?php endif; ?>
+	    <?php
+	    }
 
     public function render_ga4_redirect_uri_field()
     {
