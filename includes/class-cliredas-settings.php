@@ -103,6 +103,14 @@ final class CLIREDAS_Settings
         );
 
         add_settings_field(
+            'cliredas_ga4_property_id',
+            __('GA4 Property', 'client-report-dashboard'),
+            array($this, 'render_ga4_property_field'),
+            self::SETTINGS_PAGE_SLUG,
+            'cliredas_section_connection'
+        );
+
+        add_settings_field(
             'cliredas_connection_status',
             __('Status', 'client-report-dashboard'),
             array($this, 'render_connection_status_field'),
@@ -223,7 +231,17 @@ final class CLIREDAS_Settings
             }
 
             if (isset($input['ga4_property_id'])) {
-                $sanitized['ga4_property_id'] = sanitize_text_field(wp_unslash($input['ga4_property_id']));
+                $property_id = sanitize_text_field(wp_unslash($input['ga4_property_id']));
+                $property_id = trim($property_id);
+
+                // Normalize to the GA4 Admin API/Data API format: properties/123456789.
+                if ('' === $property_id) {
+                    $sanitized['ga4_property_id'] = '';
+                } elseif (preg_match('/^\\d+$/', $property_id)) {
+                    $sanitized['ga4_property_id'] = 'properties/' . $property_id;
+                } else {
+                    $sanitized['ga4_property_id'] = $property_id;
+                }
             }
 
             if (isset($input['ga4_refresh_token'])) {
@@ -480,8 +498,32 @@ final class CLIREDAS_Settings
             'cliredas_ga4_disconnect'
         );
 
+        $token_error_message = '';
+        if ($connected) {
+            $token = $this->get_valid_access_token();
+            if (is_wp_error($token)) {
+                $status_text = __('Connected (reconnect required)', 'client-report-dashboard');
+                $token_error_message = trim((string) $token->get_error_message());
+                if ('' !== $token_error_message) {
+                    $token_error_message = sanitize_text_field($token_error_message);
+                    $token_error_message = substr($token_error_message, 0, 200);
+                } else {
+                    $token_error_message = __('Your saved connection is no longer valid. Please reconnect Google Analytics.', 'client-report-dashboard');
+                }
+            }
+        }
+
+        $property_id = isset($settings['ga4_property_id']) ? trim((string) $settings['ga4_property_id']) : '';
+        if ($connected && '' === $token_error_message && '' === $property_id) {
+            $status_text = __('Connected (property not selected)', 'client-report-dashboard');
+        }
+
     ?>
         <p><strong><?php echo esc_html($status_text); ?></strong></p>
+
+        <?php if ('' !== $token_error_message) : ?>
+            <p class="description"><?php echo esc_html($token_error_message); ?></p>
+        <?php endif; ?>
 
         <p>
             <?php if (! $connected) : ?>
@@ -498,6 +540,11 @@ final class CLIREDAS_Settings
                     </span>
                 <?php endif; ?>
             <?php else : ?>
+                <?php if ('' !== $token_error_message) : ?>
+                    <a class="button button-primary" href="<?php echo esc_url($connect_url); ?>">
+                        <?php echo esc_html__('Reconnect Google Analytics', 'client-report-dashboard'); ?>
+                    </a>
+                <?php endif; ?>
                 <a class="button" href="<?php echo esc_url($disconnect_url); ?>">
                     <?php echo esc_html__('Disconnect', 'client-report-dashboard'); ?>
                 </a>
@@ -591,5 +638,287 @@ final class CLIREDAS_Settings
             <?php echo esc_html__('Add this exact URL as an Authorized redirect URI in your Google OAuth client.', 'client-report-dashboard'); ?>
         </p>
 <?php
+    }
+
+    /**
+     * Render GA4 property selector.
+     *
+     * @return void
+     */
+    public function render_ga4_property_field()
+    {
+        $settings = $this->get_settings();
+
+        if (! $this->is_ga4_connected()) {
+            echo '<p class="description">' . esc_html__('Connect Google Analytics first to load available properties.', 'client-report-dashboard') . '</p>';
+            return;
+        }
+
+        $selected = isset($settings['ga4_property_id']) ? (string) $settings['ga4_property_id'] : '';
+
+        $properties = $this->get_ga4_properties();
+        if (is_wp_error($properties)) {
+            $code = (string) $properties->get_error_code();
+            $msg  = trim((string) $properties->get_error_message());
+            $msg  = sanitize_text_field($msg);
+            $msg  = substr($msg, 0, 200);
+
+            $needs_reconnect = in_array(
+                $code,
+                array(
+                    'missing_refresh_token',
+                    'missing_client_id',
+                    'missing_client_secret',
+                    'token_refresh_failed',
+                    'token_refresh_invalid',
+                    'token_refresh_missing_access_token',
+                ),
+                true
+            );
+
+            echo '<p class="description">' . esc_html__('Unable to load GA4 properties right now.', 'client-report-dashboard') . '</p>';
+            if ('' !== $msg) {
+                echo '<p class="description">' . esc_html($msg) . '</p>';
+            }
+
+            if ($needs_reconnect) {
+                $connect_url = wp_nonce_url(
+                    admin_url('admin-post.php?action=cliredas_ga4_connect'),
+                    'cliredas_ga4_connect'
+                );
+                echo '<p><a class="button button-primary" href="' . esc_url($connect_url) . '">' . esc_html__('Reconnect Google Analytics', 'client-report-dashboard') . '</a></p>';
+            }
+
+            return;
+        }
+
+        if (empty($properties)) {
+            echo '<p class="description">' . esc_html__('No GA4 properties were found for this Google account.', 'client-report-dashboard') . '</p>';
+            return;
+        }
+
+    ?>
+        <select name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_property_id]" class="regular-text">
+            <option value=""><?php echo esc_html__('Select a property', 'client-report-dashboard'); ?></option>
+            <?php foreach ($properties as $property_id => $label) : ?>
+                <option value="<?php echo esc_attr((string) $property_id); ?>" <?php selected($selected, (string) $property_id); ?>>
+                    <?php echo esc_html((string) $label); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <p class="description">
+            <?php echo esc_html__('This selects which GA4 property the dashboard will report on.', 'client-report-dashboard'); ?>
+        </p>
+        <?php if ('' === trim((string) $selected)) : ?>
+            <p class="description">
+                <?php echo esc_html__('No property selected yet. Choose one to enable GA4 reporting for the dashboard.', 'client-report-dashboard'); ?>
+            </p>
+        <?php endif; ?>
+    <?php
+    }
+
+    /**
+     * Get a valid access token, refreshing it when needed.
+     *
+     * @return string|\WP_Error
+     */
+    private function get_valid_access_token()
+    {
+        $settings = $this->get_settings();
+
+        $access_token = isset($settings['ga4_access_token']) ? trim((string) $settings['ga4_access_token']) : '';
+        $expires_at   = isset($settings['ga4_token_expires']) ? (int) $settings['ga4_token_expires'] : 0;
+
+        if ('' !== $access_token && $expires_at > (time() + 60)) {
+            return $access_token;
+        }
+
+        $refresh_token = isset($settings['ga4_refresh_token']) ? trim((string) $settings['ga4_refresh_token']) : '';
+        if ('' === $refresh_token) {
+            return new WP_Error('missing_refresh_token', __('Missing refresh token. Please reconnect Google Analytics.', 'client-report-dashboard'));
+        }
+
+        $client_id = isset($settings['ga4_client_id']) ? trim((string) $settings['ga4_client_id']) : '';
+        if ('' === $client_id) {
+            return new WP_Error('missing_client_id', __('Missing OAuth Client ID.', 'client-report-dashboard'));
+        }
+
+        $client_secret = isset($settings['ga4_client_secret']) ? trim((string) $settings['ga4_client_secret']) : '';
+        if ('' === $client_secret) {
+            return new WP_Error('missing_client_secret', __('Missing OAuth Client Secret.', 'client-report-dashboard'));
+        }
+
+        $response = wp_remote_post(
+            'https://oauth2.googleapis.com/token',
+            array(
+                'timeout' => 20,
+                'body'    => array(
+                    'client_id'     => $client_id,
+                    'client_secret' => $client_secret,
+                    'refresh_token' => $refresh_token,
+                    'grant_type'    => 'refresh_token',
+                ),
+            )
+        );
+
+        if (is_wp_error($response)) {
+            return new WP_Error('token_refresh_failed', $response->get_error_message());
+        }
+
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $body   = (string) wp_remote_retrieve_body($response);
+        $data   = json_decode($body, true);
+
+        if (! is_array($data)) {
+            return new WP_Error('token_refresh_invalid', __('Invalid token refresh response from Google.', 'client-report-dashboard'));
+        }
+
+        if (200 !== $status) {
+            $remote_error = isset($data['error']) ? (string) $data['error'] : '';
+            $remote_desc  = isset($data['error_description']) ? (string) $data['error_description'] : '';
+            $msg = $remote_error ? $remote_error : __('Token refresh failed.', 'client-report-dashboard');
+            if ('' !== $remote_desc) {
+                $msg .= ' - ' . $remote_desc;
+            }
+            return new WP_Error('token_refresh_failed', $msg);
+        }
+
+        $new_access_token = isset($data['access_token']) ? trim((string) $data['access_token']) : '';
+        if ('' === $new_access_token) {
+            return new WP_Error('token_refresh_missing_access_token', __('Token refresh response is missing access_token.', 'client-report-dashboard'));
+        }
+
+        $expires_in = isset($data['expires_in']) ? (int) $data['expires_in'] : 0;
+        if ($expires_in <= 0) {
+            $expires_in = 3600;
+        }
+
+        $settings['ga4_access_token']  = $new_access_token;
+        $settings['ga4_token_expires'] = time() + max(60, $expires_in - 60);
+        $settings['ga4_connected']     = 1;
+
+        update_option(self::OPTION_KEY, $settings);
+
+        return $new_access_token;
+    }
+
+    /**
+     * Fetch accessible GA4 properties via Google Analytics Admin API.
+     *
+     * @return array<string,string>|\WP_Error
+     */
+    private function get_ga4_properties()
+    {
+        $properties = array();
+
+        $token = $this->get_valid_access_token();
+        if (is_wp_error($token)) {
+            return $token;
+        }
+
+        $base_url = 'https://analyticsadmin.googleapis.com/v1beta/accountSummaries';
+
+        $page_token = '';
+        $seen_tokens = array();
+        $max_pages = 20;
+
+        for ($page = 0; $page < $max_pages; $page++) {
+            $args = array(
+                'pageSize' => 200,
+            );
+
+            if ('' !== $page_token) {
+                if (isset($seen_tokens[$page_token])) {
+                    break;
+                }
+                $seen_tokens[$page_token] = true;
+                $args['pageToken'] = $page_token;
+            }
+
+            $url = add_query_arg($args, $base_url);
+
+            $response = wp_remote_get(
+                $url,
+                array(
+                    'timeout' => 20,
+                    'headers' => array(
+                        'Authorization' => 'Bearer ' . $token,
+                    ),
+                )
+            );
+
+            // If the access token expired mid-loop, refresh once and retry this page.
+            if (! is_wp_error($response) && 401 === (int) wp_remote_retrieve_response_code($response)) {
+                $token = $this->get_valid_access_token();
+                if (is_wp_error($token)) {
+                    return $token;
+                }
+
+                $response = wp_remote_get(
+                    $url,
+                    array(
+                        'timeout' => 20,
+                        'headers' => array(
+                            'Authorization' => 'Bearer ' . $token,
+                        ),
+                    )
+                );
+            }
+
+            if (is_wp_error($response)) {
+                return new WP_Error('admin_api_failed', $response->get_error_message());
+            }
+
+            $status = (int) wp_remote_retrieve_response_code($response);
+            $body   = (string) wp_remote_retrieve_body($response);
+            $data   = json_decode($body, true);
+
+            if (! is_array($data)) {
+                return new WP_Error('admin_api_invalid', __('Invalid response from Google Analytics Admin API.', 'client-report-dashboard'));
+            }
+
+            if (200 !== $status) {
+                $msg = __('Failed to load properties from Google Analytics Admin API.', 'client-report-dashboard');
+                if (isset($data['error']['message'])) {
+                    $msg .= ' ' . sanitize_text_field((string) $data['error']['message']);
+                }
+                return new WP_Error('admin_api_failed', $msg);
+            }
+
+            $account_summaries = isset($data['accountSummaries']) && is_array($data['accountSummaries']) ? $data['accountSummaries'] : array();
+
+            foreach ($account_summaries as $summary) {
+                if (! is_array($summary)) {
+                    continue;
+                }
+
+                $property_summaries = isset($summary['propertySummaries']) && is_array($summary['propertySummaries']) ? $summary['propertySummaries'] : array();
+                foreach ($property_summaries as $property_summary) {
+                    if (! is_array($property_summary)) {
+                        continue;
+                    }
+
+                    $property_id = isset($property_summary['property']) ? (string) $property_summary['property'] : '';
+                    $display_name = isset($property_summary['displayName']) ? (string) $property_summary['displayName'] : '';
+
+                    $property_id = trim($property_id);
+                    if ('' === $property_id) {
+                        continue;
+                    }
+
+                    $label = $display_name ? $display_name : $property_id;
+                    $properties[$property_id] = $label;
+                }
+            }
+
+            $page_token = isset($data['nextPageToken']) ? trim((string) $data['nextPageToken']) : '';
+            if ('' === $page_token) {
+                break;
+            }
+        }
+
+        asort($properties, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $properties;
     }
 }
