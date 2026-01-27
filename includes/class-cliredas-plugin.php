@@ -162,6 +162,8 @@ final class CLIREDAS_Plugin
 
         require_once __DIR__ . '/class-cliredas-settings.php';
         require_once __DIR__ . '/class-cliredas-data-provider.php';
+        require_once __DIR__ . '/class-cliredas-ga4-client.php';
+        require_once __DIR__ . '/class-cliredas-ga4-data-provider.php';
         require_once __DIR__ . '/class-cliredas-provider-factory.php';
         require_once __DIR__ . '/class-cliredas-dashboard-page.php';
         require_once __DIR__ . '/class-cliredas-upgrade-page.php';
@@ -174,7 +176,7 @@ final class CLIREDAS_Plugin
         $this->settings = new CLIREDAS_Settings();
 
         new CLIREDAS_GA4_Auth($this->settings);
-        $data_provider  = CLIREDAS_Provider_Factory::get_provider();
+        $data_provider  = CLIREDAS_Provider_Factory::get_provider($this->settings);
         new CLIREDAS_Cache_Manager($data_provider);
         $dashboard_page = new CLIREDAS_Dashboard_Page($this->settings, $data_provider);
         $upgrade_page   = new CLIREDAS_Upgrade_Page();

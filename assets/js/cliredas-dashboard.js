@@ -22,6 +22,15 @@
     el.textContent = msg || '';
   }
 
+  function setRangeHint(rangeKey) {
+    const cfg = window.CLIREDAS_DASHBOARD;
+    const hint = $('#cliredas-range-hint');
+    if (!hint || !cfg || !cfg.ranges) return;
+
+    const label = cfg.ranges[rangeKey] || cfg.ranges['last_7_days'] || '';
+    hint.textContent = label ? 'Showing: ' + label : '';
+  }
+
   function setLoading(isLoading) {
     const controls = $('.cliredas-controls');
     const select = $('#cliredas-date-range');
@@ -46,6 +55,22 @@
     notice.style.display = 'none';
     const p = $('p', notice);
     if (p) p.textContent = '';
+  }
+
+  function setGa4Warning(message) {
+    const notice = $('#cliredas-ga4-warning');
+    if (!notice) return;
+
+    const text = $('.cliredas-ga4-warning-text', notice);
+
+    if (!message) {
+      notice.style.display = 'none';
+      if (text) text.textContent = '';
+      return;
+    }
+
+    notice.style.display = 'block';
+    if (text) text.textContent = message;
   }
 
   function formatNumber(n) {
@@ -80,6 +105,7 @@
     const map = {
       sessions: formatNumber(totals.sessions || 0),
       users: formatNumber(totals.users || 0),
+      pageviews: formatNumber(totals.pageviews || 0),
       engagement_time: formatDuration(totals.avg_engagement_seconds || 0),
     };
 
@@ -116,13 +142,104 @@
       .join('');
   }
 
+  function renderTrafficSources(report) {
+    const tbody = $('#cliredas-traffic-sources tbody');
+    const canvas = $('#cliredas-traffic-sources-chart');
+    if (!tbody || !canvas) return;
+
+    const sources = report.traffic_sources || {};
+    const rows = [
+      ['organic_search', 'Organic Search'],
+      ['direct', 'Direct'],
+      ['referral', 'Referral'],
+      ['social', 'Social'],
+      ['other', 'Other'],
+    ].map(function (pair) {
+      return { key: pair[0], label: pair[1], value: Number(sources[pair[0]] || 0) };
+    });
+
+    const total = rows.reduce(function (acc, r) {
+      return acc + (Number(r.value) || 0);
+    }, 0);
+
+    tbody.innerHTML = rows
+      .map(function (r) {
+        return (
+          '<tr>' +
+          '<td>' +
+          escapeHtml(r.label) +
+          '</td>' +
+          '<td>' +
+          formatNumber(r.value || 0) +
+          '</td>' +
+          '</tr>'
+        );
+      })
+      .join('');
+
+    if (typeof window.Chart === 'undefined') return;
+
+    // No data: hide chart and destroy existing instance.
+    if (total <= 0) {
+      canvas.style.display = 'none';
+      if (trafficChart) {
+        trafficChart.destroy();
+        trafficChart = null;
+      }
+      return;
+    }
+
+    canvas.style.display = 'block';
+
+    const labels = rows.map(function (r) {
+      return r.label;
+    });
+    const values = rows.map(function (r) {
+      return r.value;
+    });
+
+    const colors = ['#2271b1', '#1d9b6c', '#dba617', '#a05bbd', '#8c8f94'];
+
+    const ctx = canvas.getContext('2d');
+
+    if (!trafficChart) {
+      trafficChart = new window.Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              data: values,
+              backgroundColor: colors,
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: true },
+          },
+          cutout: '55%',
+        },
+      });
+      return;
+    }
+
+    trafficChart.data.labels = labels;
+    trafficChart.data.datasets[0].data = values;
+    trafficChart.update();
+  }
+
   function renderTopPages(report) {
     const tbody = $('#cliredas-top-pages tbody');
     if (!tbody) return;
 
     const pages = report.top_pages || [];
     if (!pages.length) {
-      tbody.innerHTML = '<tr><td colspan="3">No data.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5">No data.</td></tr>';
       return;
     }
 
@@ -140,6 +257,12 @@
           '<td>' +
           formatNumber(p.sessions || 0) +
           '</td>' +
+          '<td>' +
+          formatNumber(p.views || 0) +
+          '</td>' +
+          '<td>' +
+          escapeHtml(formatDuration(p.avg_engagement_seconds || 0)) +
+          '</td>' +
           '</tr>'
         );
       })
@@ -149,6 +272,7 @@
   // ---- Chart.js ----
 
   let sessionsChart = null;
+  let trafficChart = null;
 
   function getChartCtx() {
     const canvas = $('#cliredas-sessions-chart');
@@ -161,11 +285,15 @@
     const labels = series.map(function (p) {
       return p.date;
     });
+    const metricSelect = $('#cliredas-chart-metric');
+    const metric = metricSelect ? metricSelect.value : 'sessions';
+
     const values = series.map(function (p) {
-      return p.sessions;
+      const v = metric === 'users' ? p.users : p.sessions;
+      return Number(v || 0);
     });
 
-    return { labels, values };
+    return { labels, values, metric };
   }
 
   function renderOrUpdateSessionsChart(report) {
@@ -178,6 +306,11 @@
 
     const data = buildChartData(report);
 
+    const metricLabel = data.metric === 'users' ? 'Total users' : 'Sessions';
+    const metricColor = data.metric === 'users' ? '#1d9b6c' : '#2271b1';
+    const titleEl = $('#cliredas-chart-title');
+    if (titleEl) titleEl.textContent = metricLabel + ' over time';
+
     if (!sessionsChart) {
       sessionsChart = new window.Chart(ctx, {
         type: 'line',
@@ -185,11 +318,13 @@
           labels: data.labels,
           datasets: [
             {
-              label: 'Sessions',
+              label: metricLabel,
               data: data.values,
               tension: 0.25,
               pointRadius: 0,
               borderWidth: 2,
+              borderColor: metricColor,
+              backgroundColor: metricColor,
             },
           ],
         },
@@ -211,6 +346,7 @@
             },
             y: {
               ticks: { precision: 0 },
+              title: { display: true, text: metricLabel },
               grid: { drawBorder: false },
             },
           },
@@ -221,6 +357,12 @@
 
     sessionsChart.data.labels = data.labels;
     sessionsChart.data.datasets[0].data = data.values;
+    sessionsChart.data.datasets[0].label = metricLabel;
+    sessionsChart.data.datasets[0].borderColor = metricColor;
+    sessionsChart.data.datasets[0].backgroundColor = metricColor;
+    if (sessionsChart.options && sessionsChart.options.scales && sessionsChart.options.scales.y) {
+      sessionsChart.options.scales.y.title = { display: true, text: metricLabel };
+    }
     sessionsChart.update();
   }
 
@@ -254,7 +396,9 @@
   }
 
   function renderAll(report) {
+    setGa4Warning(report && report.error_message ? report.error_message : '');
     renderKPIs(report);
+    renderTrafficSources(report);
     renderDevices(report);
     renderTopPages(report);
     renderOrUpdateSessionsChart(report);
@@ -264,9 +408,32 @@
     const rangeSelect = $('#cliredas-date-range');
     if (!rangeSelect) return;
 
+    const chartMetricSelect = $('#cliredas-chart-metric');
+    if (chartMetricSelect) {
+      try {
+        const saved = window.localStorage.getItem('cliredas_chart_metric');
+        if (saved === 'sessions' || saved === 'users') {
+          chartMetricSelect.value = saved;
+        }
+      } catch (e) {}
+
+      chartMetricSelect.addEventListener('change', function () {
+        try {
+          window.localStorage.setItem('cliredas_chart_metric', chartMetricSelect.value);
+        } catch (e) {}
+
+        // Re-render chart using already-loaded report.
+        const r = window.CLIREDAS_DASHBOARD && window.CLIREDAS_DASHBOARD.initialReport;
+        if (r) {
+          renderOrUpdateSessionsChart(r);
+        }
+      });
+    }
+
     // Render immediately from embedded initial report (no initial AJAX).
     clearError();
     if (window.CLIREDAS_DASHBOARD.initialReport) {
+      setRangeHint(rangeSelect.value);
       renderAll(window.CLIREDAS_DASHBOARD.initialReport);
     }
 
@@ -275,9 +442,12 @@
 
       clearError();
       setLoading(true);
+      setRangeHint(range);
 
       try {
         const report = await fetchReport(range);
+        // Keep the last loaded report so chart metric toggles don't require refetch.
+        if (window.CLIREDAS_DASHBOARD) window.CLIREDAS_DASHBOARD.initialReport = report;
         renderAll(report);
         setLoading(false);
       } catch (e) {

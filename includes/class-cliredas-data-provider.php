@@ -78,18 +78,23 @@ final class CLIREDAS_Data_Provider
 
             $total_sessions += $value;
 
+            $users_value = (int) round($value * 0.72);
+
             $timeseries[] = array(
                 'date'     => $label,
                 'sessions' => $value,
+                'users'    => $users_value,
             );
         }
 
         // Simple derivations.
         $total_users = (int) round($total_sessions * 0.72);
         $avg_engagement_seconds = (30 === $days) ? 102 : 95;
+        $pageviews = (int) round($total_sessions * 1.35);
 
         $top_pages = $this->mock_top_pages($days);
         $devices   = $this->mock_devices($total_sessions);
+        $traffic_sources = $this->mock_traffic_sources($total_sessions);
 
         return array(
             'range' => array(
@@ -100,10 +105,12 @@ final class CLIREDAS_Data_Provider
                 'sessions'               => $total_sessions,
                 'users'                  => $total_users,
                 'avg_engagement_seconds' => $avg_engagement_seconds,
+                'pageviews'              => $pageviews,
             ),
             'timeseries' => $timeseries,
             'top_pages'  => $top_pages,
             'devices'    => $devices,
+            'traffic_sources' => $traffic_sources,
             'generated_at' => time(),
         );
     }
@@ -131,6 +138,14 @@ final class CLIREDAS_Data_Provider
             array('title' => 'Privacy Policy', 'url' => '/privacy-policy/', 'sessions' => (int) round(900 * $mult)),
         );
 
+        // Add a views column for UI parity with GA4 provider.
+        foreach ($pages as $i => $row) {
+            $sessions = isset($row['sessions']) ? (int) $row['sessions'] : 0;
+            $pages[$i]['views'] = (int) round($sessions * 1.25);
+            // Fake "avg engagement time" (seconds) for UI parity.
+            $pages[$i]['avg_engagement_seconds'] = 40 + ((int) $days * 2) + (($i * 7) % 55);
+        }
+
         usort(
             $pages,
             static function ($a, $b) {
@@ -157,6 +172,29 @@ final class CLIREDAS_Data_Provider
             'desktop' => $desktop,
             'mobile'  => $mobile,
             'tablet'  => $tablet,
+        );
+    }
+
+    /**
+     * Mock traffic sources breakdown.
+     *
+     * @param int $total_sessions Total sessions.
+     * @return array<string,int>
+     */
+    private function mock_traffic_sources($total_sessions)
+    {
+        $organic = (int) round($total_sessions * 0.46);
+        $direct  = (int) round($total_sessions * 0.28);
+        $ref     = (int) round($total_sessions * 0.14);
+        $social  = (int) round($total_sessions * 0.08);
+        $other   = max(0, $total_sessions - $organic - $direct - $ref - $social);
+
+        return array(
+            'organic_search' => $organic,
+            'direct'         => $direct,
+            'referral'       => $ref,
+            'social'         => $social,
+            'other'          => $other,
         );
     }
 

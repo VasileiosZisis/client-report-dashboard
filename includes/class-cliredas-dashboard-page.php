@@ -21,18 +21,23 @@ final class CLIREDAS_Dashboard_Page
     /**
      * Data provider.
      *
-     * @var CLIREDAS_Data_Provider
+     * @var object
      */
     private $provider;
 
     /**
-     * @param CLIREDAS_Settings      $settings  Settings service.
-     * @param CLIREDAS_Data_Provider $provider  Data provider.
+     * @param CLIREDAS_Settings $settings Settings service.
+     * @param object            $provider Provider with get_report().
      */
-    public function __construct(CLIREDAS_Settings $settings, CLIREDAS_Data_Provider $provider)
+    public function __construct(CLIREDAS_Settings $settings, $provider)
     {
         $this->settings = $settings;
         $this->provider = $provider;
+
+        // Safety: ensure we always have a provider with get_report().
+        if (! is_object($this->provider) || ! method_exists($this->provider, 'get_report')) {
+            $this->provider = new CLIREDAS_Data_Provider();
+        }
 
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
         add_action('wp_ajax_cliredas_get_report', array($this, 'ajax_get_report'));
@@ -127,8 +132,12 @@ final class CLIREDAS_Dashboard_Page
                     'value' => number_format_i18n((int) $report['totals']['sessions']),
                 ),
                 'users'    => array(
-                    'label' => __('Users', 'client-report-dashboard'),
+                    'label' => __('Total users', 'client-report-dashboard'),
                     'value' => number_format_i18n((int) $report['totals']['users']),
+                ),
+                'pageviews' => array(
+                    'label' => __('Pageviews', 'client-report-dashboard'),
+                    'value' => number_format_i18n((int) ($report['totals']['pageviews'] ?? 0)),
                 ),
                 'engagement_time' => array(
                     'label' => __('Avg engagement time', 'client-report-dashboard'),
@@ -157,7 +166,7 @@ final class CLIREDAS_Dashboard_Page
                         <?php endforeach; ?>
                     </select>
 
-                    <span class="cliredas-range-hint">
+                    <span class="cliredas-range-hint" id="cliredas-range-hint">
                         <?php echo esc_html(sprintf(__('Showing: %s', 'client-report-dashboard'), $selected_label)); ?>
                     </span>
 
@@ -187,6 +196,21 @@ final class CLIREDAS_Dashboard_Page
                     </p>
                 </div>
             <?php endif; ?>
+
+            <?php
+            $ga4_warning_message = ! empty($report['error_message']) ? trim((string) $report['error_message']) : '';
+            $settings_url = admin_url('options-general.php?page=' . CLIREDAS_Settings::SETTINGS_PAGE_SLUG);
+            ?>
+            <div id="cliredas-ga4-warning" class="notice notice-warning is-dismissible" <?php echo ('' === $ga4_warning_message) ? 'style="display:none;"' : ''; ?>>
+                <p>
+                    <span class="cliredas-ga4-warning-text"><?php echo esc_html($ga4_warning_message); ?></span>
+                    <?php if (current_user_can('manage_options')) : ?>
+                        <a href="<?php echo esc_url($settings_url); ?>">
+                            <?php echo esc_html__('Open Settings', 'client-report-dashboard'); ?>
+                        </a>
+                    <?php endif; ?>
+                </p>
+            </div>
 
             <?php if (current_user_can('manage_options') && isset($_GET['cliredas_cache_cleared'])) : ?>
                 <div class="notice notice-success is-dismissible">
@@ -229,11 +253,48 @@ final class CLIREDAS_Dashboard_Page
 
             <div class="cliredas-grid">
                 <div class="cliredas-card cliredas-card-wide">
-                    <h2 class="cliredas-card-title"><?php echo esc_html__('Sessions over time', 'client-report-dashboard'); ?></h2>
+                    <div class="cliredas-card-header">
+                        <h2 class="cliredas-card-title" id="cliredas-chart-title"><?php echo esc_html__('Sessions over time', 'client-report-dashboard'); ?></h2>
+
+                        <label class="cliredas-inline-control" for="cliredas-chart-metric">
+                            <span class="cliredas-inline-control-label"><?php echo esc_html__('Chart', 'client-report-dashboard'); ?></span>
+                            <select id="cliredas-chart-metric" class="cliredas-select cliredas-select-compact">
+                                <option value="sessions"><?php echo esc_html__('Sessions', 'client-report-dashboard'); ?></option>
+                                <option value="users"><?php echo esc_html__('Total users', 'client-report-dashboard'); ?></option>
+                            </select>
+                        </label>
+                    </div>
 
                     <div class="cliredas-chart-wrap">
                         <canvas id="cliredas-sessions-chart" height="90"></canvas>
                     </div>
+                </div>
+
+                <div class="cliredas-card cliredas-card-wide">
+                    <h2 class="cliredas-card-title"><?php echo esc_html__('Top pages', 'client-report-dashboard'); ?></h2>
+
+                    <table class="widefat striped cliredas-table" id="cliredas-top-pages">
+                        <thead>
+                            <tr>
+                                <th><?php echo esc_html__('Page Title', 'client-report-dashboard'); ?></th>
+                                <th><?php echo esc_html__('URL', 'client-report-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Sessions', 'client-report-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Views', 'client-report-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Avg engagement time', 'client-report-dashboard'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ((array) $report['top_pages'] as $row) : ?>
+                                <tr>
+                                    <td><?php echo esc_html((string) $row['title']); ?></td>
+                                    <td><code><?php echo esc_html((string) $row['url']); ?></code></td>
+                                    <td><?php echo esc_html(number_format_i18n((int) $row['sessions'])); ?></td>
+                                    <td><?php echo esc_html(number_format_i18n((int) ($row['views'] ?? 0))); ?></td>
+                                    <td><?php echo esc_html($this->format_duration((int) ($row['avg_engagement_seconds'] ?? 0))); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
 
                 <div class="cliredas-card">
@@ -257,23 +318,36 @@ final class CLIREDAS_Dashboard_Page
                     </table>
                 </div>
 
-                <div class="cliredas-card cliredas-card-wide">
-                    <h2 class="cliredas-card-title"><?php echo esc_html__('Top pages', 'client-report-dashboard'); ?></h2>
+                <div class="cliredas-card">
+                    <h2 class="cliredas-card-title"><?php echo esc_html__('Traffic sources', 'client-report-dashboard'); ?></h2>
 
-                    <table class="widefat striped cliredas-table" id="cliredas-top-pages">
+                    <div class="cliredas-chart-wrap cliredas-chart-wrap-small">
+                        <canvas id="cliredas-traffic-sources-chart" height="180"></canvas>
+                    </div>
+
+                    <table class="widefat striped cliredas-table" id="cliredas-traffic-sources">
                         <thead>
                             <tr>
-                                <th><?php echo esc_html__('Page Title', 'client-report-dashboard'); ?></th>
-                                <th><?php echo esc_html__('URL', 'client-report-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Source', 'client-report-dashboard'); ?></th>
                                 <th><?php echo esc_html__('Sessions', 'client-report-dashboard'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ((array) $report['top_pages'] as $row) : ?>
+                            <?php
+                            $sources = isset($report['traffic_sources']) && is_array($report['traffic_sources']) ? $report['traffic_sources'] : array();
+                            $labels = array(
+                                'organic_search' => __('Organic Search', 'client-report-dashboard'),
+                                'direct'         => __('Direct', 'client-report-dashboard'),
+                                'referral'       => __('Referral', 'client-report-dashboard'),
+                                'social'         => __('Social', 'client-report-dashboard'),
+                                'other'          => __('Other', 'client-report-dashboard'),
+                            );
+                            foreach ($labels as $key => $label) :
+                                $count = isset($sources[$key]) ? (int) $sources[$key] : 0;
+                            ?>
                                 <tr>
-                                    <td><?php echo esc_html((string) $row['title']); ?></td>
-                                    <td><code><?php echo esc_html((string) $row['url']); ?></code></td>
-                                    <td><?php echo esc_html(number_format_i18n((int) $row['sessions'])); ?></td>
+                                    <td><?php echo esc_html($label); ?></td>
+                                    <td><?php echo esc_html(number_format_i18n($count)); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

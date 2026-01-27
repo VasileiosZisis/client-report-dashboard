@@ -45,7 +45,7 @@
 
 .cliredas-kpis {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin: 12px 0 16px;
 }
@@ -85,6 +85,36 @@
   padding: 14px;
 }
 
+.cliredas-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cliredas-card-header .cliredas-card-title {
+  margin: 0;
+}
+
+.cliredas-inline-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.cliredas-inline-control-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cliredas-select-compact {
+  min-width: 160px;
+}
+
 .cliredas-card-wide {
   grid-column: 1 / -1;
 }
@@ -111,9 +141,18 @@
   min-height: 220px;
 }
 
+.cliredas-chart-wrap-small {
+  min-height: 180px;
+}
+
 #cliredas-sessions-chart {
   width: 100% !important;
   height: 220px !important;
+}
+
+#cliredas-traffic-sources-chart {
+  width: 100% !important;
+  height: 180px !important;
 }
 
 .cliredas-table th,

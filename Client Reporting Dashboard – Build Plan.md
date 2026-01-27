@@ -363,20 +363,30 @@ Filters/Actions already used/expected:
 **Steps:**
 
 1. Implement `CLIREDAS_GA4_Data_Provider` (in Free).
-2. Ensure provider returns same report shape used by JS.
+2. Ensure provider returns the same report shape used by the dashboard JS (and falls back to mock data with a warning on API failures).
 3. Use GA4 Data API `runReport` queries:
-   - totals: sessions, users, avg engagement time
-   - timeseries: sessions per day for range
-   - top pages: title + path + sessions
+   - totals: sessions, total users, pageviews (`screenPageViews`), avg engagement time (computed)
+   - timeseries: sessions + total users per day (chart toggle in UI)
+   - top pages: title + path + sessions + views + avg engagement time (per page)
    - devices: desktop/mobile/tablet sessions
-4. Add error mapping (permission, invalid property, quota).
-5. Wire provider via `cliredas_data_provider` filter (or factory logic based on connected + property set).
+   - traffic sources: Organic Search / Direct / Referral / Social / Other
+4. Add clearer error mapping (permission, invalid property, quota) and include the raw Google error message in the warning.
+5. Wire provider via factory logic based on GA4 connected state (keep `cliredas_data_provider` filter as an extension point).
+6. Dashboard UX improvements:
+   - show-once / human-readable warnings on dashboard when GA4 fetch fails
+   - keep "Showing: Last X days" hint in sync with the selected range
+   - top pages: stop merging different paths into "/" (only normalize trailing slashes); label "/" as "Landing Page"
 
 **Tests:**
 
 - Dashboard shows real data after connecting + selecting property.
 - Range change updates with real values.
+- Chart metric toggle switches between Sessions and Total users.
+- Top pages show columns: Sessions, Views, Avg engagement time.
+- Traffic sources doughnut + table show values and update with range changes.
 - “No data” and API failures show usable UI messages.
+
+- API failures include the raw Google error message in the warning (for faster troubleshooting).
 
 **Criteria:** real GA4 data displayed reliably.
 
