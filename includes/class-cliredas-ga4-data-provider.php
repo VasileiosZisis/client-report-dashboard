@@ -55,6 +55,23 @@ final class CLIREDAS_GA4_Data_Provider
             return $report;
         }
 
+        // GA4 provider caching (enabled by default).
+        $cache_enabled = (bool) apply_filters('cliredas_enable_cache', true, $range_key);
+        $cache_key = $this->get_cache_key($range_key, $property_id);
+
+        // After "Clear cache", force a fresh fetch for the next request (even if an object cache is in play).
+        $force_refresh = isset($_GET['cliredas_cache_cleared']);
+
+        if ($cache_enabled && ! $force_refresh) {
+            $cached = get_transient($cache_key);
+            if (is_array($cached)) {
+                // If this report was cached before we tracked keys, backfill the cache index on read.
+                $this->record_cache_key($cache_key);
+                $cached['source'] = 'ga4_cache';
+                return apply_filters('cliredas_report', $cached, $range_key);
+            }
+        }
+
         $dates = $this->get_date_range($range_key);
 
         $totals = $this->fetch_totals($property_id, $dates);
@@ -108,6 +125,11 @@ final class CLIREDAS_GA4_Data_Provider
             );
         }
 
+        if ($cache_enabled) {
+            set_transient($cache_key, $report, $this->get_cache_ttl($range_key, $property_id));
+            $this->record_cache_key($cache_key);
+        }
+
         /**
          * Filter the generated report.
          *
@@ -115,6 +137,130 @@ final class CLIREDAS_GA4_Data_Provider
          * @param string $range_key Range key.
          */
         return apply_filters('cliredas_report', $report, $range_key);
+    }
+
+    /**
+     * Clear all known cached reports tracked in the cache index.
+     *
+     * @return int Number of keys cleared.
+     */
+    public function clear_all_cache()
+    {
+        if (! class_exists('CLIREDAS_Data_Provider')) {
+            return 0;
+        }
+
+        $keys = get_option(CLIREDAS_Data_Provider::CACHE_INDEX_OPTION, array());
+        if (! is_array($keys)) {
+            $keys = array();
+        }
+
+        $cleared = 0;
+
+        foreach ($keys as $key) {
+            $key = sanitize_key((string) $key);
+            if ('' === $key) {
+                continue;
+            }
+
+            delete_transient($key);
+            $cleared++;
+        }
+
+        delete_option(CLIREDAS_Data_Provider::CACHE_INDEX_OPTION);
+
+        /**
+         * Fires after cache is cleared.
+         *
+         * @param int $cleared Count.
+         */
+        do_action('cliredas_cache_cleared', $cleared);
+
+        return $cleared;
+    }
+
+    /**
+     * Record a transient key in the cache index option.
+     *
+     * @param string $transient_key Transient key.
+     * @return void
+     */
+    private function record_cache_key($transient_key)
+    {
+        if (! class_exists('CLIREDAS_Data_Provider')) {
+            return;
+        }
+
+        $transient_key = sanitize_key((string) $transient_key);
+        if ('' === $transient_key) {
+            return;
+        }
+
+        $keys = get_option(CLIREDAS_Data_Provider::CACHE_INDEX_OPTION, array());
+        if (! is_array($keys)) {
+            $keys = array();
+        }
+
+        if (! in_array($transient_key, $keys, true)) {
+            $keys[] = $transient_key;
+            update_option(CLIREDAS_Data_Provider::CACHE_INDEX_OPTION, $keys, false);
+        }
+    }
+
+    /**
+     * Build a stable GA4 cache key.
+     *
+     * Format: cliredas_report_{blogId?}_{propertyId}_{rangeKey}
+     *
+     * @param string $range_key Range key.
+     * @param string $property_id GA4 property resource name (e.g. "properties/123").
+     * @return string
+     */
+    private function get_cache_key($range_key, $property_id)
+    {
+        $range_key = sanitize_key($range_key);
+        $property_id = strtolower(trim((string) $property_id));
+        $property_id = str_replace('/', '_', $property_id);
+        $property_id = sanitize_key($property_id);
+
+        $parts = array('cliredas_report');
+
+        // Include blog id for cache safety when a persistent object cache is shared (multisite or not).
+        if (function_exists('get_current_blog_id')) {
+            $parts[] = (string) (int) get_current_blog_id();
+        }
+
+        if ('' !== $property_id) {
+            $parts[] = $property_id;
+        }
+
+        $parts[] = $range_key ? $range_key : 'last_7_days';
+
+        return implode('_', $parts);
+    }
+
+    /**
+     * Cache TTL (seconds) for GA4 reports.
+     *
+     * Uses the existing `cliredas_cache_ttl` filter (default 15 minutes).
+     *
+     * @param string $range_key Range key.
+     * @param string $property_id GA4 property resource name.
+     * @return int
+     */
+    private function get_cache_ttl($range_key, $property_id)
+    {
+        $ttl = (int) apply_filters(
+            'cliredas_cache_ttl',
+            15 * MINUTE_IN_SECONDS,
+            sanitize_key($range_key),
+            array(
+                'provider'     => 'ga4',
+                'property_id'  => (string) $property_id,
+            )
+        );
+
+        return max(60, $ttl);
     }
 
     /**
