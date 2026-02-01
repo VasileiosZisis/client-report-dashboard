@@ -1,64 +1,52 @@
 # Client Reporting Dashboard (Free)
 
-A freemium WordPress plugin that provides a client-friendly analytics dashboard inside wp-admin using Google Analytics 4 (GA4) data.
+Client Reporting Dashboard adds a clean, client-friendly Google Analytics 4 (GA4) dashboard inside WordPress admin (`wp-admin`).
 
-This repository is the **Free** version (WordPress.org). A separate paid add-on plugin will extend this plugin.
+This repository is the Free version intended for WordPress.org distribution. A separate Pro add-on is planned (menu label: "Pro (Coming Soon)").
 
-## Goals
+## Key Features (Free)
 
-- Simple analytics dashboard inside wp-admin
-- Clean OOP architecture following WordPress standards
-- GA4 integration is abstracted behind a data provider (mock now, real GA4 later)
-- Built-in extension points for the future Pro add-on plugin
+- Connect Google Analytics 4 via OAuth (no service account needed)
+- Select a GA4 Property from a dropdown (one active property per WordPress site)
+- Dashboard KPIs: Sessions, Total Users, Pageviews, Avg engagement time
+- Toggle line chart between Sessions over time and Total Users over time
+- Top pages table: Path, Title, Sessions, Views, Avg engagement time (per page)
+- Device breakdown (desktop / mobile / tablet)
+- Traffic sources breakdown (Organic Search / Direct / Referral / Social / Other)
+- Built-in caching (default 15 minutes) for faster dashboards and fewer API calls
+- Clear cache button (forces a fresh fetch on the next load)
+- Optional access control: allow Editors to view the dashboard
 
-## Planned Free Features
+## External Services (Google APIs)
 
-- Admin dashboard page: KPI cards, sessions chart, top pages table, device breakdown
-- Date ranges: Last 7 days, Last 30 days
-- Role/access control setting: allow Editors in addition to Administrators
-- Upgrade page + “Upgrade to Pro” link
+When enabled and connected, the plugin communicates with Google services:
 
-## Pro Add-on (Later)
+- Google OAuth 2.0 endpoints (authorize/refresh): `accounts.google.com`, `oauth2.googleapis.com`
+- Google Analytics Admin API (list properties): `analyticsadmin.googleapis.com`
+- Google Analytics Data API (fetch reports): `analyticsdata.googleapis.com`
 
-The Pro add-on will be a separate plugin that depends on this free plugin and will:
+Data sent includes your OAuth client credentials (Client ID + Client Secret), authorization codes, refresh/access tokens, and API request parameters (selected property, date range, requested dimensions/metrics).
 
-- Add extra date ranges, metrics, and sections
-- Enable email reports
-- Add white-label options
+## Installation (from this repo)
 
-The Free plugin will expose actions/filters and a simple Pro-detection helper:
+1. Copy/clone this repo into `wp-content/plugins/client-report-dashboard/`
+2. Activate "Client Reporting Dashboard" in `wp-admin` -> Plugins
+3. Go to `Settings` -> `Client Report` and enter your Google OAuth Client ID and Client Secret
+4. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI
+5. Click "Connect Google Analytics", complete the consent screen, then select a GA4 Property
+6. Visit `Client Report` -> `Dashboard`
 
-- Pro is considered active when `CLIREDAS_PRO_VERSION` is defined.
+## Local Development Notes
 
-## Conventions
+- Google OAuth redirect URIs must use a public top-level domain (e.g. `.com`, `.org`). For local development, use a public tunnel (e.g. ngrok) or a real domain.
+- Recommended in `wp-config.php`:
+  - `define('WP_DEBUG', true);`
+  - `define('WP_DEBUG_LOG', true);`
 
-### Prefixes
+## Data Stored
 
-- PHP classes/constants: `CLIREDAS_`
-- Functions/hooks/options: `cliredas_`
-
-### Code style
-
-- WordPress Coding Standards
-- Escape output (`esc_html`, `esc_attr`, `wp_kses_post`)
-- Sanitize input (`sanitize_text_field`, `absint`, etc.)
-- Capabilities checked for all admin screens and AJAX
-
-## Development
-
-### Local setup
-
-1. Install WordPress locally.
-2. Clone or copy this repo into:
-   `wp-content/plugins/client-report-dashboard/`
-3. Activate the plugin from wp-admin.
-
-### Debugging
-
-Recommended in `wp-config.php`:
-
-- `define( 'WP_DEBUG', true );`
-- `define( 'WP_DEBUG_LOG', true );`
+- Plugin settings are stored in the WordPress options table under the `cliredas_settings` option.
+- The plugin stores OAuth tokens/credentials there and does not display your saved client secret back in the UI.
 
 ## License
 
