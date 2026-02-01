@@ -1,11 +1,20 @@
 (function () {
   if (typeof window.CLIREDAS_DASHBOARD === 'undefined') return;
 
+  const cfg = window.CLIREDAS_DASHBOARD;
+  const i18n = (cfg && cfg.i18n) || {};
+
   function $(sel, root) {
     return (root || document).querySelector(sel);
   }
   function $all(sel, root) {
     return Array.prototype.slice.call((root || document).querySelectorAll(sel));
+  }
+
+  function sprintf(template, value) {
+    template = String(template || '');
+    // Support "%s" and "%1$s".
+    return template.replace(/%1\\$s/g, String(value)).replace(/%s/g, String(value));
   }
 
   function onReady(fn) {
@@ -23,12 +32,12 @@
   }
 
   function setRangeHint(rangeKey) {
-    const cfg = window.CLIREDAS_DASHBOARD;
     const hint = $('#cliredas-range-hint');
     if (!hint || !cfg || !cfg.ranges) return;
 
     const label = cfg.ranges[rangeKey] || cfg.ranges['last_7_days'] || '';
-    hint.textContent = label ? 'Showing: ' + label : '';
+    const tmpl = i18n.showingTemplate || 'Showing: %s';
+    hint.textContent = label ? sprintf(tmpl, label) : '';
   }
 
   function setLoading(isLoading) {
@@ -37,7 +46,7 @@
     if (controls) controls.classList.toggle('is-loading', !!isLoading);
     if (select) select.disabled = !!isLoading;
 
-    setStatus(isLoading ? 'Loading…' : '');
+    setStatus(isLoading ? i18n.loading || 'Loading…' : '');
   }
 
   function showError(message) {
@@ -45,7 +54,7 @@
     if (!notice) return;
 
     const p = $('p', notice);
-    if (p) p.textContent = message || 'An error occurred.';
+    if (p) p.textContent = message || i18n.errorGeneric || 'An error occurred.';
     notice.style.display = 'block';
   }
 
@@ -148,12 +157,13 @@
     if (!tbody || !canvas) return;
 
     const sources = report.traffic_sources || {};
+    const srcLabels = i18n.trafficSources || {};
     const rows = [
-      ['organic_search', 'Organic Search'],
-      ['direct', 'Direct'],
-      ['referral', 'Referral'],
-      ['social', 'Social'],
-      ['other', 'Other'],
+      ['organic_search', srcLabels.organic_search || 'Organic Search'],
+      ['direct', srcLabels.direct || 'Direct'],
+      ['referral', srcLabels.referral || 'Referral'],
+      ['social', srcLabels.social || 'Social'],
+      ['other', srcLabels.other || 'Other'],
     ].map(function (pair) {
       return { key: pair[0], label: pair[1], value: Number(sources[pair[0]] || 0) };
     });
@@ -239,7 +249,8 @@
 
     const pages = report.top_pages || [];
     if (!pages.length) {
-      tbody.innerHTML = '<tr><td colspan="5">No data.</td></tr>';
+      const noData = escapeHtml(i18n.noData || 'No data.');
+      tbody.innerHTML = '<tr><td colspan="5">' + noData + '</td></tr>';
       return;
     }
 
@@ -306,10 +317,16 @@
 
     const data = buildChartData(report);
 
-    const metricLabel = data.metric === 'users' ? 'Total users' : 'Sessions';
+    const metricLabel =
+      data.metric === 'users'
+        ? i18n.totalUsers || 'Total users'
+        : i18n.sessions || 'Sessions';
     const metricColor = data.metric === 'users' ? '#1d9b6c' : '#2271b1';
     const titleEl = $('#cliredas-chart-title');
-    if (titleEl) titleEl.textContent = metricLabel + ' over time';
+    if (titleEl) {
+      const tmpl = i18n.overTimeTemplate || '%s over time';
+      titleEl.textContent = sprintf(tmpl, metricLabel);
+    }
 
     if (!sessionsChart) {
       sessionsChart = new window.Chart(ctx, {
@@ -369,8 +386,6 @@
   // ---- AJAX ----
 
   async function fetchReport(rangeKey) {
-    const cfg = window.CLIREDAS_DASHBOARD;
-
     const body = new URLSearchParams();
     body.set('action', 'cliredas_get_report');
     body.set('nonce', cfg.nonce);
@@ -388,7 +403,9 @@
     const json = await res.json();
     if (!json || !json.success) {
       const msg =
-        (json && json.data && json.data.message) || 'Failed to load report.';
+        (json && json.data && json.data.message) ||
+        i18n.failedToLoadReport ||
+        'Failed to load report.';
       throw new Error(msg);
     }
 
@@ -452,7 +469,9 @@
         setLoading(false);
       } catch (e) {
         setLoading(false);
-        showError(e && e.message ? e.message : 'Error loading report.');
+        showError(
+          e && e.message ? e.message : i18n.errorLoadingReport || 'Error loading report.'
+        );
       }
     });
 

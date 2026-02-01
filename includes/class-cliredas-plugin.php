@@ -115,12 +115,6 @@ final class CLIREDAS_Plugin
      */
     public function on_plugins_loaded()
     {
-        load_plugin_textdomain(
-            'client-report-dashboard',
-            false,
-            dirname(CLIREDAS_PLUGIN_BASENAME) . '/languages'
-        );
-
         /**
          * Fires when Client Reporting Dashboard has loaded.
          *

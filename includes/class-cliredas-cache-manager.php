@@ -55,6 +55,7 @@ final class CLIREDAS_Cache_Manager
         $redirect = add_query_arg(
             array(
                 'cliredas_cache_cleared' => $cleared,
+                'cliredas_cache_cleared_nonce' => wp_create_nonce('cliredas_cache_cleared'),
             ),
             $redirect
         );

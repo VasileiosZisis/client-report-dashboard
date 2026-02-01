@@ -90,8 +90,8 @@ final class CLIREDAS_Admin_Menu
         // Upgrade page (admin only).
         add_submenu_page(
             self::MENU_SLUG,
-            __('Upgrade', 'client-report-dashboard'),
-            __('Upgrade', 'client-report-dashboard'),
+            __('Pro (Coming Soon)', 'client-report-dashboard'),
+            __('Pro (Coming Soon)', 'client-report-dashboard'),
             'manage_options',
             'cliredas-upgrade',
             array($this->upgrade_page, 'render')

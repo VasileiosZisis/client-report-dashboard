@@ -546,6 +546,8 @@ Filters/Actions already used/expected:
 - External OAuth redirects should use `wp_redirect()` or whitelist host for `wp_safe_redirect()`.
 - Core “dashboard.css” exists in wp-admin; plugin asset filenames should be unique (use `cliredas-dashboard.*`).
 - Success notices: core already displays `settings-updated`; don’t duplicate.
+- Global variables defined by a theme/plugin should start with the theme/plugin prefix.
+- Using if-exists should be reserved for shared libraries only
 
 ---
 

@@ -1,0 +1,22 @@
+# Copyright (C) 2026 Vasilis Zisis
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Client Reporting Dashboard 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/client-report-dashboard/\n"
+"POT-Creation-Date: 2026-01-28 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Codex CLI\n"
+"X-Domain: client-report-dashboard\n"
+
+#. This .pot is intentionally minimal.
+#. WordPress.org will extract strings from the plugin source automatically via GlotPress.
+#. If you prefer to generate a full .pot locally, use WP-CLI i18n:
+#. wp i18n make-pot wp-content/plugins/client-report-dashboard wp-content/plugins/client-report-dashboard/languages/client-report-dashboard.pot
+

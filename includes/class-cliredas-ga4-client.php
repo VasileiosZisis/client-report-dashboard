@@ -374,6 +374,7 @@ final class CLIREDAS_GA4_Client
         $err = isset($data['error']) && is_array($data['error']) ? $data['error'] : array();
         $status_text = isset($err['status']) ? strtoupper((string) $err['status']) : '';
         $message = isset($err['message']) ? sanitize_text_field((string) $err['message']) : '';
+        /* translators: %s: error message returned by Google APIs. */
         $detail = ('' !== $message) ? sprintf(__(' (Google: %s)', 'client-report-dashboard'), $message) : '';
 
         if (403 === $http_status || 'PERMISSION_DENIED' === $status_text) {

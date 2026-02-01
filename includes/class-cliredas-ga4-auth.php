@@ -97,7 +97,19 @@ final class CLIREDAS_GA4_Auth
             $this->safe_redirect_with_flag(array('cliredas_ga4_error' => 'missing_client_id'));
         }
 
-        wp_redirect($auth_url);
+        // Allow safe redirect to Google's OAuth host for this request.
+        add_filter(
+            'allowed_redirect_hosts',
+            static function (array $hosts) use ($auth_url) {
+                $host = (string) wp_parse_url($auth_url, PHP_URL_HOST);
+                if ('' !== $host && ! in_array($host, $hosts, true)) {
+                    $hosts[] = $host;
+                }
+                return $hosts;
+            }
+        );
+
+        wp_safe_redirect($auth_url);
         exit;
     }
 
@@ -113,8 +125,11 @@ final class CLIREDAS_GA4_Auth
             wp_die(esc_html__('You do not have permission to do this.', 'client-report-dashboard'));
         }
 
-        $error = isset($_GET['error']) ? sanitize_key(wp_unslash($_GET['error'])) : '';
-        $error_description = isset($_GET['error_description']) ? sanitize_text_field(wp_unslash($_GET['error_description'])) : '';
+        $error_raw = filter_input(INPUT_GET, 'error', FILTER_UNSAFE_RAW);
+        $error_description_raw = filter_input(INPUT_GET, 'error_description', FILTER_UNSAFE_RAW);
+
+        $error = is_string($error_raw) ? sanitize_key(wp_unslash($error_raw)) : '';
+        $error_description = is_string($error_description_raw) ? sanitize_text_field(wp_unslash($error_description_raw)) : '';
 
         if ('' !== $error) {
             $args = array(
@@ -128,7 +143,8 @@ final class CLIREDAS_GA4_Auth
             $this->safe_redirect_with_flag($args);
         }
 
-        $code = isset($_GET['code']) ? trim((string) wp_unslash($_GET['code'])) : '';
+        $code_raw = filter_input(INPUT_GET, 'code', FILTER_UNSAFE_RAW);
+        $code = is_string($code_raw) ? trim((string) wp_unslash($code_raw)) : '';
         $code = sanitize_text_field($code);
 
         if ('' === $code) {
@@ -139,7 +155,8 @@ final class CLIREDAS_GA4_Auth
             );
         }
 
-        $state = isset($_GET['state']) ? (string) wp_unslash($_GET['state']) : '';
+        $state_raw = filter_input(INPUT_GET, 'state', FILTER_UNSAFE_RAW);
+        $state = is_string($state_raw) ? sanitize_text_field(wp_unslash($state_raw)) : '';
         $state = trim($state);
 
         $stored_state = get_user_meta(get_current_user_id(), 'cliredas_ga4_oauth_state', true);

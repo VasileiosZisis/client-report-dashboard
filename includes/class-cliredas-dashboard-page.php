@@ -57,6 +57,7 @@ final class CLIREDAS_Dashboard_Page
 
         $selected_range = $this->get_current_range_key();
         $initial_report = $this->provider->get_report($selected_range);
+        $initial_report = $this->sanitize_report_for_current_user($initial_report);
 
         CLIREDAS_Assets::enqueue_dashboard_assets(
             array(
@@ -64,7 +65,7 @@ final class CLIREDAS_Dashboard_Page
                 'nonce'         => wp_create_nonce('cliredas_dashboard'),
                 'selectedRange' => $selected_range,
                 'ranges'        => $this->get_date_ranges(),
-                'upgradeUrl'    => 'https://example.com/client-report-dashboard-pro',
+                'upgradeUrl'    => admin_url('admin.php?page=cliredas-upgrade'),
                 'initialReport' => $initial_report,
             )
         );
@@ -89,13 +90,15 @@ final class CLIREDAS_Dashboard_Page
         check_ajax_referer('cliredas_dashboard', 'nonce');
 
         $ranges = $this->get_date_ranges();
-        $range  = isset($_POST['range']) ? sanitize_key(wp_unslash($_POST['range'])) : $this->get_current_range_key();
+        $range_raw = filter_input(INPUT_POST, 'range', FILTER_UNSAFE_RAW);
+        $range  = is_string($range_raw) ? sanitize_key(wp_unslash($range_raw)) : $this->get_current_range_key();
 
         if (! array_key_exists($range, $ranges)) {
             $range = $this->get_current_range_key();
         }
 
         $report = $this->provider->get_report($range);
+        $report = $this->sanitize_report_for_current_user($report);
 
         wp_send_json_success(
             array(
@@ -123,6 +126,7 @@ final class CLIREDAS_Dashboard_Page
 
         // Initial server-rendered report (so the page is usable without JS).
         $report = $this->provider->get_report($selected_key);
+        $report = $this->sanitize_report_for_current_user($report);
 
         $kpis = apply_filters(
             'cliredas_kpis',
@@ -167,7 +171,10 @@ final class CLIREDAS_Dashboard_Page
                     </select>
 
                     <span class="cliredas-range-hint" id="cliredas-range-hint">
-                        <?php echo esc_html(sprintf(__('Showing: %s', 'client-report-dashboard'), $selected_label)); ?>
+                        <?php
+                        /* translators: %s: selected date range label (e.g. "Last 7 days"). */
+                        echo esc_html(sprintf(__('Showing: %s', 'client-report-dashboard'), $selected_label));
+                        ?>
                     </span>
 
                     <span class="cliredas-status" id="cliredas-status" aria-live="polite"></span>
@@ -187,19 +194,24 @@ final class CLIREDAS_Dashboard_Page
                 <p></p>
             </div>
 
+            <?php $settings_url = admin_url('options-general.php?page=' . CLIREDAS_Settings::SETTINGS_PAGE_SLUG); ?>
             <?php if (! $this->settings->is_ga4_connected()) : ?>
                 <div class="notice notice-info">
                     <p>
-                        <?php echo esc_html__('GA4 is not connected yet, so you are seeing mock data.', 'client-report-dashboard'); ?>
-                        <br>
-                        <?php echo esc_html__('Connection setup will be added in a future update.', 'client-report-dashboard'); ?>
+                        <?php echo esc_html__('GA4 is not connected yet, so you are seeing sample data.', 'client-report-dashboard'); ?>
+                        <?php if (current_user_can('manage_options')) : ?>
+                            <a href="<?php echo esc_url($settings_url); ?>">
+                                <?php echo esc_html__('Connect Google Analytics in Settings', 'client-report-dashboard'); ?>
+                            </a>
+                        <?php else : ?>
+                            <?php echo esc_html__('Please ask an administrator to connect Google Analytics in Settings.', 'client-report-dashboard'); ?>
+                        <?php endif; ?>
                     </p>
                 </div>
             <?php endif; ?>
 
             <?php
             $ga4_warning_message = ! empty($report['error_message']) ? trim((string) $report['error_message']) : '';
-            $settings_url = admin_url('options-general.php?page=' . CLIREDAS_Settings::SETTINGS_PAGE_SLUG);
             ?>
             <div id="cliredas-ga4-warning" class="notice notice-warning is-dismissible" <?php echo ('' === $ga4_warning_message) ? 'style="display:none;"' : ''; ?>>
                 <p>
@@ -212,7 +224,12 @@ final class CLIREDAS_Dashboard_Page
                 </p>
             </div>
 
-            <?php if (current_user_can('manage_options') && isset($_GET['cliredas_cache_cleared'])) : ?>
+            <?php
+            $cache_cleared = filter_input(INPUT_GET, 'cliredas_cache_cleared', FILTER_UNSAFE_RAW);
+            $cache_cleared_nonce = filter_input(INPUT_GET, 'cliredas_cache_cleared_nonce', FILTER_UNSAFE_RAW);
+            $cache_cleared_ok = is_string($cache_cleared_nonce) && wp_verify_nonce(sanitize_text_field(wp_unslash($cache_cleared_nonce)), 'cliredas_cache_cleared');
+            ?>
+            <?php if (current_user_can('manage_options') && is_string($cache_cleared) && $cache_cleared_ok) : ?>
                 <div class="notice notice-success is-dismissible">
                     <p>
                         <?php
@@ -220,7 +237,7 @@ final class CLIREDAS_Dashboard_Page
                             sprintf(
                                 /* translators: %d: number of cache entries cleared */
                                 __('Cache cleared (%d entries).', 'client-report-dashboard'),
-                                absint(wp_unslash($_GET['cliredas_cache_cleared']))
+                                absint(wp_unslash($cache_cleared))
                             )
                         );
                         ?>
@@ -232,6 +249,7 @@ final class CLIREDAS_Dashboard_Page
                         try {
                             var url = new URL(window.location.href);
                             url.searchParams.delete('cliredas_cache_cleared');
+                            url.searchParams.delete('cliredas_cache_cleared_nonce');
                             window.history.replaceState({}, document.title, url.toString());
                         } catch (e) {}
                     })();
@@ -365,12 +383,34 @@ final class CLIREDAS_Dashboard_Page
                     <span class="cliredas-powered-by"><?php echo esc_html__('Powered by Client Reporting Dashboard', 'client-report-dashboard'); ?></span>
                 <?php endif; ?>
 
-                <a class="cliredas-upgrade-link" href="<?php echo esc_url('https://example.com/client-report-dashboard-pro'); ?>" target="_blank" rel="noopener noreferrer">
-                    <?php echo esc_html__('Upgrade to Pro', 'client-report-dashboard'); ?>
+                <a class="cliredas-upgrade-link" href="<?php echo esc_url(admin_url('admin.php?page=cliredas-upgrade')); ?>">
+                    <?php echo esc_html__('Pro (Coming Soon)', 'client-report-dashboard'); ?>
                 </a>
             </div>
         </div>
 <?php
+    }
+
+    /**
+     * Hide detailed Google error messages from non-admin users.
+     *
+     * @param array $report Report data.
+     * @return array
+     */
+    private function sanitize_report_for_current_user(array $report)
+    {
+        if (current_user_can('manage_options')) {
+            return $report;
+        }
+
+        if (! empty($report['error_message'])) {
+            $report['error_message'] = __(
+                'GA4 data is temporarily unavailable. Please ask an administrator to reconnect Google Analytics.',
+                'client-report-dashboard'
+            );
+        }
+
+        return $report;
     }
 
     /**
@@ -408,7 +448,8 @@ final class CLIREDAS_Dashboard_Page
 
         $default = isset($keys[0]) ? (string) $keys[0] : 'last_7_days';
 
-        $range = isset($_GET['range']) ? sanitize_key(wp_unslash($_GET['range'])) : $default;
+        $range_raw = filter_input(INPUT_GET, 'range', FILTER_UNSAFE_RAW);
+        $range = is_string($range_raw) ? sanitize_key(wp_unslash($range_raw)) : $default;
 
         if (! array_key_exists($range, $ranges)) {
             $range = $default;
@@ -431,7 +472,11 @@ final class CLIREDAS_Dashboard_Page
         $remain  = (int) ($seconds % 60);
 
         if ($minutes <= 0) {
-            return sprintf(_n('%d second', '%d seconds', $remain, 'client-report-dashboard'), $remain);
+            return sprintf(
+                /* translators: %d: number of seconds */
+                _n('%d second', '%d seconds', $remain, 'client-report-dashboard'),
+                $remain
+            );
         }
 
         return sprintf(

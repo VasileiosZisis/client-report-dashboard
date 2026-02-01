@@ -406,31 +406,37 @@ final class CLIREDAS_Settings
 	                </script>
 	            <?php endif; ?>
 
-	            <?php if (isset($_GET['cliredas_cache_cleared'])) : ?>
+	            <?php
+	            $cache_cleared = filter_input(INPUT_GET, 'cliredas_cache_cleared', FILTER_UNSAFE_RAW);
+	            $cache_cleared_nonce = filter_input(INPUT_GET, 'cliredas_cache_cleared_nonce', FILTER_UNSAFE_RAW);
+	            $cache_cleared_ok = is_string($cache_cleared_nonce) && wp_verify_nonce(sanitize_text_field(wp_unslash($cache_cleared_nonce)), 'cliredas_cache_cleared');
+	            ?>
+	            <?php if (is_string($cache_cleared) && $cache_cleared_ok) : ?>
 	                <div class="notice notice-success is-dismissible">
 	                    <p>
 	                        <?php
 	                        echo esc_html(
-                            sprintf(
-                                /* translators: %d: number of cache entries cleared */
-                                __('Cached reports cleared (%d).', 'client-report-dashboard'),
-                                absint(wp_unslash($_GET['cliredas_cache_cleared']))
-                            )
-                        );
-                        ?>
-                    </p>
-                </div>
-
-                <script>
-                    (function() {
-                        try {
-                            var url = new URL(window.location.href);
-                            url.searchParams.delete('cliredas_cache_cleared');
-                            window.history.replaceState({}, document.title, url.toString());
-                        } catch (e) {}
-                    })();
-                </script>
-            <?php endif; ?>
+                             sprintf(
+                                 /* translators: %d: number of cache entries cleared */
+                                 __('Cached reports cleared (%d).', 'client-report-dashboard'),
+                                 absint(wp_unslash($cache_cleared))
+                             )
+                         );
+                         ?>
+                     </p>
+                 </div>
+ 
+                 <script>
+                     (function() {
+                         try {
+                             var url = new URL(window.location.href);
+                             url.searchParams.delete('cliredas_cache_cleared');
+                             url.searchParams.delete('cliredas_cache_cleared_nonce');
+                             window.history.replaceState({}, document.title, url.toString());
+                         } catch (e) {}
+                     })();
+                 </script>
+             <?php endif; ?>
 
             <?php
             // Only show errors (not the success message).
@@ -468,7 +474,7 @@ final class CLIREDAS_Settings
      */
     public function render_connection_section()
     {
-        echo '<p>' . esc_html__('Connect Google Analytics 4 to display real analytics data. (Connection UI will be enabled in a future update.)', 'client-report-dashboard') . '</p>';
+        echo '<p>' . esc_html__('Connect Google Analytics 4 to display real analytics data on the dashboard.', 'client-report-dashboard') . '</p>';
     }
 
     /**

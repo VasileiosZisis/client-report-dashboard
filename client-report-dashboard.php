@@ -2,21 +2,23 @@
 
 /**
  * Plugin Name: Client Reporting Dashboard
- * Plugin URI:  https://example.com/client-report-dashboard
- * Description: Client-friendly analytics dashboard inside wp-admin. (GA4 integration will be added later.)
- * Version:     0.1.0
- * Author:      Vasilis Zisis
+ * Description: Client-friendly Google Analytics 4 (GA4) dashboard inside wp-admin.
+ * Version:     1.0.0
+ * Author:      Vasileios Zisis
  * Author URI:  https://profiles.wordpress.org/vzisis/
  * Text Domain: client-report-dashboard
+ * Requires at least: 6.0
+ * Requires PHP: 7.4
  * Domain Path: /languages
- * License:     GPLv2 or later
+ * License:     GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  *
  * @package ClientReportingDashboard
  */
 
 defined('ABSPATH') || exit;
 
-define('CLIREDAS_VERSION', '0.1.0');
+define('CLIREDAS_VERSION', '1.0.0');
 define('CLIREDAS_PLUGIN_FILE', __FILE__);
 define('CLIREDAS_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('CLIREDAS_PLUGIN_DIR', plugin_dir_path(__FILE__));

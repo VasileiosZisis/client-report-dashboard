@@ -16,18 +16,18 @@ defined('WP_UNINSTALL_PLUGIN') || exit;
  * - The cache index tracks transient keys, so we clear transients from the index first.
  */
 
-$settings_option_key   = 'cliredas_settings';
-$cache_index_option_key = 'cliredas_cache_keys';
-$oauth_state_meta_key  = 'cliredas_ga4_oauth_state';
+$cliredas_settings_option_key    = 'cliredas_settings';
+$cliredas_cache_index_option_key = 'cliredas_cache_keys';
+$cliredas_oauth_state_meta_key   = 'cliredas_ga4_oauth_state';
 
 /**
  * Cleanup for a single site/blog context.
  *
  * @return void
  */
-$cleanup_site = static function () use ($settings_option_key, $cache_index_option_key) {
+$cliredas_cleanup_site = static function () use ($cliredas_settings_option_key, $cliredas_cache_index_option_key) {
     // Delete cached transients tracked in the index (if any).
-    $keys = get_option($cache_index_option_key, array());
+    $keys = get_option($cliredas_cache_index_option_key, array());
     if (is_array($keys)) {
         foreach ($keys as $key) {
             $key = sanitize_key($key);
@@ -43,31 +43,31 @@ $cleanup_site = static function () use ($settings_option_key, $cache_index_optio
     delete_transient('cliredas_report_last_30_days');
 
     // Delete options.
-    delete_option($cache_index_option_key);
-    delete_option($settings_option_key);
+    delete_option($cliredas_cache_index_option_key);
+    delete_option($cliredas_settings_option_key);
 };
 
 if (is_multisite() && function_exists('get_sites') && function_exists('switch_to_blog') && function_exists('restore_current_blog')) {
-    $site_ids = get_sites(array('fields' => 'ids'));
+    $cliredas_site_ids = get_sites(array('fields' => 'ids'));
 
-    if (is_array($site_ids) && ! empty($site_ids)) {
-        foreach ($site_ids as $site_id) {
-            switch_to_blog((int) $site_id);
-            $cleanup_site();
+    if (is_array($cliredas_site_ids) && ! empty($cliredas_site_ids)) {
+        foreach ($cliredas_site_ids as $cliredas_site_id) {
+            switch_to_blog((int) $cliredas_site_id);
+            $cliredas_cleanup_site();
             restore_current_blog();
         }
     } else {
-        $cleanup_site();
+        $cliredas_cleanup_site();
     }
 
     // Clean up any accidental network-level storage.
-    delete_site_option($cache_index_option_key);
-    delete_site_option($settings_option_key);
+    delete_site_option($cliredas_cache_index_option_key);
+    delete_site_option($cliredas_settings_option_key);
 } else {
-    $cleanup_site();
+    $cliredas_cleanup_site();
 }
 
 // Remove stored OAuth state for all users (used during GA4 connect flow).
 if (function_exists('delete_metadata')) {
-    delete_metadata('user', 0, $oauth_state_meta_key, '', true);
+    delete_metadata('user', 0, $cliredas_oauth_state_meta_key, '', true);
 }

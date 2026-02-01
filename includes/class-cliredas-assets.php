@@ -19,6 +19,33 @@ final class CLIREDAS_Assets
      */
     public static function enqueue_dashboard_assets(array $localized_data)
     {
+        // Provide i18n strings for JS (allow callers to override/extend).
+        $i18n_defaults = array(
+            'loading'                => __('Loading…', 'client-report-dashboard'),
+            /* translators: %s: selected date range label (e.g. "Last 7 days"). */
+            'showingTemplate'        => __('Showing: %s', 'client-report-dashboard'),
+            'errorGeneric'           => __('An error occurred.', 'client-report-dashboard'),
+            'failedToLoadReport'     => __('Failed to load report.', 'client-report-dashboard'),
+            'errorLoadingReport'     => __('Error loading report.', 'client-report-dashboard'),
+            'noData'                 => __('No data.', 'client-report-dashboard'),
+            'sessions'               => __('Sessions', 'client-report-dashboard'),
+            'totalUsers'             => __('Total users', 'client-report-dashboard'),
+            /* translators: %s: chart metric label (e.g. "Sessions" or "Total users"). */
+            'overTimeTemplate'       => __('%s over time', 'client-report-dashboard'),
+            'trafficSources'         => array(
+                'organic_search' => __('Organic Search', 'client-report-dashboard'),
+                'direct'         => __('Direct', 'client-report-dashboard'),
+                'referral'       => __('Referral', 'client-report-dashboard'),
+                'social'         => __('Social', 'client-report-dashboard'),
+                'other'          => __('Other', 'client-report-dashboard'),
+            ),
+        );
+
+        $localized_data['i18n'] = wp_parse_args(
+            isset($localized_data['i18n']) && is_array($localized_data['i18n']) ? $localized_data['i18n'] : array(),
+            $i18n_defaults
+        );
+
         wp_enqueue_style(
             'cliredas-dashboard',
             CLIREDAS_PLUGIN_URL . 'assets/css/cliredas-dashboard.css',
