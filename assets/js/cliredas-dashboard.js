@@ -82,6 +82,24 @@
     if (text) text.textContent = message;
   }
 
+  function removeQueryParams(params) {
+    try {
+      const url = new URL(window.location.href);
+      let changed = false;
+
+      params.forEach(function (key) {
+        if (url.searchParams.has(key)) {
+          url.searchParams.delete(key);
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        window.history.replaceState({}, document.title, url.toString());
+      }
+    } catch (e) {}
+  }
+
   function formatNumber(n) {
     try {
       return new Intl.NumberFormat().format(n);
@@ -388,8 +406,8 @@
   async function fetchReport(rangeKey) {
     const body = new URLSearchParams();
     body.set('action', 'cliredas_get_report');
-    body.set('nonce', cfg.nonce);
-    body.set('range', rangeKey);
+    body.set('cliredas_nonce', cfg.cliredasNonce || '');
+    body.set('cliredas_range', rangeKey);
 
     const res = await fetch(cfg.ajaxUrl, {
       method: 'POST',
@@ -422,6 +440,8 @@
   }
 
   onReady(function () {
+    removeQueryParams(['cliredas_cache_cleared', 'cliredas_cache_cleared_nonce']);
+
     const rangeSelect = $('#cliredas-date-range');
     if (!rangeSelect) return;
 

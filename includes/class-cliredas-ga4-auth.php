@@ -87,7 +87,7 @@ final class CLIREDAS_GA4_Auth
     public function handle_connect()
     {
         if (! current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to do this.', 'client-report-dashboard'));
+            wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
 
         check_admin_referer('cliredas_ga4_connect');
@@ -122,7 +122,7 @@ final class CLIREDAS_GA4_Auth
     public function handle_oauth_callback()
     {
         if (! current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to do this.', 'client-report-dashboard'));
+            wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
 
         $error_raw = filter_input(INPUT_GET, 'error', FILTER_UNSAFE_RAW);
@@ -230,7 +230,7 @@ final class CLIREDAS_GA4_Auth
             $this->safe_redirect_with_flag(
                 array(
                     'cliredas_ga4_error' => 'missing_refresh_token',
-                    'cliredas_ga4_error_desc' => __('Google did not return a refresh token. Try again with a fresh consent (you may need to revoke access in your Google Account and reconnect).', 'client-report-dashboard'),
+                    'cliredas_ga4_error_desc' => __('Google did not return a refresh token. Try again with a fresh consent (you may need to revoke access in your Google Account and reconnect).', 'cliredas-analytics-dashboard'),
                 )
             );
         }
@@ -259,19 +259,19 @@ final class CLIREDAS_GA4_Auth
     {
         $code = trim((string) $code);
         if ('' === $code) {
-            return new WP_Error('missing_code', __('Missing authorization code.', 'client-report-dashboard'));
+            return new WP_Error('missing_code', __('Missing authorization code.', 'cliredas-analytics-dashboard'));
         }
 
         $settings = $this->settings->get_settings();
 
         $client_id = isset($settings['ga4_client_id']) ? trim((string) $settings['ga4_client_id']) : '';
         if ('' === $client_id) {
-            return new WP_Error('missing_client_id', __('Missing OAuth Client ID.', 'client-report-dashboard'));
+            return new WP_Error('missing_client_id', __('Missing OAuth Client ID.', 'cliredas-analytics-dashboard'));
         }
 
         $client_secret = isset($settings['ga4_client_secret']) ? trim((string) $settings['ga4_client_secret']) : '';
         if ('' === $client_secret) {
-            return new WP_Error('missing_client_secret', __('Missing OAuth Client Secret.', 'client-report-dashboard'));
+            return new WP_Error('missing_client_secret', __('Missing OAuth Client Secret.', 'cliredas-analytics-dashboard'));
         }
 
         $response = wp_remote_post(
@@ -297,14 +297,14 @@ final class CLIREDAS_GA4_Auth
 
         $data = json_decode($body, true);
         if (! is_array($data)) {
-            return new WP_Error('token_response_invalid', __('Invalid token response from Google.', 'client-report-dashboard'));
+            return new WP_Error('token_response_invalid', __('Invalid token response from Google.', 'cliredas-analytics-dashboard'));
         }
 
         if (200 !== $status) {
             $remote_error = isset($data['error']) ? (string) $data['error'] : '';
             $remote_desc  = isset($data['error_description']) ? (string) $data['error_description'] : '';
 
-            $msg = $remote_error ? $remote_error : __('Token exchange failed.', 'client-report-dashboard');
+            $msg = $remote_error ? $remote_error : __('Token exchange failed.', 'cliredas-analytics-dashboard');
             if ('' !== $remote_desc) {
                 $msg .= ' - ' . $remote_desc;
             }
@@ -314,7 +314,7 @@ final class CLIREDAS_GA4_Auth
 
         $access_token = isset($data['access_token']) ? trim((string) $data['access_token']) : '';
         if ('' === $access_token) {
-            return new WP_Error('token_missing_access_token', __('Google token response is missing access_token.', 'client-report-dashboard'));
+            return new WP_Error('token_missing_access_token', __('Google token response is missing access_token.', 'cliredas-analytics-dashboard'));
         }
 
         $expires_in = isset($data['expires_in']) ? (int) $data['expires_in'] : 0;
@@ -340,7 +340,7 @@ final class CLIREDAS_GA4_Auth
     public function handle_disconnect()
     {
         if (! current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to do this.', 'client-report-dashboard'));
+            wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
 
         check_admin_referer('cliredas_ga4_disconnect');
@@ -367,7 +367,7 @@ final class CLIREDAS_GA4_Auth
     public function handle_clear_secret()
     {
         if (! current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to do this.', 'client-report-dashboard'));
+            wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
 
         check_admin_referer('cliredas_ga4_clear_secret');
@@ -436,6 +436,7 @@ final class CLIREDAS_GA4_Auth
      */
     private function safe_redirect_with_flag(array $args)
     {
+        $args['cliredas_ga4_notice_nonce'] = wp_create_nonce('cliredas_ga4_notice');
         $url = admin_url('options-general.php?page=' . CLIREDAS_Settings::SETTINGS_PAGE_SLUG);
         $url = add_query_arg($args, $url);
         wp_safe_redirect($url);

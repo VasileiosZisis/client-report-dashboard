@@ -36,7 +36,7 @@ final class CLIREDAS_Cache_Manager
     public function handle_clear_cache()
     {
         if (! current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to do this.', 'client-report-dashboard'));
+            wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
 
         check_admin_referer('cliredas_clear_cache');

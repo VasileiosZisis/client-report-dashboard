@@ -116,7 +116,7 @@ final class CLIREDAS_Plugin
     public function on_plugins_loaded()
     {
         /**
-         * Fires when Client Reporting Dashboard has loaded.
+         * Fires when Cliredas - Simple Google Analytics Dashboard has loaded.
          *
          * Useful for add-ons (Pro) to bootstrap after the free plugin is available.
          */
@@ -215,6 +215,6 @@ final class CLIREDAS_Plugin
      */
     public function __wakeup()
     {
-        wp_die(esc_html__('Unserializing is not allowed.', 'client-report-dashboard'));
+        wp_die(esc_html__('Unserializing is not allowed.', 'cliredas-analytics-dashboard'));
     }
 }

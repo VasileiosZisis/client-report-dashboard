@@ -21,23 +21,23 @@ final class CLIREDAS_Assets
     {
         // Provide i18n strings for JS (allow callers to override/extend).
         $i18n_defaults = array(
-            'loading'                => __('Loading…', 'client-report-dashboard'),
+            'loading'                => __('Loading', 'cliredas-analytics-dashboard'),
             /* translators: %s: selected date range label (e.g. "Last 7 days"). */
-            'showingTemplate'        => __('Showing: %s', 'client-report-dashboard'),
-            'errorGeneric'           => __('An error occurred.', 'client-report-dashboard'),
-            'failedToLoadReport'     => __('Failed to load report.', 'client-report-dashboard'),
-            'errorLoadingReport'     => __('Error loading report.', 'client-report-dashboard'),
-            'noData'                 => __('No data.', 'client-report-dashboard'),
-            'sessions'               => __('Sessions', 'client-report-dashboard'),
-            'totalUsers'             => __('Total users', 'client-report-dashboard'),
+            'showingTemplate'        => __('Showing: %s', 'cliredas-analytics-dashboard'),
+            'errorGeneric'           => __('An error occurred.', 'cliredas-analytics-dashboard'),
+            'failedToLoadReport'     => __('Failed to load report.', 'cliredas-analytics-dashboard'),
+            'errorLoadingReport'     => __('Error loading report.', 'cliredas-analytics-dashboard'),
+            'noData'                 => __('No data.', 'cliredas-analytics-dashboard'),
+            'sessions'               => __('Sessions', 'cliredas-analytics-dashboard'),
+            'totalUsers'             => __('Total users', 'cliredas-analytics-dashboard'),
             /* translators: %s: chart metric label (e.g. "Sessions" or "Total users"). */
-            'overTimeTemplate'       => __('%s over time', 'client-report-dashboard'),
+            'overTimeTemplate'       => __('%s over time', 'cliredas-analytics-dashboard'),
             'trafficSources'         => array(
-                'organic_search' => __('Organic Search', 'client-report-dashboard'),
-                'direct'         => __('Direct', 'client-report-dashboard'),
-                'referral'       => __('Referral', 'client-report-dashboard'),
-                'social'         => __('Social', 'client-report-dashboard'),
-                'other'          => __('Other', 'client-report-dashboard'),
+                'organic_search' => __('Organic Search', 'cliredas-analytics-dashboard'),
+                'direct'         => __('Direct', 'cliredas-analytics-dashboard'),
+                'referral'       => __('Referral', 'cliredas-analytics-dashboard'),
+                'social'         => __('Social', 'cliredas-analytics-dashboard'),
+                'other'          => __('Other', 'cliredas-analytics-dashboard'),
             ),
         );
 
@@ -73,6 +73,22 @@ final class CLIREDAS_Assets
             'cliredas-dashboard',
             'CLIREDAS_DASHBOARD',
             $localized_data
+        );
+    }
+
+    /**
+     * Enqueue settings-page assets.
+     *
+     * @return void
+     */
+    public static function enqueue_settings_assets()
+    {
+        wp_enqueue_script(
+            'cliredas-settings',
+            CLIREDAS_PLUGIN_URL . 'assets/js/cliredas-settings.js',
+            array(),
+            CLIREDAS_VERSION,
+            true
         );
     }
 }

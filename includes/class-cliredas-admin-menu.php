@@ -60,7 +60,7 @@ final class CLIREDAS_Admin_Menu
      */
     public function register_menus()
     {
-        $menu_title = (string) apply_filters('cliredas_menu_title', __('Client Report', 'client-report-dashboard'));
+        $menu_title = (string) apply_filters('cliredas_menu_title', __('Client Report', 'cliredas-analytics-dashboard'));
         $capability = $this->settings->get_required_capability('menu');
 
         /**
@@ -69,7 +69,7 @@ final class CLIREDAS_Admin_Menu
         do_action('cliredas_before_register_menus');
 
         add_menu_page(
-            __('Client Report', 'client-report-dashboard'),
+            __('Client Report', 'cliredas-analytics-dashboard'),
             $menu_title,
             $capability,
             self::MENU_SLUG,
@@ -80,8 +80,8 @@ final class CLIREDAS_Admin_Menu
         // Dashboard (explicit submenu, points to the same callback/slug).
         add_submenu_page(
             self::MENU_SLUG,
-            __('Dashboard', 'client-report-dashboard'),
-            __('Dashboard', 'client-report-dashboard'),
+            __('Dashboard', 'cliredas-analytics-dashboard'),
+            __('Dashboard', 'cliredas-analytics-dashboard'),
             $capability,
             self::MENU_SLUG,
             array($this->dashboard_page, 'render')
@@ -90,20 +90,21 @@ final class CLIREDAS_Admin_Menu
         // Upgrade page (admin only).
         add_submenu_page(
             self::MENU_SLUG,
-            __('Pro (Coming Soon)', 'client-report-dashboard'),
-            __('Pro (Coming Soon)', 'client-report-dashboard'),
+            __('Pro (Coming Soon)', 'cliredas-analytics-dashboard'),
+            __('Pro (Coming Soon)', 'cliredas-analytics-dashboard'),
             'manage_options',
             'cliredas-upgrade',
             array($this->upgrade_page, 'render')
         );
 
-        // Settings page (admin only) - points to the same slug as Settings → Client Report.
+        // Settings page (admin only).
         add_submenu_page(
             self::MENU_SLUG,
-            __('Settings', 'client-report-dashboard'),
-            __('Settings', 'client-report-dashboard'),
+            __('Settings', 'cliredas-analytics-dashboard'),
+            __('Settings', 'cliredas-analytics-dashboard'),
             'manage_options',
-            'options-general.php?page=' . CLIREDAS_Settings::SETTINGS_PAGE_SLUG
+            'cliredas-settings-shortcut',
+            array($this->settings, 'render_settings_page')
         );
 
         /**
@@ -114,9 +115,4 @@ final class CLIREDAS_Admin_Menu
         do_action('cliredas_after_register_menus');
     }
 
-    public function redirect_to_settings()
-    {
-        wp_safe_redirect(admin_url('options-general.php?page=' . CLIREDAS_Settings::SETTINGS_PAGE_SLUG));
-        exit;
-    }
 }

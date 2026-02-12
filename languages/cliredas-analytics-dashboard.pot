@@ -2,8 +2,8 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Client Reporting Dashboard 1.0.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/client-report-dashboard/\n"
+"Project-Id-Version: Cliredas - Simple Google Analytics Dashboard 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/cliredas-analytics-dashboard/\n"
 "POT-Creation-Date: 2026-01-28 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
@@ -13,10 +13,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Codex CLI\n"
-"X-Domain: client-report-dashboard\n"
+"X-Domain: cliredas-analytics-dashboard\n"
 
 #. This .pot is intentionally minimal.
 #. WordPress.org will extract strings from the plugin source automatically via GlotPress.
 #. If you prefer to generate a full .pot locally, use WP-CLI i18n:
-#. wp i18n make-pot wp-content/plugins/client-report-dashboard wp-content/plugins/client-report-dashboard/languages/client-report-dashboard.pot
-
+#. wp i18n make-pot wp-content/plugins/cliredas-analytics-dashboard wp-content/plugins/cliredas-analytics-dashboard/languages/cliredas-analytics-dashboard.pot

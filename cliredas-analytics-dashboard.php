@@ -1,12 +1,12 @@
 <?php
 
 /**
- * Plugin Name: Client Reporting Dashboard
+ * Plugin Name: Cliredas - Simple Google Analytics Dashboard
  * Description: Client-friendly Google Analytics 4 (GA4) dashboard inside wp-admin.
  * Version:     1.0.0
  * Author:      Vasileios Zisis
  * Author URI:  https://profiles.wordpress.org/vzisis/
- * Text Domain: client-report-dashboard
+ * Text Domain: cliredas-analytics-dashboard
  * Requires at least: 6.0
  * Requires PHP: 7.4
  * Domain Path: /languages

@@ -50,7 +50,7 @@ final class CLIREDAS_GA4_Data_Provider
         if ('' === $property_id) {
             $fallback = new CLIREDAS_Data_Provider();
             $report = $fallback->get_report($range_key);
-            $report['error_message'] = __('GA4 is connected but no property is selected yet. Select a GA4 Property in Settings.', 'client-report-dashboard');
+            $report['error_message'] = __('GA4 is connected but no property is selected yet. Select a GA4 Property in Settings.', 'cliredas-analytics-dashboard');
             $report['source'] = 'mock';
             return $report;
         }
@@ -121,7 +121,7 @@ final class CLIREDAS_GA4_Data_Provider
         if ('' !== $traffic_sources_error && empty($report['error_message'])) {
             $report['error_message'] = sprintf(
                 /* translators: %s: error message */
-                __('Traffic sources unavailable. %s', 'client-report-dashboard'),
+                __('Traffic sources unavailable. %s', 'cliredas-analytics-dashboard'),
                 $traffic_sources_error
             );
         }
@@ -275,7 +275,7 @@ final class CLIREDAS_GA4_Data_Provider
         $report = $fallback->get_report($range_key);
 
         $message = trim((string) $error->get_error_message());
-        $message = $message ? $message : __('GA4 report failed. Showing mock data.', 'client-report-dashboard');
+        $message = $message ? $message : __('GA4 report failed. Showing mock data.', 'cliredas-analytics-dashboard');
 
         $report['error_message'] = $message;
         $report['source'] = 'mock';
@@ -525,7 +525,7 @@ final class CLIREDAS_GA4_Data_Provider
         // Make "/" clearer in the UI (titles can be misleading/non-unique in GA4).
         foreach ($out as $i => $row) {
             if (isset($row['url']) && '/' === (string) $row['url']) {
-                $out[$i]['title'] = __('Landing Page', 'client-report-dashboard');
+                $out[$i]['title'] = __('Landing Page', 'cliredas-analytics-dashboard');
             }
         }
 

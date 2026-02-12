@@ -62,7 +62,7 @@ final class CLIREDAS_Dashboard_Page
         CLIREDAS_Assets::enqueue_dashboard_assets(
             array(
                 'ajaxUrl'       => admin_url('admin-ajax.php'),
-                'nonce'         => wp_create_nonce('cliredas_dashboard'),
+                'cliredasNonce' => wp_create_nonce('cliredas_dashboard'),
                 'selectedRange' => $selected_range,
                 'ranges'        => $this->get_date_ranges(),
                 'upgradeUrl'    => admin_url('admin.php?page=cliredas-upgrade'),
@@ -82,15 +82,15 @@ final class CLIREDAS_Dashboard_Page
 
         if (! current_user_can($capability)) {
             wp_send_json_error(
-                array('message' => __('Permission denied.', 'client-report-dashboard')),
+                array('message' => __('Permission denied.', 'cliredas-analytics-dashboard')),
                 403
             );
         }
 
-        check_ajax_referer('cliredas_dashboard', 'nonce');
+        check_ajax_referer('cliredas_dashboard', 'cliredas_nonce');
 
         $ranges = $this->get_date_ranges();
-        $range_raw = filter_input(INPUT_POST, 'range', FILTER_UNSAFE_RAW);
+        $range_raw = filter_input(INPUT_POST, 'cliredas_range', FILTER_UNSAFE_RAW);
         $range  = is_string($range_raw) ? sanitize_key(wp_unslash($range_raw)) : $this->get_current_range_key();
 
         if (! array_key_exists($range, $ranges)) {
@@ -117,7 +117,7 @@ final class CLIREDAS_Dashboard_Page
         $capability = $this->settings->get_required_capability('dashboard');
 
         if (! current_user_can($capability)) {
-            wp_die(esc_html__('You do not have permission to view this page.', 'client-report-dashboard'));
+            wp_die(esc_html__('You do not have permission to view this page.', 'cliredas-analytics-dashboard'));
         }
 
         $ranges         = $this->get_date_ranges();
@@ -132,19 +132,19 @@ final class CLIREDAS_Dashboard_Page
             'cliredas_kpis',
             array(
                 'sessions' => array(
-                    'label' => __('Sessions', 'client-report-dashboard'),
+                    'label' => __('Sessions', 'cliredas-analytics-dashboard'),
                     'value' => number_format_i18n((int) $report['totals']['sessions']),
                 ),
                 'users'    => array(
-                    'label' => __('Total users', 'client-report-dashboard'),
+                    'label' => __('Total users', 'cliredas-analytics-dashboard'),
                     'value' => number_format_i18n((int) $report['totals']['users']),
                 ),
                 'pageviews' => array(
-                    'label' => __('Pageviews', 'client-report-dashboard'),
+                    'label' => __('Pageviews', 'cliredas-analytics-dashboard'),
                     'value' => number_format_i18n((int) ($report['totals']['pageviews'] ?? 0)),
                 ),
                 'engagement_time' => array(
-                    'label' => __('Avg engagement time', 'client-report-dashboard'),
+                    'label' => __('Avg engagement time', 'cliredas-analytics-dashboard'),
                     'value' => $this->format_duration((int) $report['totals']['avg_engagement_seconds']),
                 ),
             ),
@@ -155,11 +155,11 @@ final class CLIREDAS_Dashboard_Page
 ?>
         <div class="wrap cliredas-wrap">
             <div class="cliredas-header">
-                <h1 class="cliredas-title"><?php echo esc_html__('Client Report', 'client-report-dashboard'); ?></h1>
+                <h1 class="cliredas-title"><?php echo esc_html__('Client Report', 'cliredas-analytics-dashboard'); ?></h1>
 
                 <div class="cliredas-controls">
                     <label for="cliredas-date-range" class="cliredas-control-label">
-                        <?php echo esc_html__('Date range', 'client-report-dashboard'); ?>
+                        <?php echo esc_html__('Date range', 'cliredas-analytics-dashboard'); ?>
                     </label>
 
                     <select id="cliredas-date-range" class="cliredas-select">
@@ -173,7 +173,7 @@ final class CLIREDAS_Dashboard_Page
                     <span class="cliredas-range-hint" id="cliredas-range-hint">
                         <?php
                         /* translators: %s: selected date range label (e.g. "Last 7 days"). */
-                        echo esc_html(sprintf(__('Showing: %s', 'client-report-dashboard'), $selected_label));
+                        echo esc_html(sprintf(__('Showing: %s', 'cliredas-analytics-dashboard'), $selected_label));
                         ?>
                     </span>
 
@@ -184,7 +184,7 @@ final class CLIREDAS_Dashboard_Page
                         <input type="hidden" name="action" value="cliredas_clear_cache">
                         <?php wp_nonce_field('cliredas_clear_cache'); ?>
                         <button type="submit" class="button">
-                            <?php echo esc_html__('Clear cache', 'client-report-dashboard'); ?>
+                            <?php echo esc_html__('Clear cache', 'cliredas-analytics-dashboard'); ?>
                         </button>
                     </form>
                 <?php endif; ?>
@@ -198,13 +198,13 @@ final class CLIREDAS_Dashboard_Page
             <?php if (! $this->settings->is_ga4_connected()) : ?>
                 <div class="notice notice-info">
                     <p>
-                        <?php echo esc_html__('GA4 is not connected yet, so you are seeing sample data.', 'client-report-dashboard'); ?>
+                        <?php echo esc_html__('GA4 is not connected yet, so you are seeing sample data.', 'cliredas-analytics-dashboard'); ?>
                         <?php if (current_user_can('manage_options')) : ?>
                             <a href="<?php echo esc_url($settings_url); ?>">
-                                <?php echo esc_html__('Connect Google Analytics in Settings', 'client-report-dashboard'); ?>
+                                <?php echo esc_html__('Connect Google Analytics in Settings', 'cliredas-analytics-dashboard'); ?>
                             </a>
                         <?php else : ?>
-                            <?php echo esc_html__('Please ask an administrator to connect Google Analytics in Settings.', 'client-report-dashboard'); ?>
+                            <?php echo esc_html__('Please ask an administrator to connect Google Analytics in Settings.', 'cliredas-analytics-dashboard'); ?>
                         <?php endif; ?>
                     </p>
                 </div>
@@ -218,7 +218,7 @@ final class CLIREDAS_Dashboard_Page
                     <span class="cliredas-ga4-warning-text"><?php echo esc_html($ga4_warning_message); ?></span>
                     <?php if (current_user_can('manage_options')) : ?>
                         <a href="<?php echo esc_url($settings_url); ?>">
-                            <?php echo esc_html__('Open Settings', 'client-report-dashboard'); ?>
+                            <?php echo esc_html__('Open Settings', 'cliredas-analytics-dashboard'); ?>
                         </a>
                     <?php endif; ?>
                 </p>
@@ -236,24 +236,13 @@ final class CLIREDAS_Dashboard_Page
                         echo esc_html(
                             sprintf(
                                 /* translators: %d: number of cache entries cleared */
-                                __('Cache cleared (%d entries).', 'client-report-dashboard'),
+                                __('Cache cleared (%d entries).', 'cliredas-analytics-dashboard'),
                                 absint(wp_unslash($cache_cleared))
                             )
                         );
                         ?>
                     </p>
                 </div>
-
-                <script>
-                    (function() {
-                        try {
-                            var url = new URL(window.location.href);
-                            url.searchParams.delete('cliredas_cache_cleared');
-                            url.searchParams.delete('cliredas_cache_cleared_nonce');
-                            window.history.replaceState({}, document.title, url.toString());
-                        } catch (e) {}
-                    })();
-                </script>
             <?php endif; ?>
 
             <?php do_action('cliredas_dashboard_before_kpis', $report, $selected_key); ?>
@@ -272,13 +261,13 @@ final class CLIREDAS_Dashboard_Page
             <div class="cliredas-grid">
                 <div class="cliredas-card cliredas-card-wide">
                     <div class="cliredas-card-header">
-                        <h2 class="cliredas-card-title" id="cliredas-chart-title"><?php echo esc_html__('Sessions over time', 'client-report-dashboard'); ?></h2>
+                        <h2 class="cliredas-card-title" id="cliredas-chart-title"><?php echo esc_html__('Sessions over time', 'cliredas-analytics-dashboard'); ?></h2>
 
                         <label class="cliredas-inline-control" for="cliredas-chart-metric">
-                            <span class="cliredas-inline-control-label"><?php echo esc_html__('Chart', 'client-report-dashboard'); ?></span>
+                            <span class="cliredas-inline-control-label"><?php echo esc_html__('Chart', 'cliredas-analytics-dashboard'); ?></span>
                             <select id="cliredas-chart-metric" class="cliredas-select cliredas-select-compact">
-                                <option value="sessions"><?php echo esc_html__('Sessions', 'client-report-dashboard'); ?></option>
-                                <option value="users"><?php echo esc_html__('Total users', 'client-report-dashboard'); ?></option>
+                                <option value="sessions"><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></option>
+                                <option value="users"><?php echo esc_html__('Total users', 'cliredas-analytics-dashboard'); ?></option>
                             </select>
                         </label>
                     </div>
@@ -289,16 +278,16 @@ final class CLIREDAS_Dashboard_Page
                 </div>
 
                 <div class="cliredas-card cliredas-card-wide">
-                    <h2 class="cliredas-card-title"><?php echo esc_html__('Top pages', 'client-report-dashboard'); ?></h2>
+                    <h2 class="cliredas-card-title"><?php echo esc_html__('Top pages', 'cliredas-analytics-dashboard'); ?></h2>
 
                     <table class="widefat striped cliredas-table" id="cliredas-top-pages">
                         <thead>
                             <tr>
-                                <th><?php echo esc_html__('Page Title', 'client-report-dashboard'); ?></th>
-                                <th><?php echo esc_html__('URL', 'client-report-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Sessions', 'client-report-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Views', 'client-report-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Avg engagement time', 'client-report-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Page Title', 'cliredas-analytics-dashboard'); ?></th>
+                                <th><?php echo esc_html__('URL', 'cliredas-analytics-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Views', 'cliredas-analytics-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Avg engagement time', 'cliredas-analytics-dashboard'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -316,13 +305,13 @@ final class CLIREDAS_Dashboard_Page
                 </div>
 
                 <div class="cliredas-card">
-                    <h2 class="cliredas-card-title"><?php echo esc_html__('Device breakdown', 'client-report-dashboard'); ?></h2>
+                    <h2 class="cliredas-card-title"><?php echo esc_html__('Device breakdown', 'cliredas-analytics-dashboard'); ?></h2>
 
                     <table class="widefat striped cliredas-table" id="cliredas-devices">
                         <thead>
                             <tr>
-                                <th><?php echo esc_html__('Device', 'client-report-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Sessions', 'client-report-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Device', 'cliredas-analytics-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -337,7 +326,7 @@ final class CLIREDAS_Dashboard_Page
                 </div>
 
                 <div class="cliredas-card">
-                    <h2 class="cliredas-card-title"><?php echo esc_html__('Traffic sources', 'client-report-dashboard'); ?></h2>
+                    <h2 class="cliredas-card-title"><?php echo esc_html__('Traffic sources', 'cliredas-analytics-dashboard'); ?></h2>
 
                     <div class="cliredas-chart-wrap cliredas-chart-wrap-small">
                         <canvas id="cliredas-traffic-sources-chart" height="180"></canvas>
@@ -346,19 +335,19 @@ final class CLIREDAS_Dashboard_Page
                     <table class="widefat striped cliredas-table" id="cliredas-traffic-sources">
                         <thead>
                             <tr>
-                                <th><?php echo esc_html__('Source', 'client-report-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Sessions', 'client-report-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Source', 'cliredas-analytics-dashboard'); ?></th>
+                                <th><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php
                             $sources = isset($report['traffic_sources']) && is_array($report['traffic_sources']) ? $report['traffic_sources'] : array();
                             $labels = array(
-                                'organic_search' => __('Organic Search', 'client-report-dashboard'),
-                                'direct'         => __('Direct', 'client-report-dashboard'),
-                                'referral'       => __('Referral', 'client-report-dashboard'),
-                                'social'         => __('Social', 'client-report-dashboard'),
-                                'other'          => __('Other', 'client-report-dashboard'),
+                                'organic_search' => __('Organic Search', 'cliredas-analytics-dashboard'),
+                                'direct'         => __('Direct', 'cliredas-analytics-dashboard'),
+                                'referral'       => __('Referral', 'cliredas-analytics-dashboard'),
+                                'social'         => __('Social', 'cliredas-analytics-dashboard'),
+                                'other'          => __('Other', 'cliredas-analytics-dashboard'),
                             );
                             foreach ($labels as $key => $label) :
                                 $count = isset($sources[$key]) ? (int) $sources[$key] : 0;
@@ -375,18 +364,6 @@ final class CLIREDAS_Dashboard_Page
 
             <?php do_action('cliredas_dashboard_sections', $report, $selected_key); ?>
 
-            <div class="cliredas-footer">
-                <?php
-                $show_powered_by = (bool) apply_filters('cliredas_show_powered_by', true);
-                if ($show_powered_by) :
-                ?>
-                    <span class="cliredas-powered-by"><?php echo esc_html__('Powered by Client Reporting Dashboard', 'client-report-dashboard'); ?></span>
-                <?php endif; ?>
-
-                <a class="cliredas-upgrade-link" href="<?php echo esc_url(admin_url('admin.php?page=cliredas-upgrade')); ?>">
-                    <?php echo esc_html__('Pro (Coming Soon)', 'client-report-dashboard'); ?>
-                </a>
-            </div>
         </div>
 <?php
     }
@@ -406,7 +383,7 @@ final class CLIREDAS_Dashboard_Page
         if (! empty($report['error_message'])) {
             $report['error_message'] = __(
                 'GA4 data is temporarily unavailable. Please ask an administrator to reconnect Google Analytics.',
-                'client-report-dashboard'
+                'cliredas-analytics-dashboard'
             );
         }
 
@@ -421,15 +398,15 @@ final class CLIREDAS_Dashboard_Page
     private function get_date_ranges()
     {
         $ranges = array(
-            'last_7_days'  => __('Last 7 days', 'client-report-dashboard'),
-            'last_30_days' => __('Last 30 days', 'client-report-dashboard'),
+            'last_7_days'  => __('Last 7 days', 'cliredas-analytics-dashboard'),
+            'last_30_days' => __('Last 30 days', 'cliredas-analytics-dashboard'),
         );
 
         $ranges = apply_filters('cliredas_date_ranges', $ranges);
 
         if (! is_array($ranges) || empty($ranges)) {
             $ranges = array(
-                'last_7_days' => __('Last 7 days', 'client-report-dashboard'),
+                'last_7_days' => __('Last 7 days', 'cliredas-analytics-dashboard'),
             );
         }
 
@@ -448,7 +425,12 @@ final class CLIREDAS_Dashboard_Page
 
         $default = isset($keys[0]) ? (string) $keys[0] : 'last_7_days';
 
-        $range_raw = filter_input(INPUT_GET, 'range', FILTER_UNSAFE_RAW);
+        $range_raw = filter_input(INPUT_GET, 'cliredas_range', FILTER_UNSAFE_RAW);
+        if (! is_string($range_raw)) {
+            // Backward compatibility for existing links using ?range=...
+            $range_raw = filter_input(INPUT_GET, 'range', FILTER_UNSAFE_RAW);
+        }
+
         $range = is_string($range_raw) ? sanitize_key(wp_unslash($range_raw)) : $default;
 
         if (! array_key_exists($range, $ranges)) {
@@ -474,14 +456,14 @@ final class CLIREDAS_Dashboard_Page
         if ($minutes <= 0) {
             return sprintf(
                 /* translators: %d: number of seconds */
-                _n('%d second', '%d seconds', $remain, 'client-report-dashboard'),
+                _n('%d second', '%d seconds', $remain, 'cliredas-analytics-dashboard'),
                 $remain
             );
         }
 
         return sprintf(
             /* translators: 1: minutes, 2: seconds */
-            __('%1$dm %2$ds', 'client-report-dashboard'),
+            __('%1$dm %2$ds', 'cliredas-analytics-dashboard'),
             $minutes,
             $remain
         );

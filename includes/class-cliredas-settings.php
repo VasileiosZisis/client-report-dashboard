@@ -52,6 +52,29 @@ final class CLIREDAS_Settings
     {
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_menu', array($this, 'add_options_page'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
+    }
+
+    /**
+     * Enqueue assets for plugin settings screens only.
+     *
+     * @param string $hook_suffix Current admin hook suffix.
+     * @return void
+     */
+    public function enqueue_assets($hook_suffix)
+    {
+        if (! is_string($hook_suffix)) {
+            return;
+        }
+
+        $is_core_settings_screen = ('settings_page_' . self::SETTINGS_PAGE_SLUG) === $hook_suffix;
+        $is_client_report_settings_submenu = false !== strpos($hook_suffix, 'cliredas-settings-shortcut');
+
+        if (! $is_core_settings_screen && ! $is_client_report_settings_submenu) {
+            return;
+        }
+
+        CLIREDAS_Assets::enqueue_settings_assets();
     }
 
     /**
@@ -73,14 +96,14 @@ final class CLIREDAS_Settings
 
         add_settings_section(
             'cliredas_section_connection',
-            __('GA4 Connection', 'client-report-dashboard'),
+            __('GA4 Connection', 'cliredas-analytics-dashboard'),
             array($this, 'render_connection_section'),
             self::SETTINGS_PAGE_SLUG
         );
 
         add_settings_field(
             'cliredas_ga4_client_id',
-            __('OAuth Client ID', 'client-report-dashboard'),
+            __('OAuth Client ID', 'cliredas-analytics-dashboard'),
             array($this, 'render_ga4_client_id_field'),
             self::SETTINGS_PAGE_SLUG,
             'cliredas_section_connection'
@@ -88,7 +111,7 @@ final class CLIREDAS_Settings
 
         add_settings_field(
             'cliredas_ga4_client_secret',
-            __('OAuth Client Secret', 'client-report-dashboard'),
+            __('OAuth Client Secret', 'cliredas-analytics-dashboard'),
             array($this, 'render_ga4_client_secret_field'),
             self::SETTINGS_PAGE_SLUG,
             'cliredas_section_connection'
@@ -96,7 +119,7 @@ final class CLIREDAS_Settings
 
         add_settings_field(
             'cliredas_ga4_redirect_uri',
-            __('Redirect URI', 'client-report-dashboard'),
+            __('Redirect URI', 'cliredas-analytics-dashboard'),
             array($this, 'render_ga4_redirect_uri_field'),
             self::SETTINGS_PAGE_SLUG,
             'cliredas_section_connection'
@@ -104,7 +127,7 @@ final class CLIREDAS_Settings
 
         add_settings_field(
             'cliredas_ga4_property_id',
-            __('GA4 Property', 'client-report-dashboard'),
+            __('GA4 Property', 'cliredas-analytics-dashboard'),
             array($this, 'render_ga4_property_field'),
             self::SETTINGS_PAGE_SLUG,
             'cliredas_section_connection'
@@ -112,7 +135,7 @@ final class CLIREDAS_Settings
 
         add_settings_field(
             'cliredas_connection_status',
-            __('Status', 'client-report-dashboard'),
+            __('Status', 'cliredas-analytics-dashboard'),
             array($this, 'render_connection_status_field'),
             self::SETTINGS_PAGE_SLUG,
             'cliredas_section_connection'
@@ -120,30 +143,31 @@ final class CLIREDAS_Settings
 
         add_settings_section(
             'cliredas_section_access',
-            __('Access Control', 'client-report-dashboard'),
+            __('Access Control', 'cliredas-analytics-dashboard'),
             array($this, 'render_access_section'),
             self::SETTINGS_PAGE_SLUG
         );
 
         add_settings_field(
             'cliredas_allow_editors',
-            __('Dashboard visibility', 'client-report-dashboard'),
+            __('Dashboard visibility', 'cliredas-analytics-dashboard'),
             array($this, 'render_allow_editors_field'),
             self::SETTINGS_PAGE_SLUG,
             'cliredas_section_access'
         );
+
     }
 
     /**
-     * Add Settings → Client Report page.
+     * Add Settings â†’ Client Report page.
      *
      * @return void
      */
     public function add_options_page()
     {
         add_options_page(
-            __('Client Report Settings', 'client-report-dashboard'),
-            __('Client Report', 'client-report-dashboard'),
+            __('Client Report Settings', 'cliredas-analytics-dashboard'),
+            __('Client Report', 'cliredas-analytics-dashboard'),
             'manage_options',
             self::SETTINGS_PAGE_SLUG,
             array($this, 'render_settings_page')
@@ -267,7 +291,7 @@ final class CLIREDAS_Settings
      */
     public function render_access_section()
     {
-        echo '<p>' . esc_html__('Control who can view the Client Report dashboard.', 'client-report-dashboard') . '</p>';
+        echo '<p>' . esc_html__('Control who can view the Client Report dashboard.', 'cliredas-analytics-dashboard') . '</p>';
     }
 
     /**
@@ -283,7 +307,7 @@ final class CLIREDAS_Settings
 ?>
         <label for="cliredas_allow_editors">
             <input type="checkbox" id="cliredas_allow_editors" name="<?php echo esc_attr(self::OPTION_KEY); ?>[allow_editors]" value="1" <?php checked(1, $allow_editors); ?> />
-            <?php echo esc_html__('Show dashboard to Editors as well as Administrators', 'client-report-dashboard'); ?>
+            <?php echo esc_html__('Show dashboard to Editors as well as Administrators', 'cliredas-analytics-dashboard'); ?>
         </label>
     <?php
     }
@@ -296,16 +320,28 @@ final class CLIREDAS_Settings
 	    public function render_settings_page()
 	    {
 	        if (! current_user_can('manage_options')) {
-	            wp_die(esc_html__('You do not have permission to access this page.', 'client-report-dashboard'));
+	            wp_die(esc_html__('You do not have permission to access this page.', 'cliredas-analytics-dashboard'));
 	        }
 	    ?>
 	        <div class="wrap">
-	            <h1><?php echo esc_html__('Client Report Settings', 'client-report-dashboard'); ?></h1>
+	            <h1><?php echo esc_html__('Client Report Settings', 'cliredas-analytics-dashboard'); ?></h1>
 
 	            <?php
-	            $ga4_notice = isset($_GET['cliredas_ga4_notice']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_notice'])) : '';
-	            $ga4_error  = isset($_GET['cliredas_ga4_error']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_error'])) : '';
-	            $ga4_error_desc = isset($_GET['cliredas_ga4_error_desc']) ? sanitize_text_field(wp_unslash($_GET['cliredas_ga4_error_desc'])) : '';
+	            $ga4_notice_raw = filter_input(INPUT_GET, 'cliredas_ga4_notice', FILTER_UNSAFE_RAW);
+	            $ga4_error_raw = filter_input(INPUT_GET, 'cliredas_ga4_error', FILTER_UNSAFE_RAW);
+	            $ga4_error_desc_raw = filter_input(INPUT_GET, 'cliredas_ga4_error_desc', FILTER_UNSAFE_RAW);
+	            $ga4_notice_nonce_raw = filter_input(INPUT_GET, 'cliredas_ga4_notice_nonce', FILTER_UNSAFE_RAW);
+
+	            $ga4_notice_nonce_ok = is_string($ga4_notice_nonce_raw) && wp_verify_nonce(sanitize_text_field($ga4_notice_nonce_raw), 'cliredas_ga4_notice');
+
+	            $ga4_notice = '';
+	            $ga4_error = '';
+	            $ga4_error_desc = '';
+	            if ($ga4_notice_nonce_ok) {
+	                $ga4_notice = is_string($ga4_notice_raw) ? sanitize_key($ga4_notice_raw) : '';
+	                $ga4_error = is_string($ga4_error_raw) ? sanitize_key($ga4_error_raw) : '';
+	                $ga4_error_desc = is_string($ga4_error_desc_raw) ? sanitize_text_field($ga4_error_desc_raw) : '';
+	            }
 
 	            $ga4_notice_message = '';
 	            $ga4_notice_class   = '';
@@ -319,45 +355,45 @@ final class CLIREDAS_Settings
 
 	                    $ga4_notice_message = sprintf(
 	                        /* translators: %s: Google OAuth error code */
-	                        __('Google OAuth error: %s', 'client-report-dashboard'),
-	                        $oauth_code ? $oauth_code : __('unknown', 'client-report-dashboard')
+	                        __('Google OAuth error: %s', 'cliredas-analytics-dashboard'),
+	                        $oauth_code ? $oauth_code : __('unknown', 'cliredas-analytics-dashboard')
 	                    );
 	                }
 
 	                switch ($ga4_error) {
 	                    case 'missing_client_id':
-	                        $ga4_notice_message = __('Missing OAuth Client ID. Save your Client ID first, then click Connect again.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Missing OAuth Client ID. Save your Client ID first, then click Connect again.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'missing_client_secret':
-	                        $ga4_notice_message = __('Missing OAuth Client Secret. Save your Client Secret first, then click Connect again.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Missing OAuth Client Secret. Save your Client Secret first, then click Connect again.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'missing_code':
-	                        $ga4_notice_message = __('OAuth callback did not include an authorization code. Please try connecting again.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('OAuth callback did not include an authorization code. Please try connecting again.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'missing_state':
-	                        $ga4_notice_message = __('OAuth callback is missing state verification. Please try connecting again.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('OAuth callback is missing state verification. Please try connecting again.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'invalid_state':
-	                        $ga4_notice_message = __('OAuth state verification failed. Please try connecting again.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('OAuth state verification failed. Please try connecting again.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'missing_refresh_token':
-	                        $ga4_notice_message = __('Connected, but Google did not return a refresh token. Please reconnect and approve access again.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Connected, but Google did not return a refresh token. Please reconnect and approve access again.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'token_exchange_failed':
-	                        $ga4_notice_message = __('Token exchange failed. Please try connecting again.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Token exchange failed. Please try connecting again.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'token_response_invalid':
-	                        $ga4_notice_message = __('Token exchange failed due to an invalid response. Please try again.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Token exchange failed due to an invalid response. Please try again.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'token_missing_access_token':
-	                        $ga4_notice_message = __('Token exchange failed (missing access token). Please try again.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Token exchange failed (missing access token). Please try again.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'oauth_access_denied':
-	                        $ga4_notice_message = __('You denied access on the Google consent screen.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('You denied access on the Google consent screen.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    default:
 	                        if ('' === $ga4_notice_message) {
-	                            $ga4_notice_message = __('GA4 connection failed. Please try again.', 'client-report-dashboard');
+	                            $ga4_notice_message = __('GA4 connection failed. Please try again.', 'cliredas-analytics-dashboard');
 	                        }
 	                        break;
 	                }
@@ -367,19 +403,19 @@ final class CLIREDAS_Settings
 	                switch ($ga4_notice) {
 	                    case 'callback_reached':
 	                        $ga4_notice_class   = 'notice notice-info is-dismissible';
-	                        $ga4_notice_message = __('Google OAuth callback received. Token exchange will be implemented in the next milestone.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Google OAuth callback received. Token exchange will be implemented in the next milestone.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'connected':
-	                        $ga4_notice_message = __('Connected to Google Analytics.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Connected to Google Analytics.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'secret_cleared':
-	                        $ga4_notice_message = __('Client secret cleared. GA4 has been disconnected.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Client secret cleared. GA4 has been disconnected.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    case 'disconnected':
-	                        $ga4_notice_message = __('Disconnected from Google Analytics.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('Disconnected from Google Analytics.', 'cliredas-analytics-dashboard');
 	                        break;
 	                    default:
-	                        $ga4_notice_message = __('GA4 status updated.', 'client-report-dashboard');
+	                        $ga4_notice_message = __('GA4 status updated.', 'cliredas-analytics-dashboard');
 	                        break;
 	                }
 	            }
@@ -392,18 +428,6 @@ final class CLIREDAS_Settings
 	                        <p class="description"><?php echo esc_html($ga4_error_desc); ?></p>
 	                    <?php endif; ?>
 	                </div>
-
-	                <script>
-	                    (function() {
-	                        try {
-	                            var url = new URL(window.location.href);
-	                            url.searchParams.delete('cliredas_ga4_notice');
-	                            url.searchParams.delete('cliredas_ga4_error');
-	                            url.searchParams.delete('cliredas_ga4_error_desc');
-	                            window.history.replaceState({}, document.title, url.toString());
-	                        } catch (e) {}
-	                    })();
-	                </script>
 	            <?php endif; ?>
 
 	            <?php
@@ -418,29 +442,19 @@ final class CLIREDAS_Settings
 	                        echo esc_html(
                              sprintf(
                                  /* translators: %d: number of cache entries cleared */
-                                 __('Cached reports cleared (%d).', 'client-report-dashboard'),
+                                 __('Cached reports cleared (%d).', 'cliredas-analytics-dashboard'),
                                  absint(wp_unslash($cache_cleared))
                              )
                          );
                          ?>
-                     </p>
-                 </div>
- 
-                 <script>
-                     (function() {
-                         try {
-                             var url = new URL(window.location.href);
-                             url.searchParams.delete('cliredas_cache_cleared');
-                             url.searchParams.delete('cliredas_cache_cleared_nonce');
-                             window.history.replaceState({}, document.title, url.toString());
-                         } catch (e) {}
-                     })();
-                 </script>
-             <?php endif; ?>
+	                     </p>
+	                 </div>
+	             <?php endif; ?>
 
             <?php
             // Only show errors (not the success message).
-            if (isset($_GET['settings-updated'])) {
+            $settings_updated = filter_input(INPUT_GET, 'settings-updated', FILTER_UNSAFE_RAW);
+            if (is_string($settings_updated) && '' !== $settings_updated) {
                 // Do nothing; let core show the success notice (or your own).
             } else {
                 settings_errors();
@@ -457,11 +471,11 @@ final class CLIREDAS_Settings
 
             <hr />
 
-            <h2><?php echo esc_html__('Tools', 'client-report-dashboard'); ?></h2>
+            <h2><?php echo esc_html__('Tools', 'cliredas-analytics-dashboard'); ?></h2>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="cliredas_clear_cache">
                 <?php wp_nonce_field('cliredas_clear_cache'); ?>
-                <?php submit_button(__('Clear cached reports', 'client-report-dashboard'), 'secondary', 'submit', false); ?>
+                <?php submit_button(__('Clear cached reports', 'cliredas-analytics-dashboard'), 'secondary', 'submit', false); ?>
             </form>
         </div>
     <?php
@@ -474,7 +488,7 @@ final class CLIREDAS_Settings
      */
     public function render_connection_section()
     {
-        echo '<p>' . esc_html__('Connect Google Analytics 4 to display real analytics data on the dashboard.', 'client-report-dashboard') . '</p>';
+        echo '<p>' . esc_html__('Connect Google Analytics 4 to display real analytics data on the dashboard.', 'cliredas-analytics-dashboard') . '</p>';
     }
 
     /**
@@ -491,8 +505,8 @@ final class CLIREDAS_Settings
         $can_connect = ('' !== $client_id);
 
         $status_text = $connected
-            ? __('Connected', 'client-report-dashboard')
-            : __('Not connected', 'client-report-dashboard');
+            ? __('Connected', 'cliredas-analytics-dashboard')
+            : __('Not connected', 'cliredas-analytics-dashboard');
 
         $connect_url = wp_nonce_url(
             admin_url('admin-post.php?action=cliredas_ga4_connect'),
@@ -508,20 +522,20 @@ final class CLIREDAS_Settings
         if ($connected) {
             $token = $this->get_valid_access_token();
             if (is_wp_error($token)) {
-                $status_text = __('Connected (reconnect required)', 'client-report-dashboard');
+                $status_text = __('Connected (reconnect required)', 'cliredas-analytics-dashboard');
                 $token_error_message = trim((string) $token->get_error_message());
                 if ('' !== $token_error_message) {
                     $token_error_message = sanitize_text_field($token_error_message);
                     $token_error_message = substr($token_error_message, 0, 200);
                 } else {
-                    $token_error_message = __('Your saved connection is no longer valid. Please reconnect Google Analytics.', 'client-report-dashboard');
+                    $token_error_message = __('Your saved connection is no longer valid. Please reconnect Google Analytics.', 'cliredas-analytics-dashboard');
                 }
             }
         }
 
         $property_id = isset($settings['ga4_property_id']) ? trim((string) $settings['ga4_property_id']) : '';
         if ($connected && '' === $token_error_message && '' === $property_id) {
-            $status_text = __('Connected (property not selected)', 'client-report-dashboard');
+            $status_text = __('Connected (property not selected)', 'cliredas-analytics-dashboard');
         }
 
     ?>
@@ -535,24 +549,24 @@ final class CLIREDAS_Settings
             <?php if (! $connected) : ?>
                 <?php if ($can_connect) : ?>
                     <a class="button button-primary" href="<?php echo esc_url($connect_url); ?>">
-                        <?php echo esc_html__('Connect Google Analytics', 'client-report-dashboard'); ?>
+                        <?php echo esc_html__('Connect Google Analytics', 'cliredas-analytics-dashboard'); ?>
                     </a>
                 <?php else : ?>
                     <a class="button button-primary disabled" href="#" aria-disabled="true" onclick="return false;">
-                        <?php echo esc_html__('Connect Google Analytics', 'client-report-dashboard'); ?>
+                        <?php echo esc_html__('Connect Google Analytics', 'cliredas-analytics-dashboard'); ?>
                     </a>
                     <span class="description" style="margin-left:8px;">
-                        <?php echo esc_html__('Save your Client ID first.', 'client-report-dashboard'); ?>
+                        <?php echo esc_html__('Save your Client ID first.', 'cliredas-analytics-dashboard'); ?>
                     </span>
                 <?php endif; ?>
             <?php else : ?>
                 <?php if ('' !== $token_error_message) : ?>
                     <a class="button button-primary" href="<?php echo esc_url($connect_url); ?>">
-                        <?php echo esc_html__('Reconnect Google Analytics', 'client-report-dashboard'); ?>
+                        <?php echo esc_html__('Reconnect Google Analytics', 'cliredas-analytics-dashboard'); ?>
                     </a>
                 <?php endif; ?>
                 <a class="button" href="<?php echo esc_url($disconnect_url); ?>">
-                    <?php echo esc_html__('Disconnect', 'client-report-dashboard'); ?>
+                    <?php echo esc_html__('Disconnect', 'cliredas-analytics-dashboard'); ?>
                 </a>
             <?php endif; ?>
         </p>
@@ -593,9 +607,9 @@ final class CLIREDAS_Settings
             class="regular-text"
             name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_client_id]"
             value="<?php echo esc_attr($value); ?>"
-            placeholder="<?php echo esc_attr__('1234-abc.apps.googleusercontent.com', 'client-report-dashboard'); ?>" />
+            placeholder="<?php echo esc_attr__('1234-abc.apps.googleusercontent.com', 'cliredas-analytics-dashboard'); ?>" />
         <p class="description">
-            <?php echo esc_html__('From Google Cloud Console → OAuth consent screen / Credentials.', 'client-report-dashboard'); ?>
+            <?php echo esc_html__('From Google Cloud Console â†’ OAuth consent screen / Credentials.', 'cliredas-analytics-dashboard'); ?>
         </p>
     <?php
     }
@@ -610,8 +624,8 @@ final class CLIREDAS_Settings
 	        );
 	    ?>
 	        <p style="margin-top:0;">
-	            <strong><?php echo esc_html__('Client secret:', 'client-report-dashboard'); ?></strong>
-	            <?php echo esc_html($has_secret ? __('Saved', 'client-report-dashboard') : __('Not set', 'client-report-dashboard')); ?>
+	            <strong><?php echo esc_html__('Client secret:', 'cliredas-analytics-dashboard'); ?></strong>
+	            <?php echo esc_html($has_secret ? __('Saved', 'cliredas-analytics-dashboard') : __('Not set', 'cliredas-analytics-dashboard')); ?>
 	        </p>
 
 	        <input type="password"
@@ -619,16 +633,16 @@ final class CLIREDAS_Settings
 	            name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_client_secret]"
 	            value=""
 	            autocomplete="new-password"
-	            placeholder="<?php echo esc_attr($has_secret ? __('Enter to replace', 'client-report-dashboard') : __('Enter client secret', 'client-report-dashboard')); ?>" />
+	            placeholder="<?php echo esc_attr($has_secret ? __('Enter to replace', 'cliredas-analytics-dashboard') : __('Enter client secret', 'cliredas-analytics-dashboard')); ?>" />
 	        <p class="description">
-	            <?php echo esc_html__('Leave blank to keep the currently saved secret.', 'client-report-dashboard'); ?>
+	            <?php echo esc_html__('Leave blank to keep the currently saved secret.', 'cliredas-analytics-dashboard'); ?>
 	        </p>
 
 	        <?php if ($has_secret) : ?>
 	            <p>
 	                <a class="button button-secondary" href="<?php echo esc_url($clear_url); ?>"
-	                    onclick="return confirm('<?php echo esc_js(__('This will clear the saved client secret and disconnect GA4. Continue?', 'client-report-dashboard')); ?>');">
-	                    <?php echo esc_html__('Clear secret', 'client-report-dashboard'); ?>
+	                    onclick="return confirm('<?php echo esc_js(__('This will clear the saved client secret and disconnect GA4. Continue?', 'cliredas-analytics-dashboard')); ?>');">
+	                    <?php echo esc_html__('Clear secret', 'cliredas-analytics-dashboard'); ?>
 	                </a>
 	            </p>
 	        <?php endif; ?>
@@ -641,7 +655,7 @@ final class CLIREDAS_Settings
     ?>
         <input type="text" class="large-text code" readonly value="<?php echo esc_attr($redirect_uri); ?>" />
         <p class="description">
-            <?php echo esc_html__('Add this exact URL as an Authorized redirect URI in your Google OAuth client.', 'client-report-dashboard'); ?>
+            <?php echo esc_html__('Add this exact URL as an Authorized redirect URI in your Google OAuth client.', 'cliredas-analytics-dashboard'); ?>
         </p>
 <?php
     }
@@ -656,7 +670,7 @@ final class CLIREDAS_Settings
         $settings = $this->get_settings();
 
         if (! $this->is_ga4_connected()) {
-            echo '<p class="description">' . esc_html__('Connect Google Analytics first to load available properties.', 'client-report-dashboard') . '</p>';
+            echo '<p class="description">' . esc_html__('Connect Google Analytics first to load available properties.', 'cliredas-analytics-dashboard') . '</p>';
             return;
         }
 
@@ -682,7 +696,7 @@ final class CLIREDAS_Settings
                 true
             );
 
-            echo '<p class="description">' . esc_html__('Unable to load GA4 properties right now.', 'client-report-dashboard') . '</p>';
+            echo '<p class="description">' . esc_html__('Unable to load GA4 properties right now.', 'cliredas-analytics-dashboard') . '</p>';
             if ('' !== $msg) {
                 echo '<p class="description">' . esc_html($msg) . '</p>';
             }
@@ -692,20 +706,20 @@ final class CLIREDAS_Settings
                     admin_url('admin-post.php?action=cliredas_ga4_connect'),
                     'cliredas_ga4_connect'
                 );
-                echo '<p><a class="button button-primary" href="' . esc_url($connect_url) . '">' . esc_html__('Reconnect Google Analytics', 'client-report-dashboard') . '</a></p>';
+                echo '<p><a class="button button-primary" href="' . esc_url($connect_url) . '">' . esc_html__('Reconnect Google Analytics', 'cliredas-analytics-dashboard') . '</a></p>';
             }
 
             return;
         }
 
         if (empty($properties)) {
-            echo '<p class="description">' . esc_html__('No GA4 properties were found for this Google account.', 'client-report-dashboard') . '</p>';
+            echo '<p class="description">' . esc_html__('No GA4 properties were found for this Google account.', 'cliredas-analytics-dashboard') . '</p>';
             return;
         }
 
     ?>
         <select name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_property_id]" class="regular-text">
-            <option value=""><?php echo esc_html__('Select a property', 'client-report-dashboard'); ?></option>
+            <option value=""><?php echo esc_html__('Select a property', 'cliredas-analytics-dashboard'); ?></option>
             <?php foreach ($properties as $property_id => $label) : ?>
                 <option value="<?php echo esc_attr((string) $property_id); ?>" <?php selected($selected, (string) $property_id); ?>>
                     <?php echo esc_html((string) $label); ?>
@@ -713,11 +727,11 @@ final class CLIREDAS_Settings
             <?php endforeach; ?>
         </select>
         <p class="description">
-            <?php echo esc_html__('This selects which GA4 property the dashboard will report on.', 'client-report-dashboard'); ?>
+            <?php echo esc_html__('This selects which GA4 property the dashboard will report on.', 'cliredas-analytics-dashboard'); ?>
         </p>
         <?php if ('' === trim((string) $selected)) : ?>
             <p class="description">
-                <?php echo esc_html__('No property selected yet. Choose one to enable GA4 reporting for the dashboard.', 'client-report-dashboard'); ?>
+                <?php echo esc_html__('No property selected yet. Choose one to enable GA4 reporting for the dashboard.', 'cliredas-analytics-dashboard'); ?>
             </p>
         <?php endif; ?>
     <?php
@@ -741,17 +755,17 @@ final class CLIREDAS_Settings
 
         $refresh_token = isset($settings['ga4_refresh_token']) ? trim((string) $settings['ga4_refresh_token']) : '';
         if ('' === $refresh_token) {
-            return new WP_Error('missing_refresh_token', __('Missing refresh token. Please reconnect Google Analytics.', 'client-report-dashboard'));
+            return new WP_Error('missing_refresh_token', __('Missing refresh token. Please reconnect Google Analytics.', 'cliredas-analytics-dashboard'));
         }
 
         $client_id = isset($settings['ga4_client_id']) ? trim((string) $settings['ga4_client_id']) : '';
         if ('' === $client_id) {
-            return new WP_Error('missing_client_id', __('Missing OAuth Client ID.', 'client-report-dashboard'));
+            return new WP_Error('missing_client_id', __('Missing OAuth Client ID.', 'cliredas-analytics-dashboard'));
         }
 
         $client_secret = isset($settings['ga4_client_secret']) ? trim((string) $settings['ga4_client_secret']) : '';
         if ('' === $client_secret) {
-            return new WP_Error('missing_client_secret', __('Missing OAuth Client Secret.', 'client-report-dashboard'));
+            return new WP_Error('missing_client_secret', __('Missing OAuth Client Secret.', 'cliredas-analytics-dashboard'));
         }
 
         $response = wp_remote_post(
@@ -776,13 +790,13 @@ final class CLIREDAS_Settings
         $data   = json_decode($body, true);
 
         if (! is_array($data)) {
-            return new WP_Error('token_refresh_invalid', __('Invalid token refresh response from Google.', 'client-report-dashboard'));
+            return new WP_Error('token_refresh_invalid', __('Invalid token refresh response from Google.', 'cliredas-analytics-dashboard'));
         }
 
         if (200 !== $status) {
             $remote_error = isset($data['error']) ? (string) $data['error'] : '';
             $remote_desc  = isset($data['error_description']) ? (string) $data['error_description'] : '';
-            $msg = $remote_error ? $remote_error : __('Token refresh failed.', 'client-report-dashboard');
+            $msg = $remote_error ? $remote_error : __('Token refresh failed.', 'cliredas-analytics-dashboard');
             if ('' !== $remote_desc) {
                 $msg .= ' - ' . $remote_desc;
             }
@@ -791,7 +805,7 @@ final class CLIREDAS_Settings
 
         $new_access_token = isset($data['access_token']) ? trim((string) $data['access_token']) : '';
         if ('' === $new_access_token) {
-            return new WP_Error('token_refresh_missing_access_token', __('Token refresh response is missing access_token.', 'client-report-dashboard'));
+            return new WP_Error('token_refresh_missing_access_token', __('Token refresh response is missing access_token.', 'cliredas-analytics-dashboard'));
         }
 
         $expires_in = isset($data['expires_in']) ? (int) $data['expires_in'] : 0;
@@ -880,11 +894,11 @@ final class CLIREDAS_Settings
             $data   = json_decode($body, true);
 
             if (! is_array($data)) {
-                return new WP_Error('admin_api_invalid', __('Invalid response from Google Analytics Admin API.', 'client-report-dashboard'));
+                return new WP_Error('admin_api_invalid', __('Invalid response from Google Analytics Admin API.', 'cliredas-analytics-dashboard'));
             }
 
             if (200 !== $status) {
-                $msg = __('Failed to load properties from Google Analytics Admin API.', 'client-report-dashboard');
+                $msg = __('Failed to load properties from Google Analytics Admin API.', 'cliredas-analytics-dashboard');
                 if (isset($data['error']['message'])) {
                     $msg .= ' ' . sanitize_text_field((string) $data['error']['message']);
                 }

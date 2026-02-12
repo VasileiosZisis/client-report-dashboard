@@ -1,4 +1,4 @@
-=== Client Reporting Dashboard ===
+=== Cliredas - Simple Google Analytics Dashboard ===
 Contributors: vzisis
 Tags: analytics, dashboard, reporting, google-analytics, ga4
 Requires at least: 6.0
@@ -11,7 +11,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Client-friendly Google Analytics 4 (GA4) dashboard inside wp-admin with real GA4 data, caching, and clear setup steps.
 
 == Description ==
-Client Reporting Dashboard adds a clean, client-friendly analytics dashboard inside WordPress admin.
+Cliredas - Simple Google Analytics Dashboard adds a clean, client-friendly analytics dashboard inside WordPress admin.
 
 Use it to show key GA4 performance metrics without sending clients to the GA4 interface.
 
