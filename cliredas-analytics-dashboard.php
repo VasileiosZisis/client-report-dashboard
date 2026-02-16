@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Plugin Name: Cliredas - Simple Google Analytics Dashboard
+ * Plugin Name: Cliredas - Client Dashboard for Google Analytics (GA4)
  * Description: Client-friendly Google Analytics 4 (GA4) dashboard inside wp-admin.
  * Version:     1.0.0
  * Author:      Vasileios Zisis

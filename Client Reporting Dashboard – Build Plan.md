@@ -1,6 +1,6 @@
-# Cliredas - Simple Google Analytics Dashboard – Build Plan (Free → Pro)
+# Cliredas - Client Dashboard for Google Analytics (GA4) – Build Plan (Free → Pro)
 
-This document is the single source of truth for building **Cliredas - Simple Google Analytics Dashboard** as a freemium WordPress plugin.
+This document is the single source of truth for building **Cliredas - Client Dashboard for Google Analytics (GA4)** as a freemium WordPress plugin.
 
 - **Free plugin slug:** `client-report-dashboard`
 - **Pro add-on slug:** `client-report-dashboard-pro` (separate plugin that extends Free)
@@ -567,10 +567,15 @@ Filters/Actions already used/expected:
 - Avoid the use of \__ (double underscores), wp_ , or \_ (single underscore) as a prefix. Those are reserved for WordPress itself. You can use them inside your classes, but not as stand-alone function
 
 4. **Do not nest `<form>` tags** inside the Settings API form. Use nonce links (`wp_nonce_url`) for admin-post actions in settings fields.
+
 5. External OAuth redirects should use `wp_redirect()` or whitelist host for `wp_safe_redirect()`.
+
 6. Core “dashboard.css” exists in wp-admin; plugin asset filenames should be unique (use `cliredas-dashboard.*`).
+
 7. Success notices: core already displays `settings-updated`; don’t duplicate.
+
 8. Using if-exists should be reserved for shared libraries only
+
 9. Do not embed external links or credits on the public site without explicit user permission.
 
 ---

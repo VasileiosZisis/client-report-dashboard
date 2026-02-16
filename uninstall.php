@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Uninstall cleanup for Cliredas - Simple Google Analytics Dashboard.
+ * Uninstall cleanup for Cliredas - Client Dashboard for Google Analytics (GA4).
  *
  * @package ClientReportingDashboard
  */

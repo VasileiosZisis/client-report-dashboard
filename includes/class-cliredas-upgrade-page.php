@@ -26,7 +26,7 @@ final class CLIREDAS_Upgrade_Page
         <div class="wrap">
             <h1><?php echo esc_html__('Pro (Coming Soon) - Features & Metrics', 'cliredas-analytics-dashboard'); ?></h1>
 
-            <p><?php echo esc_html__('Cliredas - Simple Google Analytics Dashboard Pro includes everything in the Free version, plus:', 'cliredas-analytics-dashboard'); ?></p>
+            <p><?php echo esc_html__('Cliredas - Client Dashboard for Google Analytics (GA4) Pro includes everything in the Free version, plus:', 'cliredas-analytics-dashboard'); ?></p>
 
             <ol>
                 <li>
@@ -73,7 +73,7 @@ final class CLIREDAS_Upgrade_Page
                         <li><?php echo esc_html__('Impressions', 'cliredas-analytics-dashboard'); ?></li>
                         <li><?php echo esc_html__('Average position', 'cliredas-analytics-dashboard'); ?></li>
                         <li><?php echo esc_html__('Click-through rate (CTR)', 'cliredas-analytics-dashboard'); ?></li>
-                        <li><?php echo esc_html__('â€œTop search queriesâ€ and â€œTop landing pages from searchâ€ tables for the selected date range.', 'cliredas-analytics-dashboard'); ?></li>
+                        <li><?php echo esc_html__('"Top search queries" and "Top landing pages from search" tables for the selected date range.', 'cliredas-analytics-dashboard'); ?></li>
                     </ul>
 
                     <p><?php echo esc_html__('Quick overview of how organic search is performing without leaving WordPress.', 'cliredas-analytics-dashboard'); ?></p>
@@ -91,7 +91,7 @@ final class CLIREDAS_Upgrade_Page
                     <p><strong><?php echo esc_html__('Customizable email content:', 'cliredas-analytics-dashboard'); ?></strong></p>
                     <ul>
                         <li><?php echo esc_html__('Custom subject line and intro text per site.', 'cliredas-analytics-dashboard'); ?></li>
-                        <li><?php echo esc_html__('Optional â€œHighlights & next stepsâ€ note that appears at the top of the email.', 'cliredas-analytics-dashboard'); ?></li>
+                        <li><?php echo esc_html__('Optional "Highlights & next steps" note that appears at the top of the email.', 'cliredas-analytics-dashboard'); ?></li>
                     </ul>
 
                     <p><strong><?php echo esc_html__('PDF export:', 'cliredas-analytics-dashboard'); ?></strong></p>
@@ -106,14 +106,14 @@ final class CLIREDAS_Upgrade_Page
 
                     <p><strong><?php echo esc_html__('Fully white-labelled experience:', 'cliredas-analytics-dashboard'); ?></strong></p>
                     <ul>
-                        <li><?php echo esc_html__('Change the dashboard menu label (e.g. â€œPerformance Reportâ€, â€œMarketing Reportâ€).', 'cliredas-analytics-dashboard'); ?></li>
+                        <li><?php echo esc_html__('Change the dashboard menu label (e.g. "Performance Report", "Marketing Report").', 'cliredas-analytics-dashboard'); ?></li>
                         <li><?php echo esc_html__('Add your own logo to the dashboard and email reports.', 'cliredas-analytics-dashboard'); ?></li>
                         <li><?php echo esc_html__('Choose a brand accent color used in charts and headings.', 'cliredas-analytics-dashboard'); ?></li>
                     </ul>
 
                     <p><strong><?php echo esc_html__('Hide plugin branding:', 'cliredas-analytics-dashboard'); ?></strong></p>
                     <ul>
-                        <li><?php echo esc_html__('Option to remove â€œPowered by Cliredas - Simple Google Analytics Dashboardâ€ from the UI and emails, so everything appears under your agency brand.', 'cliredas-analytics-dashboard'); ?></li>
+                        <li><?php echo esc_html__('Option to remove "Powered by Cliredas - Client Dashboard for Google Analytics (GA4)" from the UI and emails, so everything appears under your agency brand.', 'cliredas-analytics-dashboard'); ?></li>
                     </ul>
                 </li>
 
@@ -132,7 +132,7 @@ final class CLIREDAS_Upgrade_Page
 
                     <p><strong><?php echo esc_html__('Client notes history:', 'cliredas-analytics-dashboard'); ?></strong></p>
                     <ul>
-                        <li><?php echo esc_html__('Keep a timeline of monthly notes (e.g. â€œNew landing page launchedâ€, â€œCampaign X startedâ€), visible on the dashboard and in reports.', 'cliredas-analytics-dashboard'); ?></li>
+                        <li><?php echo esc_html__('Keep a timeline of monthly notes (e.g. "New landing page launched", "Campaign X started"), visible on the dashboard and in reports.', 'cliredas-analytics-dashboard'); ?></li>
                     </ul>
 
                     <p><strong><?php echo esc_html__('Multisite-friendly:', 'cliredas-analytics-dashboard'); ?></strong></p>

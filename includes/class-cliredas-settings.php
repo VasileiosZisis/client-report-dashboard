@@ -159,7 +159,7 @@ final class CLIREDAS_Settings
     }
 
     /**
-     * Add Settings â†’ Client Report page.
+     * Add Settings → Client Report page.
      *
      * @return void
      */
@@ -609,7 +609,7 @@ final class CLIREDAS_Settings
             value="<?php echo esc_attr($value); ?>"
             placeholder="<?php echo esc_attr__('1234-abc.apps.googleusercontent.com', 'cliredas-analytics-dashboard'); ?>" />
         <p class="description">
-            <?php echo esc_html__('From Google Cloud Console â†’ OAuth consent screen / Credentials.', 'cliredas-analytics-dashboard'); ?>
+            <?php echo esc_html__('From Google Cloud Console → OAuth consent screen / Credentials.', 'cliredas-analytics-dashboard'); ?>
         </p>
     <?php
     }

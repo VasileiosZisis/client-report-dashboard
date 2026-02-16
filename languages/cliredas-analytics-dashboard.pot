@@ -2,7 +2,7 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Cliredas - Simple Google Analytics Dashboard 1.0.0\n"
+"Project-Id-Version: Cliredas - Client Dashboard for Google Analytics (GA4) 1.0.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/cliredas-analytics-dashboard/\n"
 "POT-Creation-Date: 2026-01-28 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"

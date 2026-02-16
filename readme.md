@@ -1,6 +1,6 @@
-# Cliredas - Simple Google Analytics Dashboard (Free)
+# Cliredas - Client Dashboard for Google Analytics (GA4) (Free)
 
-Cliredas - Simple Google Analytics Dashboard adds a clean, client-friendly Google Analytics 4 (GA4) dashboard inside WordPress admin (`wp-admin`).
+Cliredas - Client Dashboard for Google Analytics (GA4) adds a clean, client-friendly Google Analytics 4 (GA4) dashboard inside WordPress admin (`wp-admin`).
 
 This repository is the Free version intended for WordPress.org distribution. A separate Pro add-on is planned (menu label: "Pro (Coming Soon)").
 
@@ -30,7 +30,7 @@ Data sent includes your OAuth client credentials (Client ID + Client Secret), au
 ## Installation (from this repo)
 
 1. Copy/clone this repo into `wp-content/plugins/cliredas-analytics-dashboard/`
-2. Activate "Cliredas - Simple Google Analytics Dashboard" in `wp-admin` -> Plugins
+2. Activate "Cliredas - Client Dashboard for Google Analytics (GA4)" in `wp-admin` -> Plugins
 3. Go to `Settings` -> `Client Report` and enter your Google OAuth Client ID and Client Secret
 4. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI
 5. Click "Connect Google Analytics", complete the consent screen, then select a GA4 Property

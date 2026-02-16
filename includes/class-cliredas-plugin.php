@@ -116,7 +116,7 @@ final class CLIREDAS_Plugin
     public function on_plugins_loaded()
     {
         /**
-         * Fires when Cliredas - Simple Google Analytics Dashboard has loaded.
+         * Fires when Cliredas - Client Dashboard for Google Analytics (GA4) has loaded.
          *
          * Useful for add-ons (Pro) to bootstrap after the free plugin is available.
          */
