@@ -60,8 +60,8 @@ final class CLIREDAS_GA4_Data_Provider
         $cache_key = $this->get_cache_key($range_key, $property_id);
 
         // After "Clear cache", force a fresh fetch for the next request (even if an object cache is in play).
-        $cache_cleared_nonce = filter_input(INPUT_GET, 'cliredas_cache_cleared_nonce', FILTER_UNSAFE_RAW);
-        $force_refresh = is_string($cache_cleared_nonce) && wp_verify_nonce(sanitize_text_field(wp_unslash($cache_cleared_nonce)), 'cliredas_cache_cleared');
+        $cache_cleared_nonce = filter_input(INPUT_GET, 'cliredas_cache_cleared_nonce', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $force_refresh = is_string($cache_cleared_nonce) && wp_verify_nonce(sanitize_text_field($cache_cleared_nonce), 'cliredas_cache_cleared');
 
         if ($cache_enabled && ! $force_refresh) {
             $cached = get_transient($cache_key);

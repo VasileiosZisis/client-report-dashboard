@@ -317,31 +317,28 @@ final class CLIREDAS_Settings
      *
      * @return void
      */
-	    public function render_settings_page()
-	    {
-	        if (! current_user_can('manage_options')) {
-	            wp_die(esc_html__('You do not have permission to access this page.', 'cliredas-analytics-dashboard'));
-	        }
-	    ?>
-	        <div class="wrap">
-	            <h1><?php echo esc_html__('Client Report Settings', 'cliredas-analytics-dashboard'); ?></h1>
+    public function render_settings_page()
+    {
+        if (! current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to access this page.', 'cliredas-analytics-dashboard'));
+        }
+    ?>
+        <div class="wrap">
+            <h1><?php echo esc_html__('Client Report Settings', 'cliredas-analytics-dashboard'); ?></h1>
 
-	            <?php
-	            $ga4_notice_raw = filter_input(INPUT_GET, 'cliredas_ga4_notice', FILTER_UNSAFE_RAW);
-	            $ga4_error_raw = filter_input(INPUT_GET, 'cliredas_ga4_error', FILTER_UNSAFE_RAW);
-	            $ga4_error_desc_raw = filter_input(INPUT_GET, 'cliredas_ga4_error_desc', FILTER_UNSAFE_RAW);
-	            $ga4_notice_nonce_raw = filter_input(INPUT_GET, 'cliredas_ga4_notice_nonce', FILTER_UNSAFE_RAW);
+            <?php
+            $ga4_notice = '';
+            $ga4_error = '';
+            $ga4_error_desc = '';
 
-	            $ga4_notice_nonce_ok = is_string($ga4_notice_nonce_raw) && wp_verify_nonce(sanitize_text_field($ga4_notice_nonce_raw), 'cliredas_ga4_notice');
-
-	            $ga4_notice = '';
-	            $ga4_error = '';
-	            $ga4_error_desc = '';
-	            if ($ga4_notice_nonce_ok) {
-	                $ga4_notice = is_string($ga4_notice_raw) ? sanitize_key($ga4_notice_raw) : '';
-	                $ga4_error = is_string($ga4_error_raw) ? sanitize_key($ga4_error_raw) : '';
-	                $ga4_error_desc = is_string($ga4_error_desc_raw) ? sanitize_text_field($ga4_error_desc_raw) : '';
-	            }
+            if (
+                isset($_GET['cliredas_ga4_notice_nonce']) &&
+                wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['cliredas_ga4_notice_nonce'])), 'cliredas_ga4_notice')
+            ) {
+                $ga4_notice = isset($_GET['cliredas_ga4_notice']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_notice'])) : '';
+                $ga4_error = isset($_GET['cliredas_ga4_error']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_error'])) : '';
+                $ga4_error_desc = isset($_GET['cliredas_ga4_error_desc']) ? sanitize_text_field(wp_unslash($_GET['cliredas_ga4_error_desc'])) : '';
+            }
 
 	            $ga4_notice_message = '';
 	            $ga4_notice_class   = '';
@@ -367,12 +364,15 @@ final class CLIREDAS_Settings
 	                    case 'missing_client_secret':
 	                        $ga4_notice_message = __('Missing OAuth Client Secret. Save your Client Secret first, then click Connect again.', 'cliredas-analytics-dashboard');
 	                        break;
-	                    case 'missing_code':
-	                        $ga4_notice_message = __('OAuth callback did not include an authorization code. Please try connecting again.', 'cliredas-analytics-dashboard');
-	                        break;
-	                    case 'missing_state':
-	                        $ga4_notice_message = __('OAuth callback is missing state verification. Please try connecting again.', 'cliredas-analytics-dashboard');
-	                        break;
+                    case 'missing_code':
+                        $ga4_notice_message = __('OAuth callback did not include an authorization code. Please try connecting again.', 'cliredas-analytics-dashboard');
+                        break;
+                    case 'invalid_code':
+                        $ga4_notice_message = __('OAuth callback returned an invalid authorization code. Please try connecting again.', 'cliredas-analytics-dashboard');
+                        break;
+                    case 'missing_state':
+                        $ga4_notice_message = __('OAuth callback is missing state verification. Please try connecting again.', 'cliredas-analytics-dashboard');
+                        break;
 	                    case 'invalid_state':
 	                        $ga4_notice_message = __('OAuth state verification failed. Please try connecting again.', 'cliredas-analytics-dashboard');
 	                        break;
@@ -430,30 +430,34 @@ final class CLIREDAS_Settings
 	                </div>
 	            <?php endif; ?>
 
-	            <?php
-	            $cache_cleared = filter_input(INPUT_GET, 'cliredas_cache_cleared', FILTER_UNSAFE_RAW);
-	            $cache_cleared_nonce = filter_input(INPUT_GET, 'cliredas_cache_cleared_nonce', FILTER_UNSAFE_RAW);
-	            $cache_cleared_ok = is_string($cache_cleared_nonce) && wp_verify_nonce(sanitize_text_field(wp_unslash($cache_cleared_nonce)), 'cliredas_cache_cleared');
-	            ?>
-	            <?php if (is_string($cache_cleared) && $cache_cleared_ok) : ?>
-	                <div class="notice notice-success is-dismissible">
-	                    <p>
-	                        <?php
-	                        echo esc_html(
-                             sprintf(
-                                 /* translators: %d: number of cache entries cleared */
-                                 __('Cached reports cleared (%d).', 'cliredas-analytics-dashboard'),
-                                 absint(wp_unslash($cache_cleared))
-                             )
-                         );
-                         ?>
-	                     </p>
-	                 </div>
-	             <?php endif; ?>
+            <?php
+            $cache_cleared = null;
+            if (
+                isset($_GET['cliredas_cache_cleared_nonce']) &&
+                wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['cliredas_cache_cleared_nonce'])), 'cliredas_cache_cleared')
+            ) {
+                $cache_cleared = isset($_GET['cliredas_cache_cleared']) ? absint(wp_unslash($_GET['cliredas_cache_cleared'])) : null;
+            }
+            ?>
+            <?php if (null !== $cache_cleared) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p>
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %d: number of cache entries cleared */
+                                __('Cached reports cleared (%d).', 'cliredas-analytics-dashboard'),
+                                $cache_cleared
+                            )
+                        );
+                        ?>
+                    </p>
+                </div>
+            <?php endif; ?>
 
             <?php
             // Only show errors (not the success message).
-            $settings_updated = filter_input(INPUT_GET, 'settings-updated', FILTER_UNSAFE_RAW);
+            $settings_updated = filter_input(INPUT_GET, 'settings-updated', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
             if (is_string($settings_updated) && '' !== $settings_updated) {
                 // Do nothing; let core show the success notice (or your own).
             } else {

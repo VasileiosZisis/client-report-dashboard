@@ -90,8 +90,8 @@ final class CLIREDAS_Dashboard_Page
         check_ajax_referer('cliredas_dashboard', 'cliredas_nonce');
 
         $ranges = $this->get_date_ranges();
-        $range_raw = filter_input(INPUT_POST, 'cliredas_range', FILTER_UNSAFE_RAW);
-        $range  = is_string($range_raw) ? sanitize_key(wp_unslash($range_raw)) : $this->get_current_range_key();
+        $range_raw = filter_input(INPUT_POST, 'cliredas_range', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $range  = is_string($range_raw) ? sanitize_key($range_raw) : $this->get_current_range_key();
 
         if (! array_key_exists($range, $ranges)) {
             $range = $this->get_current_range_key();
@@ -225,9 +225,9 @@ final class CLIREDAS_Dashboard_Page
             </div>
 
             <?php
-            $cache_cleared = filter_input(INPUT_GET, 'cliredas_cache_cleared', FILTER_UNSAFE_RAW);
-            $cache_cleared_nonce = filter_input(INPUT_GET, 'cliredas_cache_cleared_nonce', FILTER_UNSAFE_RAW);
-            $cache_cleared_ok = is_string($cache_cleared_nonce) && wp_verify_nonce(sanitize_text_field(wp_unslash($cache_cleared_nonce)), 'cliredas_cache_cleared');
+            $cache_cleared = filter_input(INPUT_GET, 'cliredas_cache_cleared', FILTER_SANITIZE_NUMBER_INT);
+            $cache_cleared_nonce = filter_input(INPUT_GET, 'cliredas_cache_cleared_nonce', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+            $cache_cleared_ok = is_string($cache_cleared_nonce) && wp_verify_nonce(sanitize_text_field($cache_cleared_nonce), 'cliredas_cache_cleared');
             ?>
             <?php if (current_user_can('manage_options') && is_string($cache_cleared) && $cache_cleared_ok) : ?>
                 <div class="notice notice-success is-dismissible">
@@ -237,7 +237,7 @@ final class CLIREDAS_Dashboard_Page
                             sprintf(
                                 /* translators: %d: number of cache entries cleared */
                                 __('Cache cleared (%d entries).', 'cliredas-analytics-dashboard'),
-                                absint(wp_unslash($cache_cleared))
+                                absint($cache_cleared)
                             )
                         );
                         ?>
@@ -425,13 +425,13 @@ final class CLIREDAS_Dashboard_Page
 
         $default = isset($keys[0]) ? (string) $keys[0] : 'last_7_days';
 
-        $range_raw = filter_input(INPUT_GET, 'cliredas_range', FILTER_UNSAFE_RAW);
+        $range_raw = filter_input(INPUT_GET, 'cliredas_range', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
         if (! is_string($range_raw)) {
             // Backward compatibility for existing links using ?range=...
-            $range_raw = filter_input(INPUT_GET, 'range', FILTER_UNSAFE_RAW);
+            $range_raw = filter_input(INPUT_GET, 'range', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
         }
 
-        $range = is_string($range_raw) ? sanitize_key(wp_unslash($range_raw)) : $default;
+        $range = is_string($range_raw) ? sanitize_key($range_raw) : $default;
 
         if (! array_key_exists($range, $ranges)) {
             $range = $default;
