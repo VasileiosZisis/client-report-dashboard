@@ -230,7 +230,7 @@ final class CLIREDAS_Settings
         $sanitized = $existing;
 
         if (is_array($input)) {
-            $clear_secret = ! empty($input['_cliredas_clear_ga4_client_secret']);
+            $clear_secret = ! empty($input['cliredas_clear_ga4_client_secret']);
 
             $sanitized['allow_editors'] = ! empty($input['allow_editors']) ? 1 : 0;
 

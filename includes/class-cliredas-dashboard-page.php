@@ -78,6 +78,7 @@ final class CLIREDAS_Dashboard_Page
      */
     public function ajax_get_report()
     {
+        check_ajax_referer('cliredas_dashboard', 'cliredas_nonce');
         $capability = $this->settings->get_required_capability('dashboard');
 
         if (! current_user_can($capability)) {
@@ -86,8 +87,6 @@ final class CLIREDAS_Dashboard_Page
                 403
             );
         }
-
-        check_ajax_referer('cliredas_dashboard', 'cliredas_nonce');
 
         $ranges = $this->get_date_ranges();
         $range_raw = filter_input(INPUT_POST, 'cliredas_range', FILTER_SANITIZE_FULL_SPECIAL_CHARS);

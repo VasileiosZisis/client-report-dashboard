@@ -111,10 +111,6 @@ final class CLIREDAS_Upgrade_Page
                         <li><?php echo esc_html__('Choose a brand accent color used in charts and headings.', 'cliredas-analytics-dashboard'); ?></li>
                     </ul>
 
-                    <p><strong><?php echo esc_html__('Hide plugin branding:', 'cliredas-analytics-dashboard'); ?></strong></p>
-                    <ul>
-                        <li><?php echo esc_html__('Option to remove "Powered by Cliredas - Client Dashboard for Google Analytics (GA4)" from the UI and emails, so everything appears under your agency brand.', 'cliredas-analytics-dashboard'); ?></li>
-                    </ul>
                 </li>
 
                 <li>

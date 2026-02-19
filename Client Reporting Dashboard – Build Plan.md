@@ -507,7 +507,7 @@ Filters/Actions already used/expected:
 **Goal:** branding controls.
 **Steps:**
 
-1. Allow setting logo, menu name, hide “Powered by”, hide upgrade link.
+1. Allow setting logo, menu name, hide upgrade link.
 2. Use filters: `cliredas_menu_title`, `cliredas_show_powered_by`, plus new filter for upgrade link.
 3. Add CSS override option.
 
@@ -537,45 +537,5 @@ Filters/Actions already used/expected:
 - No fatal if license server unreachable (graceful).
 
 **Commit message:** `chore: pro licensing and updates`
-
----
-
-# Notes & Known gotchas
-
-1. Look for any `<script>` or `<style>` HTML tags and use wp_enqueue commands. Make use of the specific function for enqueue them:
-
-- Static JS | wp_register_script() , wp_enqueue_script() , admin_enqueue_scripts()
-- Inline JS | wp_add_inline_script()
-- Static CSS | wp_register_style() , wp_enqueue_style()
-- Inline CSS | wp_add_inline_style()
-
-- In the public pages enqueue them using the hook wp_enqueue_scripts() .
-- In the admin pages enqueue them using the hook admin_enqueue_scripts() . Also use admin_print_scripts() and admin_print_styles() .
-
-2. Look for functions that interact with $GET , $POST , $REQUEST and perform actions triggered by the user/browser that modify data or perform sensitive actions (e.g., privileged actions or data manipulation). For such actions, you should always check for a nonce. Additionally, verify user permissions if the action is restricted to certain roles (e.g., admin, editor)
-
-- Create a nonce ( wp_nonce_field() , wp_nonce_url() , wp_create_nonce() ). If you need to pass the nonce to JavaScript you can make use of wp_localize_script()
-- Pass it with the request.
-- Check the nonce ( check_admin_referer() , check_ajax_referer() , wp_verify_nonce() ) , and permissions if applicable ( current_user_can() ) .
-
-3. Use cliredas prefix for
-
-- Declarations: Functions, classes, etc (if not under a namespace)
-- Globals: Global variables, namespaces, define() .
-- Data storage: update\*option() , set_transient() , update_post_meta() , etc.
-- WordPress declarations: add_shortcode() , register_post_type() , add_menu_page() , wp_register_script() , wp_localize_script() , add_action( - - 'wp_ajax\*...' ) , etc.
-- Avoid the use of \__ (double underscores), wp_ , or \_ (single underscore) as a prefix. Those are reserved for WordPress itself. You can use them inside your classes, but not as stand-alone function
-
-4. **Do not nest `<form>` tags** inside the Settings API form. Use nonce links (`wp_nonce_url`) for admin-post actions in settings fields.
-
-5. External OAuth redirects should use `wp_redirect()` or whitelist host for `wp_safe_redirect()`.
-
-6. Core “dashboard.css” exists in wp-admin; plugin asset filenames should be unique (use `cliredas-dashboard.*`).
-
-7. Success notices: core already displays `settings-updated`; don’t duplicate.
-
-8. Using if-exists should be reserved for shared libraries only
-
-9. Do not embed external links or credits on the public site without explicit user permission.
 
 ---

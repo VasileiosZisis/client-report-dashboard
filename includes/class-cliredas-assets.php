@@ -14,7 +14,7 @@ final class CLIREDAS_Assets
     /**
      * Enqueue dashboard assets (Chart.js + dashboard JS/CSS) and localize data.
      *
-     * @param array $localized_data Data passed to CLIREDAS_DASHBOARD in JS.
+     * @param array $localized_data Data passed to cliredasDashboard in JS.
      * @return void
      */
     public static function enqueue_dashboard_assets(array $localized_data)
@@ -71,7 +71,7 @@ final class CLIREDAS_Assets
 
         wp_localize_script(
             'cliredas-dashboard',
-            'CLIREDAS_DASHBOARD',
+            'cliredasDashboard',
             $localized_data
         );
     }

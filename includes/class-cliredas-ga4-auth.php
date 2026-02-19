@@ -86,11 +86,10 @@ final class CLIREDAS_GA4_Auth
      */
     public function handle_connect()
     {
+        check_admin_referer('cliredas_ga4_connect');
         if (! current_user_can('manage_options')) {
             wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
-
-        check_admin_referer('cliredas_ga4_connect');
 
         $auth_url = $this->get_authorization_url();
         if ('' === $auth_url) {
@@ -353,11 +352,10 @@ final class CLIREDAS_GA4_Auth
      */
     public function handle_disconnect()
     {
+        check_admin_referer('cliredas_ga4_disconnect');
         if (! current_user_can('manage_options')) {
             wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
-
-        check_admin_referer('cliredas_ga4_disconnect');
 
         $current = $this->settings->get_settings();
 
@@ -380,17 +378,16 @@ final class CLIREDAS_GA4_Auth
      */
     public function handle_clear_secret()
     {
+        check_admin_referer('cliredas_ga4_clear_secret');
         if (! current_user_can('manage_options')) {
             wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
-
-        check_admin_referer('cliredas_ga4_clear_secret');
 
         $current = $this->settings->get_settings();
 
         $current['ga4_client_secret'] = '';
         // Signal to the sanitize callback that this blank value is intentional (clear action).
-        $current['_cliredas_clear_ga4_client_secret'] = 1;
+        $current['cliredas_clear_ga4_client_secret'] = 1;
 
         // Clearing the secret effectively disables token refresh, so also disconnect and clear tokens.
         $current['ga4_connected']     = 0;
@@ -456,12 +453,12 @@ final class CLIREDAS_GA4_Auth
             return false;
         }
 
-        // Keep a strict but compatible character set for OAuth codes.
-        if (strlen($code) > 2048) {
+        // OAuth codes are opaque; validate length and reject control chars only.
+        if (strlen($code) > 4096) {
             return false;
         }
 
-        return 1 === preg_match('/^[A-Za-z0-9\\-_\\./]+$/', $code);
+        return 1 !== preg_match('/[\\x00-\\x1F\\x7F]/', $code);
     }
 
     /**

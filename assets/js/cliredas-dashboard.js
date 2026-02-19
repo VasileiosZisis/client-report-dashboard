@@ -1,7 +1,7 @@
 (function () {
-  if (typeof window.CLIREDAS_DASHBOARD === 'undefined') return;
+  if (typeof window.cliredasDashboard === 'undefined') return;
 
-  const cfg = window.CLIREDAS_DASHBOARD;
+  const cfg = window.cliredasDashboard;
   const i18n = (cfg && cfg.i18n) || {};
 
   function $(sel, root) {
@@ -46,7 +46,7 @@
     if (controls) controls.classList.toggle('is-loading', !!isLoading);
     if (select) select.disabled = !!isLoading;
 
-    setStatus(isLoading ? i18n.loading || 'Loading…' : '');
+    setStatus(isLoading ? i18n.loading || 'Loading...' : '');
   }
 
   function showError(message) {
@@ -460,7 +460,7 @@
         } catch (e) {}
 
         // Re-render chart using already-loaded report.
-        const r = window.CLIREDAS_DASHBOARD && window.CLIREDAS_DASHBOARD.initialReport;
+        const r = cfg && cfg.initialReport;
         if (r) {
           renderOrUpdateSessionsChart(r);
         }
@@ -469,9 +469,9 @@
 
     // Render immediately from embedded initial report (no initial AJAX).
     clearError();
-    if (window.CLIREDAS_DASHBOARD.initialReport) {
+    if (cfg.initialReport) {
       setRangeHint(rangeSelect.value);
-      renderAll(window.CLIREDAS_DASHBOARD.initialReport);
+      renderAll(cfg.initialReport);
     }
 
     rangeSelect.addEventListener('change', async function () {
@@ -484,7 +484,7 @@
       try {
         const report = await fetchReport(range);
         // Keep the last loaded report so chart metric toggles don't require refetch.
-        if (window.CLIREDAS_DASHBOARD) window.CLIREDAS_DASHBOARD.initialReport = report;
+        if (cfg) cfg.initialReport = report;
         renderAll(report);
         setLoading(false);
       } catch (e) {
@@ -510,3 +510,4 @@
     }
   });
 })();
+
