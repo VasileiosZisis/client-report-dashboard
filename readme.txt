@@ -65,7 +65,6 @@ Yes. Enable the option in Settings > Client Report.
 == Screenshots ==
 1. Dashboard (KPIs, chart toggle, top pages, devices, traffic sources).
 2. Settings page (OAuth credentials, connect/disconnect, property selection).
-3. Clear cache action (forces fresh fetch and refreshes the dashboard).
 
 == Changelog ==
 = 1.0.0 =
