@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Select the active dashboard data provider.
+ */
 final class CLIREDAS_Provider_Factory
 {
 

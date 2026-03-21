@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Render and serve the plugin dashboard page.
+ */
 final class CLIREDAS_Dashboard_Page
 {
 
@@ -26,6 +29,8 @@ final class CLIREDAS_Dashboard_Page
     private $provider;
 
     /**
+     * Set up the dashboard page controller.
+     *
      * @param CLIREDAS_Settings $settings Settings service.
      * @param object            $provider Provider with get_report().
      */
@@ -51,6 +56,8 @@ final class CLIREDAS_Dashboard_Page
      */
     public function enqueue_assets($hook_suffix)
     {
+        unset($hook_suffix);
+
         if (! CLIREDAS_Admin_Screens::is_dashboard_screen()) {
             return;
         }

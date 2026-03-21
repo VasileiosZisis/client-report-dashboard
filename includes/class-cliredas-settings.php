@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Register and render the plugin settings.
+ */
 final class CLIREDAS_Settings
 {
 
@@ -458,9 +461,7 @@ final class CLIREDAS_Settings
             <?php
             // Only show errors (not the success message).
             $settings_updated = filter_input(INPUT_GET, 'settings-updated', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-            if (is_string($settings_updated) && '' !== $settings_updated) {
-                // Do nothing; let core show the success notice (or your own).
-            } else {
+            if (! is_string($settings_updated) || '' === $settings_updated) {
                 settings_errors();
             }
             ?>

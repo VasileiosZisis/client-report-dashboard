@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Render the plugin upgrade page.
+ */
 final class CLIREDAS_Upgrade_Page
 {
 

@@ -1,4 +1,4 @@
-# Cliredas - Client Dashboard for Google Analytics (GA4) (Free)
+# Cliredas - Client Dashboard for Google Analytics (GA4)
 
 Cliredas - Client Dashboard for Google Analytics (GA4) adds a clean, client-friendly Google Analytics 4 (GA4) dashboard inside WordPress admin (`wp-admin`).
 

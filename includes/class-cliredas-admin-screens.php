@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Provide helpers for the plugin admin screens.
+ */
 final class CLIREDAS_Admin_Screens
 {
 

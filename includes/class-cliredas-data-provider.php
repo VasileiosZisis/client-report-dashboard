@@ -10,6 +10,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Provide mock dashboard data for the free plugin experience.
+ */
 final class CLIREDAS_Data_Provider
 {
 
@@ -269,7 +272,7 @@ final class CLIREDAS_Data_Provider
             }
 
             delete_transient($key);
-            $cleared++;
+            ++$cleared;
         }
 
         delete_option(self::CACHE_INDEX_OPTION);

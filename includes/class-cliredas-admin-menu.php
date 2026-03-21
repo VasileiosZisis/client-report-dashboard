@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Register the plugin admin menus.
+ */
 final class CLIREDAS_Admin_Menu
 {
 
@@ -40,6 +43,8 @@ final class CLIREDAS_Admin_Menu
     private $upgrade_page;
 
     /**
+     * Set up the admin menu controller.
+     *
      * @param CLIREDAS_Settings       $settings       Settings service.
      * @param CLIREDAS_Dashboard_Page $dashboard_page Dashboard page renderer.
      * @param CLIREDAS_Upgrade_Page   $upgrade_page   Upgrade page renderer.

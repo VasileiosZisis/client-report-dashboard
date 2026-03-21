@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Handle the GA4 OAuth connection flow.
+ */
 final class CLIREDAS_GA4_Auth
 {
 
@@ -26,6 +29,8 @@ final class CLIREDAS_GA4_Auth
     private $settings;
 
     /**
+     * Set up the GA4 auth controller.
+     *
      * @param CLIREDAS_Settings $settings Settings service.
      */
     public function __construct(CLIREDAS_Settings $settings)

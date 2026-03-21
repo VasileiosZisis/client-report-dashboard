@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Call the GA4 OAuth and Analytics APIs.
+ */
 final class CLIREDAS_GA4_Client
 {
 
@@ -40,6 +43,8 @@ final class CLIREDAS_GA4_Client
     private $settings;
 
     /**
+     * Set up the GA4 API client.
+     *
      * @param CLIREDAS_Settings $settings Settings service.
      */
     public function __construct(CLIREDAS_Settings $settings)
@@ -243,6 +248,8 @@ final class CLIREDAS_GA4_Client
     }
 
     /**
+     * Send an authorized GET request to Google.
+     *
      * @param string $url URL.
      * @param string $token Access token.
      * @return array{data:array,status:int}|\WP_Error
@@ -301,6 +308,8 @@ final class CLIREDAS_GA4_Client
     }
 
     /**
+     * Send an authorized JSON POST request to Google.
+     *
      * @param string $url URL.
      * @param array  $body JSON body.
      * @param string $token Access token.

@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Provide dashboard data from the GA4 Data API.
+ */
 final class CLIREDAS_GA4_Data_Provider
 {
 
@@ -26,6 +29,8 @@ final class CLIREDAS_GA4_Data_Provider
     private $client;
 
     /**
+     * Set up the GA4 data provider.
+     *
      * @param CLIREDAS_Settings $settings Settings service.
      */
     public function __construct(CLIREDAS_Settings $settings)
@@ -165,7 +170,7 @@ final class CLIREDAS_GA4_Data_Provider
             }
 
             delete_transient($key);
-            $cleared++;
+            ++$cleared;
         }
 
         delete_option(CLIREDAS_Data_Provider::CACHE_INDEX_OPTION);
@@ -265,6 +270,8 @@ final class CLIREDAS_GA4_Data_Provider
     }
 
     /**
+     * Build a fallback report when a GA4 request fails.
+     *
      * @param string $range_key Range key.
      * @param \WP_Error $error Error.
      * @return array
@@ -300,6 +307,8 @@ final class CLIREDAS_GA4_Data_Provider
     }
 
     /**
+     * Fetch aggregate GA4 totals for the selected range.
+     *
      * @param string $property_id Property id.
      * @param array{startDate:string,endDate:string} $dates Dates.
      * @return array|\WP_Error
@@ -354,6 +363,8 @@ final class CLIREDAS_GA4_Data_Provider
     }
 
     /**
+     * Fetch the GA4 time series for the selected range.
+     *
      * @param string $property_id Property id.
      * @param array{startDate:string,endDate:string} $dates Dates.
      * @return array<int,array{date:string,sessions:int}>|\WP_Error
@@ -416,6 +427,8 @@ final class CLIREDAS_GA4_Data_Provider
     }
 
     /**
+     * Fetch the top pages report from GA4.
+     *
      * @param string $property_id Property id.
      * @param array{startDate:string,endDate:string} $dates Dates.
      * @return array<int,array{title:string,url:string,sessions:int}>|\WP_Error
@@ -557,6 +570,8 @@ final class CLIREDAS_GA4_Data_Provider
     }
 
     /**
+     * Fetch device category totals from GA4.
+     *
      * @param string $property_id Property id.
      * @param array{startDate:string,endDate:string} $dates Dates.
      * @return array<string,int>|\WP_Error
@@ -685,6 +700,8 @@ final class CLIREDAS_GA4_Data_Provider
     }
 
     /**
+     * Build the empty traffic sources bucket structure.
+     *
      * @return array<string,int>
      */
     private function empty_traffic_sources()
@@ -699,6 +716,8 @@ final class CLIREDAS_GA4_Data_Provider
     }
 
     /**
+     * Format a GA4 date string for dashboard output.
+     *
      * Convert GA4 "YYYYMMDD" into "YYYY-MM-DD".
      *
      * @param string $yyyymmdd Date string.

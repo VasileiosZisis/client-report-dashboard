@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Load the plugin admin assets.
+ */
 final class CLIREDAS_Assets
 {
 

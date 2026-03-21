@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<ruleset name="Client Report Dashboard">
+	<description>WPCS rules for Client Report Dashboard plugin.</description>
+
+	<!-- Scan plugin files -->
+	<file>./</file>
+
+	<!-- Ignore dependencies / generated files -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/build/*</exclude-pattern>
+	<exclude-pattern>*/dist/*</exclude-pattern>
+	<exclude-pattern>*/.git/*</exclude-pattern>
+	<exclude-pattern>*/assets/js/*</exclude-pattern>
+
+	<!-- WordPress plugin-focused standards -->
+	<rule ref="WordPress-Core">
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+	</rule>
+	<rule ref="WordPress-Docs">
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+	</rule>
+	<rule ref="WordPress-Extra">
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+	</rule>
+
+	<!-- Helpful while tuning -->
+	<arg
+		name="exclude"
+		value="Generic.Classes.OpeningBraceSameLine,Generic.Formatting.MultipleStatementAlignment,Generic.Functions.OpeningFunctionBraceKernighanRitchie,Generic.WhiteSpace.ArbitraryParenthesesSpacing,Generic.WhiteSpace.DisallowSpaceIndent,Generic.WhiteSpace.ScopeIndent,NormalizedArrays.Arrays.ArrayBraceSpacing,PEAR.Functions.FunctionCallSignature,PSR2.Classes.ClassDeclaration,PSR2.Methods.FunctionClosingBrace,Squiz.Commenting.FileComment,Squiz.Commenting.FunctionComment,Squiz.Functions.FunctionDeclarationArgumentSpacing,Universal.WhiteSpace.PrecisionAlignment,WordPress.Arrays.ArrayDeclarationSpacing,WordPress.Arrays.ArrayKeySpacingRestrictions,WordPress.Arrays.MultipleStatementAlignment,WordPress.WhiteSpace.CastStructureSpacing,WordPress.WhiteSpace.ControlStructureSpacing,WordPress.WhiteSpace.OperatorSpacing"
+	/>
+	<arg value="s"/>
+
+	<!-- Optional: Set your support target -->
+	<config name="minimum_supported_wp_version" value="6.0"/>
+</ruleset>

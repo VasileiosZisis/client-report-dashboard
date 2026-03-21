@@ -8,6 +8,9 @@
 
 defined('ABSPATH') || exit;
 
+/**
+ * Handle cache-clearing requests for dashboard reports.
+ */
 final class CLIREDAS_Cache_Manager
 {
 
@@ -19,6 +22,8 @@ final class CLIREDAS_Cache_Manager
     private $provider;
 
     /**
+     * Set up the cache manager.
+     *
      * @param object $provider Provider with clear_all_cache().
      */
     public function __construct($provider)

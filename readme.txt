@@ -11,11 +11,11 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Client-friendly Google Analytics 4 (GA4) dashboard inside wp-admin with real GA4 data, caching, and clear setup steps.
 
 == Description ==
-Cliredas - Client Dashboard for Google Analytics (GA4) adds a clean, client-friendly analytics dashboard inside WordPress admin.
+Adds a clean, client-friendly Google Analytics 4 (GA4) dashboard inside the WordPress admin.
 
 Use it to show key GA4 performance metrics without sending clients to the GA4 interface.
 
-= Key Features =
+== Key Features ==
 * Connect Google Analytics 4 via OAuth (no service account needed)
 * Select your GA4 Property from a dropdown
 * Dashboard KPIs: Sessions, Total users, Pageviews, Avg engagement time
@@ -27,8 +27,8 @@ Use it to show key GA4 performance metrics without sending clients to the GA4 in
 * Clear Cache button (forces a fresh fetch on the next load)
 * Optional access control: allow Editors to view the dashboard
 
-= External Services =
-This plugin can connect to Google Analytics 4 and uses Google APIs to retrieve analytics data.
+== External Services ==
+The plugin does not send analytics data anywhere except Google APIs and your WordPress site.
 
 When enabled and connected, the plugin sends requests to:
 * Google OAuth 2.0 endpoints (to authorize and refresh access): https://accounts.google.com/ and https://oauth2.googleapis.com/
