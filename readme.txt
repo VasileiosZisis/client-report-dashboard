@@ -2,9 +2,9 @@
 Contributors: vzisis
 Tags: analytics, dashboard, reporting, google-analytics, ga4
 Requires at least: 6.0
-Tested up to: 6.9
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,7 @@ Use it to show key GA4 performance metrics without sending clients to the GA4 in
 * Connect Google Analytics 4 via OAuth (no service account needed)
 * Select your GA4 Property from a dropdown
 * Dashboard KPIs: Sessions, Total users, Pageviews, Avg engagement time
+* Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
 * Toggle line chart between Sessions over time and Total users over time
 * Top pages table with Sessions, Views, and Avg engagement time per page
 * Device breakdown (desktop / mobile / tablet)
@@ -46,15 +47,16 @@ Google privacy policy: https://policies.google.com/privacy
 2. Activate the plugin.
 3. Go to Client Report in the admin menu.
 4. Go to Settings > Client Report and add your Google OAuth Client ID and Client Secret.
-5. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI.
-6. Click Connect Google Analytics, complete the consent screen, then select a GA4 Property.
+5. If the site is behind a public tunnel or reverse proxy (for example, ngrok), enter the public site URL in Public OAuth base URL and save settings.
+6. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI.
+7. Click Connect Google Analytics, complete the consent screen, then select a GA4 Property.
 
 == Frequently Asked Questions ==
 = Does this connect to Google Analytics 4? =
 Yes. Use Settings > Client Report to connect GA4 via OAuth and select a property.
 
 = Why does Google block my redirect URI on a local domain? =
-Google OAuth redirect URIs must use a public top-level domain (e.g. .com, .org). For local development, use a public tunnel (e.g. ngrok) or a real domain.
+Google OAuth redirect URIs must use a public top-level domain (e.g. .com, .org). For local development, use a public tunnel (e.g. ngrok) or a real domain. When using a tunnel, enter the tunnel's public site URL in Public OAuth base URL, save settings, and then copy the generated Redirect URI into Google Cloud Console.
 
 = Does this plugin store tokens/secrets in the database? =
 Yes. OAuth credentials and tokens are stored in the WordPress options table under the `cliredas_settings` option. The plugin never displays your saved client secret back in the UI.
@@ -67,6 +69,9 @@ Yes. Enable the option in Settings > Client Report.
 2. Settings page (OAuth credentials, connect/disconnect, property selection).
 
 == Changelog ==
+= 1.1.0 =
+* Added This month, Last month, and Last 90 days dashboard date presets.
+
 = 1.0.0 =
 * GA4 OAuth connect + disconnect
 * GA4 property listing + selection
@@ -74,5 +79,8 @@ Yes. Enable the option in Settings > Client Report.
 * Dashboard improvements: chart toggle, pageviews KPI, traffic sources, caching + clear cache
 
 == Upgrade Notice ==
+= 1.1.0 =
+Adds new dashboard date presets for month-to-date, previous month, and 90-day reporting.
+
 = 1.0.0 =
 Initial stable release with GA4 connection and real GA4 reporting.

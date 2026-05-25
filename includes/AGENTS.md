@@ -151,36 +151,44 @@ Any handler that changes data, exposes sensitive data, or performs privileged ac
 
 1. Text domain rules
 
-- Text domain MUST match the plugin slug (folder name / WordPress.org slug). :contentReference[oaicite:4]{index=4}
-- Text domain MUST be lowercase, use dashes (not underscores), and contain no spaces. :contentReference[oaicite:5]{index=5}
+- Text domain MUST match the plugin slug.
+- Text domain MUST be lowercase, use dashes, and contain no spaces.
 
 2. Always include the text domain in gettext calls
 
-- Every translatable string MUST use a gettext function AND include the correct text domain argument:
-  - `__( 'Text', 'your-slug' )`, `_e( 'Text', 'your-slug' )`, `_n( 'Singular', 'Plural', $count, 'your-slug' )`, `_x()`, `_nx()`, etc. :contentReference[oaicite:6]{index=6}
+- Every translatable string MUST include the correct literal text domain argument in functions like `__()`, `_e()`, `_n()`, `_x()`, `_ex()`, `_n_noop()`, and related gettext helpers.
 
-3. Never use a variable or constant for the text domain argument
+3. Do not use variables or constants for the text domain argument
 
-- Do NOT do: `__( 'Translate me', $text_domain )` or `__( 'Translate me', TEXT_DOMAIN )`. Use the literal slug string. :contentReference[oaicite:7]{index=7}
+- Do NOT do `__( 'Translate me', $text_domain )`.
+- Use the literal plugin slug string in gettext calls.
 
-4. Variables/placeholders must not be inside translatable strings
+4. Variables must not be embedded inside translatable strings
 
-- Do NOT interpolate variables into the translatable string (e.g., `"Hello $name"`).
-- Use placeholders + `printf/sprintf` (and argument swapping when needed). :contentReference[oaicite:8]{index=8}
+- Do NOT write strings like `_e( "Your city is $city.", 'your-slug' )`.
+- Use placeholders with `printf()` / `sprintf()` instead.
 
-5. Translator comments for placeholders/context
+5. Use translator comments for placeholders or unclear strings
 
-- For strings with placeholders or ambiguous meaning, add a translator comment immediately before the gettext call:
-  - `/* translators: 1: ..., 2: ... */` :contentReference[oaicite:9]{index=9}
+- Add a `/* translators: ... */` comment immediately before gettext calls that contain placeholders or need context.
 
-6. Loading translations (PHP)
+6. Use context-aware functions when meaning changes by context
 
-- Include `Text Domain:` in the plugin header; add `Domain Path: /languages` if translations are shipped in that folder. :contentReference[oaicite:10]{index=10}
-- If the plugin needs to load translations from its own `/languages` directory (e.g., when not relying on WordPress.org language packs), use `load_plugin_textdomain()` appropriately during initialization. :contentReference[oaicite:11]{index=11}
+- Use `_x()` / `_ex()` when the same English word may need different translations in different contexts.
 
-7. JavaScript translations (if applicable)
+7. Use plural-aware functions when count changes meaning
 
-- If translating strings in JS, use WordPress’ JS i18n tools (`wp.i18n`) and ensure the translation domain matches the plugin slug. :contentReference[oaicite:12]{index=12}
+- Use `_n()` for plurals.
+- Use `_n_noop()` / `_nx_noop()` with `translate_nooped_plural()` when plural translation is defined earlier and rendered later.
+
+8. Avoid i18n edge-case mistakes
+
+- Do not internationalize empty strings.
+- Avoid `\r` in translatable strings; use `\n` instead.
+
+9. Escape translated output appropriately
+
+- Prefer context-appropriate escaping for translated output, such as escaped translation helpers when output is rendered to HTML.
 
 ## Redirect safety (especially OAuth flows)
 

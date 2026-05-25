@@ -36,6 +36,33 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for an
 - The service must provide meaningful functionality and be clearly documented (including Terms of Use where applicable).
 - Do not move arbitrary code out of the plugin just to claim it’s “SaaS”.
 
+## Guideline 5 — Trialware / locked features (strict)
+
+- Code hosted on WordPress.org MUST be fully functional as-is.
+- Do NOT lock, disable, or limit built-in features behind:
+  - license keys
+  - trials
+  - time limits
+  - quotas/usage limits
+  - payments
+  - “Pro active” checks (e.g., `is_pro_active()`) that hide/disable functionality that exists in this codebase
+- If a feature is present in the code in this repository, it MUST be usable without any license/pro gating.
+- It is allowed to mention that additional features exist in a SEPARATE plugin/add-on, but the restricted functionality MUST NOT be shipped (even partially) in the WordPress.org plugin code.
+
+## Guideline 6 — Serviceware (allowed only when legitimate)
+
+- External-service integrations are allowed ONLY if:
+  - the service performs real processing on external servers, AND
+  - the functionality cannot reasonably be done locally by the plugin alone, AND
+  - the service is clearly documented in the readme, including Terms of Use and Privacy Policy links.
+- A “license check” service that merely unlocks local features is NOT serviceware and is NOT allowed in WordPress.org-hosted code.
+
+## Architecture rule derived from 5–6
+
+- Do NOT include “contract/schema/hooks/post types” for Pro-only features inside the free plugin if the feature itself is inaccessible.
+  - If it’s in the free plugin repo, it must be enabled and functional.
+  - Otherwise, move it entirely to the separate add-on/plugin hosted elsewhere.
+
 7. Privacy and tracking
 
 - Do not contact external servers, collect usage data, or track users WITHOUT explicit, informed consent (opt-in).
@@ -66,6 +93,11 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for an
 
 - Do not hijack the admin dashboard.
 - Notices/upsells must be limited in scope (preferably on the plugin’s own pages), used sparingly, and be dismissible when appropriate.
+- Site-wide notices and any dashboard widgets added by the plugin MUST be dismissible or automatically disappear once the issue is resolved.
+- Error notices and alerts MUST clearly explain how the user can fix the problem, and MUST remove themselves when the problem is resolved.
+- Avoid advertising in the WordPress admin; any promotional content must be minimal, contextual, and limited to plugin-specific admin pages.
+- Do NOT use referral tracking in wp-admin notices, links, or promotions.
+- Links to the developer’s own site/social profiles and locally bundled images are allowed only when used sparingly and within the plugin’s own admin experience.
 
 12. Readme and public pages
 
@@ -91,10 +123,10 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for an
 
 ## Internationalization naming rules (i18n)
 
-- The plugin text domain MUST match the plugin slug (the plugin folder name / WordPress.org slug). :contentReference[oaicite:0]{index=0}
-- The text domain MUST be lowercase, use dashes (not underscores), and contain no spaces. :contentReference[oaicite:1]{index=1}
-- Add `Text Domain: your-slug` to the plugin header (recommended for clarity; optional since WordPress 4.6). :contentReference[oaicite:2]{index=2}
-- If you ship translations inside the plugin (e.g., `/languages`), set `Domain Path: /languages` in the plugin header. :contentReference[oaicite:3]{index=3}
+- The plugin text domain MUST match the plugin slug (the plugin folder name / WordPress.org slug).
+- The text domain MUST be lowercase, use dashes (not underscores), and contain no spaces.
+- Add `Text Domain: your-slug` to the plugin header. It is optional since WordPress 4.6, but recommended for clarity and for plugin metadata translation.
+- If translations are stored in a `/languages` directory inside the plugin, use `Domain Path: /languages` in the plugin header, with the leading slash. This header can be omitted for plugins in the official WordPress Plugin Directory.
 
 ## Uniqueness rule: names must be globally distinct (avoid conflicts)
 
@@ -151,6 +183,8 @@ D) WordPress “registration” names (strings stored/used globally)
 
 4. Namespaces are encouraged
 
+- Namespaces MUST be globally distinct and not generic. Do not use common/dictionary-word namespaces.
+- Prefer a vendor + plugin namespace pattern.
 - Prefer a plugin-specific PHP namespace for modern code, but still keep classes/functions distinct and readable.
 - Namespaces and prefixes should be consistent across the codebase.
 

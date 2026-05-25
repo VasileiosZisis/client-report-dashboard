@@ -43,12 +43,13 @@ final class CLIREDAS_Settings
     private $defaults = array(
         'allow_editors'      => 0,
         'ga4_connected'      => 0,
-        'ga4_client_id'      => '',
-        'ga4_client_secret'  => '',
-        'ga4_property_id'    => '',
-        'ga4_refresh_token'  => '',
-        'ga4_access_token'   => '',
-        'ga4_token_expires'  => 0,
+        'ga4_client_id'         => '',
+        'ga4_client_secret'     => '',
+        'ga4_redirect_base_url' => '',
+        'ga4_property_id'       => '',
+        'ga4_refresh_token'     => '',
+        'ga4_access_token'      => '',
+        'ga4_token_expires'     => 0,
     );
 
     public function __construct()
@@ -116,6 +117,14 @@ final class CLIREDAS_Settings
             'cliredas_ga4_client_secret',
             __('OAuth Client Secret', 'cliredas-analytics-dashboard'),
             array($this, 'render_ga4_client_secret_field'),
+            self::SETTINGS_PAGE_SLUG,
+            'cliredas_section_connection'
+        );
+
+        add_settings_field(
+            'cliredas_ga4_redirect_base_url',
+            __('Public OAuth base URL', 'cliredas-analytics-dashboard'),
+            array($this, 'render_ga4_redirect_base_url_field'),
             self::SETTINGS_PAGE_SLUG,
             'cliredas_section_connection'
         );
@@ -239,6 +248,13 @@ final class CLIREDAS_Settings
 
             if (isset($input['ga4_client_id'])) {
                 $sanitized['ga4_client_id'] = sanitize_text_field(wp_unslash($input['ga4_client_id']));
+            }
+
+            if (isset($input['ga4_redirect_base_url'])) {
+                $sanitized['ga4_redirect_base_url'] = $this->sanitize_ga4_redirect_base_url(
+                    wp_unslash($input['ga4_redirect_base_url']),
+                    isset($existing['ga4_redirect_base_url']) ? (string) $existing['ga4_redirect_base_url'] : ''
+                );
             }
 
             // Client secret: don't wipe on blank saves, but allow explicit clearing.
@@ -603,6 +619,31 @@ final class CLIREDAS_Settings
         return false;
     }
 
+    /**
+     * Build the GA4 OAuth redirect URI.
+     *
+     * @return string
+     */
+    public function get_ga4_redirect_uri()
+    {
+        $settings = $this->get_settings();
+        $base_url = isset($settings['ga4_redirect_base_url']) ? trim((string) $settings['ga4_redirect_base_url']) : '';
+
+        if ('' !== $base_url) {
+            $redirect_uri = trailingslashit($base_url) . 'wp-admin/admin-post.php?action=cliredas_ga4_oauth_callback';
+        } else {
+            $redirect_uri = admin_url('admin-post.php?action=cliredas_ga4_oauth_callback');
+        }
+
+        /**
+         * Filter the GA4 OAuth redirect URI.
+         *
+         * @param string $redirect_uri Redirect URI.
+         * @param array  $settings     Current plugin settings.
+         */
+        return (string) apply_filters('cliredas_ga4_redirect_uri', $redirect_uri, $settings);
+    }
+
     public function render_ga4_client_id_field()
     {
         $settings = $this->get_settings();
@@ -656,13 +697,92 @@ final class CLIREDAS_Settings
 
     public function render_ga4_redirect_uri_field()
     {
-        $redirect_uri = admin_url('admin-post.php?action=cliredas_ga4_oauth_callback');
+        $redirect_uri = $this->get_ga4_redirect_uri();
     ?>
         <input type="text" class="large-text code" readonly value="<?php echo esc_attr($redirect_uri); ?>" />
         <p class="description">
             <?php echo esc_html__('Add this exact URL as an Authorized redirect URI in your Google OAuth client.', 'cliredas-analytics-dashboard'); ?>
         </p>
 <?php
+    }
+
+    /**
+     * Render optional public base URL for tunnels/reverse proxies.
+     *
+     * @return void
+     */
+    public function render_ga4_redirect_base_url_field()
+    {
+        $settings = $this->get_settings();
+        $value    = isset($settings['ga4_redirect_base_url']) ? (string) $settings['ga4_redirect_base_url'] : '';
+    ?>
+        <input type="url"
+            class="regular-text"
+            name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_redirect_base_url]"
+            value="<?php echo esc_attr($value); ?>"
+            placeholder="<?php echo esc_attr(home_url()); ?>" />
+        <p class="description">
+            <?php echo esc_html__('Optional. Use this when WordPress is behind a public tunnel or reverse proxy. Enter only the public site URL, such as an HTTPS ngrok URL, without a path.', 'cliredas-analytics-dashboard'); ?>
+        </p>
+        <p class="description">
+            <?php echo esc_html__('When this is set, open wp-admin through the same public URL before connecting so the OAuth callback uses the same login session.', 'cliredas-analytics-dashboard'); ?>
+        </p>
+    <?php
+    }
+
+    /**
+     * Sanitize the optional OAuth redirect base URL.
+     *
+     * @param mixed  $value    Raw input value.
+     * @param string $fallback Existing value to keep if input is invalid.
+     * @return string
+     */
+    private function sanitize_ga4_redirect_base_url($value, $fallback)
+    {
+        $value = trim((string) $value);
+        if ('' === $value) {
+            return '';
+        }
+
+        $url = esc_url_raw($value);
+        if ('' === $url) {
+            add_settings_error(
+                self::OPTION_KEY,
+                'cliredas_ga4_redirect_base_url_invalid',
+                __('Public OAuth base URL must be a valid URL.', 'cliredas-analytics-dashboard')
+            );
+            return $fallback;
+        }
+
+        $parts  = wp_parse_url($url);
+        $scheme = isset($parts['scheme']) ? strtolower((string) $parts['scheme']) : '';
+        $host   = isset($parts['host']) ? strtolower((string) $parts['host']) : '';
+
+        if ('' === $scheme || '' === $host || isset($parts['query']) || isset($parts['fragment']) || isset($parts['user']) || isset($parts['pass'])) {
+            add_settings_error(
+                self::OPTION_KEY,
+                'cliredas_ga4_redirect_base_url_invalid',
+                __('Public OAuth base URL must include only a scheme and host, without a path query, fragment, or credentials.', 'cliredas-analytics-dashboard')
+            );
+            return $fallback;
+        }
+
+        $is_localhost = in_array($host, array('localhost', '127.0.0.1', '::1'), true);
+        if ('https' !== $scheme && ! ($is_localhost && 'http' === $scheme)) {
+            add_settings_error(
+                self::OPTION_KEY,
+                'cliredas_ga4_redirect_base_url_https',
+                __('Public OAuth base URL must use HTTPS, except localhost URLs used for local testing.', 'cliredas-analytics-dashboard')
+            );
+            return $fallback;
+        }
+
+        $normalized = $scheme . '://' . $host;
+        if (isset($parts['port'])) {
+            $normalized .= ':' . absint($parts['port']);
+        }
+
+        return untrailingslashit($normalized);
     }
 
     /**

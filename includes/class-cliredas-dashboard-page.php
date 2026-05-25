@@ -406,6 +406,9 @@ final class CLIREDAS_Dashboard_Page
         $ranges = array(
             'last_7_days'  => __('Last 7 days', 'cliredas-analytics-dashboard'),
             'last_30_days' => __('Last 30 days', 'cliredas-analytics-dashboard'),
+            'this_month'   => __('This month', 'cliredas-analytics-dashboard'),
+            'last_month'   => __('Last month', 'cliredas-analytics-dashboard'),
+            'last_90_days' => __('Last 90 days', 'cliredas-analytics-dashboard'),
         );
 
         $ranges = apply_filters('cliredas_date_ranges', $ranges);

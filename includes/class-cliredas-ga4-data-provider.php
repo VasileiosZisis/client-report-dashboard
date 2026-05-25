@@ -297,7 +297,23 @@ final class CLIREDAS_GA4_Data_Provider
      */
     private function get_date_range($range_key)
     {
+        $today = new DateTimeImmutable('today', wp_timezone());
+
         switch ($range_key) {
+            case 'last_90_days':
+                return array('startDate' => '89daysAgo', 'endDate' => 'today');
+            case 'last_month':
+                $last_month = $today->modify('first day of last month');
+
+                return array(
+                    'startDate' => $last_month->format('Y-m-01'),
+                    'endDate'   => $last_month->format('Y-m-t'),
+                );
+            case 'this_month':
+                return array(
+                    'startDate' => $today->format('Y-m-01'),
+                    'endDate'   => 'today',
+                );
             case 'last_30_days':
                 return array('startDate' => '29daysAgo', 'endDate' => 'today');
             case 'last_7_days':

@@ -50,7 +50,7 @@ final class CLIREDAS_GA4_Auth
      */
     public function get_redirect_uri()
     {
-        return admin_url('admin-post.php?action=cliredas_ga4_oauth_callback');
+        return $this->settings->get_ga4_redirect_uri();
     }
 
     /**

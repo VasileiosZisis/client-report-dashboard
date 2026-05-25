@@ -61,10 +61,9 @@ final class CLIREDAS_Data_Provider
      */
     private function build_mock_report($range_key)
     {
-        $days = ('last_30_days' === $range_key) ? 30 : 7;
-
         $today = new DateTimeImmutable('today', wp_timezone());
-        $start = $today->modify('-' . ($days - 1) . ' days');
+        $days  = $this->get_mock_range_days($range_key, $today);
+        $start = $this->get_mock_range_start($range_key, $today, $days);
 
         $timeseries = array();
         $total_sessions = 0;
@@ -116,6 +115,53 @@ final class CLIREDAS_Data_Provider
             'traffic_sources' => $traffic_sources,
             'generated_at' => time(),
         );
+    }
+
+    /**
+     * Get mock report day count for a range key.
+     *
+     * @param string            $range_key Range key.
+     * @param DateTimeImmutable $today Today's date in site timezone.
+     * @return int
+     */
+    private function get_mock_range_days($range_key, DateTimeImmutable $today)
+    {
+        switch ($range_key) {
+            case 'last_90_days':
+                return 90;
+            case 'last_month':
+                return (int) $today->modify('first day of last month')->format('t');
+            case 'this_month':
+                return (int) $today->format('j');
+            case 'last_30_days':
+                return 30;
+            case 'last_7_days':
+            default:
+                return 7;
+        }
+    }
+
+    /**
+     * Get mock report start date for a range key.
+     *
+     * @param string            $range_key Range key.
+     * @param DateTimeImmutable $today Today's date in site timezone.
+     * @param int               $days Number of days in the range.
+     * @return DateTimeImmutable
+     */
+    private function get_mock_range_start($range_key, DateTimeImmutable $today, $days)
+    {
+        switch ($range_key) {
+            case 'last_month':
+                return $today->modify('first day of last month');
+            case 'this_month':
+                return $today->modify('first day of this month');
+            case 'last_90_days':
+            case 'last_30_days':
+            case 'last_7_days':
+            default:
+                return $today->modify('-' . ((int) $days - 1) . ' days');
+        }
     }
 
     /**

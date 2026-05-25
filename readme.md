@@ -9,6 +9,7 @@ This repository is the Free version intended for WordPress.org distribution. A s
 - Connect Google Analytics 4 via OAuth (no service account needed)
 - Select a GA4 Property from a dropdown (one active property per WordPress site)
 - Dashboard KPIs: Sessions, Total Users, Pageviews, Avg engagement time
+- Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
 - Toggle line chart between Sessions over time and Total Users over time
 - Top pages table: Path, Title, Sessions, Views, Avg engagement time (per page)
 - Device breakdown (desktop / mobile / tablet)
@@ -32,13 +33,21 @@ Data sent includes your OAuth client credentials (Client ID + Client Secret), au
 1. Copy/clone this repo into `wp-content/plugins/cliredas-analytics-dashboard/`
 2. Activate "Cliredas - Client Dashboard for Google Analytics (GA4)" in `wp-admin` -> Plugins
 3. Go to `Settings` -> `Client Report` and enter your Google OAuth Client ID and Client Secret
-4. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI
-5. Click "Connect Google Analytics", complete the consent screen, then select a GA4 Property
-6. Visit `Client Report` -> `Dashboard`
+4. If the site is behind a public tunnel or reverse proxy (for example, ngrok), enter the public site URL in `Public OAuth base URL` and save settings
+5. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI
+6. Click "Connect Google Analytics", complete the consent screen, then select a GA4 Property
+7. Visit `Client Report` -> `Dashboard`
+
+## Compatibility
+
+- Requires WordPress 6.0 or later
+- Tested up to WordPress 7.0
+- Requires PHP 7.4 or later
 
 ## Local Development Notes
 
 - Google OAuth redirect URIs must use a public top-level domain (e.g. `.com`, `.org`). For local development, use a public tunnel (e.g. ngrok) or a real domain.
+- When using a tunnel, enter the tunnel's public site URL in `Settings` -> `Client Report` -> `Public OAuth base URL`, save settings, and then copy the generated `Redirect URI` into Google Cloud Console.
 - Recommended in `wp-config.php`:
   - `define('WP_DEBUG', true);`
   - `define('WP_DEBUG_LOG', true);`

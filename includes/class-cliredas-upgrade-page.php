@@ -33,13 +33,10 @@ final class CLIREDAS_Upgrade_Page
 
             <ol>
                 <li>
-                    <h2><?php echo esc_html__('Advanced metrics & date ranges', 'cliredas-analytics-dashboard'); ?></h2>
+                    <h2><?php echo esc_html__('Advanced metrics & custom date ranges', 'cliredas-analytics-dashboard'); ?></h2>
 
-                    <p><strong><?php echo esc_html__('Additional date ranges:', 'cliredas-analytics-dashboard'); ?></strong></p>
+                    <p><strong><?php echo esc_html__('Advanced date controls:', 'cliredas-analytics-dashboard'); ?></strong></p>
                     <ul>
-                        <li><?php echo esc_html__('This month', 'cliredas-analytics-dashboard'); ?></li>
-                        <li><?php echo esc_html__('Last month', 'cliredas-analytics-dashboard'); ?></li>
-                        <li><?php echo esc_html__('Last 90 days', 'cliredas-analytics-dashboard'); ?></li>
                         <li><?php echo esc_html__('Year-to-date', 'cliredas-analytics-dashboard'); ?></li>
                         <li><?php echo esc_html__('Custom date range picker', 'cliredas-analytics-dashboard'); ?></li>
                     </ul>

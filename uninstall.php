@@ -42,6 +42,9 @@ $cliredas_cleanup_site = static function () use ($cliredas_settings_option_key, 
     // Back-compat: clear known transients for default ranges.
     delete_transient('cliredas_report_last_7_days');
     delete_transient('cliredas_report_last_30_days');
+    delete_transient('cliredas_report_this_month');
+    delete_transient('cliredas_report_last_month');
+    delete_transient('cliredas_report_last_90_days');
 
     // Delete options.
     delete_option($cliredas_cache_index_option_key);
