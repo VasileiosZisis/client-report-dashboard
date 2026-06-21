@@ -255,9 +255,16 @@ final class CLIREDAS_Dashboard_Page
 
             <div class="cliredas-kpis" id="cliredas-kpis">
                 <?php foreach ($kpis as $kpi_key => $kpi) : ?>
+                    <?php $delta = $this->get_kpi_delta($report, $kpi_key); ?>
                     <div class="cliredas-kpi" data-kpi="<?php echo esc_attr($kpi_key); ?>">
                         <div class="cliredas-kpi-label"><?php echo esc_html($kpi['label']); ?></div>
                         <div class="cliredas-kpi-value"><?php echo esc_html($kpi['value']); ?></div>
+                        <div
+                            class="cliredas-kpi-delta <?php echo esc_attr($delta['class']); ?>"
+                            <?php echo $delta['visible'] ? '' : 'hidden'; ?>
+                        >
+                            <?php echo esc_html($delta['text']); ?>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -475,6 +482,73 @@ final class CLIREDAS_Dashboard_Page
             __('%1$dm %2$ds', 'cliredas-analytics-dashboard'),
             $minutes,
             $remain
+        );
+    }
+
+    /**
+     * Format a KPI's change from the previous period.
+     *
+     * @param array  $report Report data.
+     * @param string $kpi_key KPI key.
+     * @return array{visible:bool,text:string,class:string}
+     */
+    private function get_kpi_delta(array $report, $kpi_key)
+    {
+        $metric_keys = array(
+            'sessions'        => 'sessions',
+            'users'           => 'users',
+            'pageviews'       => 'pageviews',
+            'engagement_time' => 'avg_engagement_seconds',
+        );
+
+        if (
+            ! isset($metric_keys[$kpi_key])
+            || ! isset($report['comparison']['totals'])
+            || ! is_array($report['comparison']['totals'])
+        ) {
+            return array(
+                'visible' => false,
+                'text'    => '',
+                'class'   => 'is-neutral',
+            );
+        }
+
+        $metric_key = $metric_keys[$kpi_key];
+        $current = isset($report['totals'][$metric_key]) ? (float) $report['totals'][$metric_key] : 0.0;
+        $previous = isset($report['comparison']['totals'][$metric_key])
+            ? (float) $report['comparison']['totals'][$metric_key]
+            : 0.0;
+
+        if ($previous <= 0.0 && $current > 0.0) {
+            return array(
+                'visible' => true,
+                'text'    => __('New vs previous period', 'cliredas-analytics-dashboard'),
+                'class'   => 'is-positive',
+            );
+        }
+
+        $change = ($previous > 0.0) ? round((($current - $previous) / $previous) * 100, 1) : 0.0;
+        $class = 'is-neutral';
+        $sign = '';
+
+        if ($change > 0.0) {
+            $class = 'is-positive';
+            $sign = '+';
+        } elseif ($change < 0.0) {
+            $class = 'is-negative';
+            $sign = '-';
+        }
+
+        $percentage = $sign . number_format_i18n(abs($change), 1) . '%';
+
+        return array(
+            'visible' => true,
+            'text'    => sprintf(
+                /* translators: %s: signed percentage change, for example +12.4% */
+                __('%s vs previous period', 'cliredas-analytics-dashboard'),
+                $percentage
+            ),
+            'class'   => $class,
         );
     }
 }

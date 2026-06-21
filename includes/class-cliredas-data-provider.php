@@ -33,7 +33,11 @@ final class CLIREDAS_Data_Provider
 
         // Future: return cached if available.
         $cached = $this->get_cached_report($range_key);
-        if (false !== $cached) {
+        if (
+            false !== $cached
+            && isset($cached['comparison']['totals'])
+            && is_array($cached['comparison']['totals'])
+        ) {
             return $cached;
         }
 
@@ -64,35 +68,10 @@ final class CLIREDAS_Data_Provider
         $today = new DateTimeImmutable('today', wp_timezone());
         $days  = $this->get_mock_range_days($range_key, $today);
         $start = $this->get_mock_range_start($range_key, $today, $days);
-
-        $timeseries = array();
-        $total_sessions = 0;
-
-        for ($i = 0; $i < $days; $i++) {
-            $date = $start->modify('+' . $i . ' days');
-            $label = $date->format('Y-m-d');
-
-            // Deterministic-ish mock value.
-            // Base depends on range, with some weekly-ish wave.
-            $base = (30 === $days) ? 320 : 380;
-            $wave = (int) (70 * sin(($i / 3.0)));
-            $value = max(40, $base + $wave + ($i * 3));
-
-            $total_sessions += $value;
-
-            $users_value = (int) round($value * 0.72);
-
-            $timeseries[] = array(
-                'date'     => $label,
-                'sessions' => $value,
-                'users'    => $users_value,
-            );
-        }
-
-        // Simple derivations.
-        $total_users = (int) round($total_sessions * 0.72);
-        $avg_engagement_seconds = (30 === $days) ? 102 : 95;
-        $pageviews = (int) round($total_sessions * 1.35);
+        $current_period = $this->build_mock_period($start, $days);
+        $comparison_range = $this->get_mock_comparison_range($range_key, $today, $start, $days);
+        $comparison_period = $this->build_mock_period($comparison_range['start'], $comparison_range['days']);
+        $total_sessions = $current_period['totals']['sessions'];
 
         $top_pages = $this->mock_top_pages($days);
         $devices   = $this->mock_devices($total_sessions);
@@ -104,16 +83,113 @@ final class CLIREDAS_Data_Provider
                 'days' => $days,
             ),
             'totals' => array(
-                'sessions'               => $total_sessions,
-                'users'                  => $total_users,
-                'avg_engagement_seconds' => $avg_engagement_seconds,
-                'pageviews'              => $pageviews,
+                'sessions'               => $current_period['totals']['sessions'],
+                'users'                  => $current_period['totals']['users'],
+                'avg_engagement_seconds' => $current_period['totals']['avg_engagement_seconds'],
+                'pageviews'              => $current_period['totals']['pageviews'],
             ),
-            'timeseries' => $timeseries,
+            'comparison' => array(
+                'range' => array(
+                    'startDate' => $comparison_range['start']->format('Y-m-d'),
+                    'endDate'   => $comparison_range['end']->format('Y-m-d'),
+                ),
+                'totals' => $comparison_period['totals'],
+            ),
+            'timeseries' => $current_period['timeseries'],
             'top_pages'  => $top_pages,
             'devices'    => $devices,
             'traffic_sources' => $traffic_sources,
             'generated_at' => time(),
+        );
+    }
+
+    /**
+     * Build deterministic mock totals and time-series data for a period.
+     *
+     * @param DateTimeImmutable $start Period start date.
+     * @param int               $days Number of days.
+     * @return array{totals:array,timeseries:array}
+     */
+    private function build_mock_period(DateTimeImmutable $start, $days)
+    {
+        $days = max(1, (int) $days);
+        $timeseries = array();
+        $total_sessions = 0;
+        $total_users = 0;
+
+        for ($i = 0; $i < $days; $i++) {
+            $date = $start->modify('+' . $i . ' days');
+            $day_number = ((int) $date->format('Y') * 366) + (int) $date->format('z');
+            $base = ($days >= 30) ? 320 : 380;
+            $wave = (int) (70 * sin($day_number / 3.0));
+            $trend = (($day_number % 13) - 6) * 3;
+            $sessions = max(40, $base + $wave + $trend);
+            $users = (int) round($sessions * 0.72);
+
+            $total_sessions += $sessions;
+            $total_users += $users;
+
+            $timeseries[] = array(
+                'date'     => $date->format('Y-m-d'),
+                'sessions' => $sessions,
+                'users'    => $users,
+            );
+        }
+
+        $start_day_number = ((int) $start->format('Y') * 366) + (int) $start->format('z');
+
+        return array(
+            'totals' => array(
+                'sessions'               => $total_sessions,
+                'users'                  => $total_users,
+                'avg_engagement_seconds' => 90 + ($start_day_number % 21),
+                'pageviews'              => (int) round($total_sessions * 1.35),
+            ),
+            'timeseries' => $timeseries,
+        );
+    }
+
+    /**
+     * Get the previous comparison period for mock data.
+     *
+     * @param string            $range_key Range key.
+     * @param DateTimeImmutable $today Today's date in site timezone.
+     * @param DateTimeImmutable $current_start Current period start date.
+     * @param int               $current_days Current period day count.
+     * @return array{start:DateTimeImmutable,end:DateTimeImmutable,days:int}
+     */
+    private function get_mock_comparison_range($range_key, DateTimeImmutable $today, DateTimeImmutable $current_start, $current_days)
+    {
+        if ('this_month' === $range_key) {
+            $start = $today->modify('first day of last month');
+            $end_day = min((int) $today->format('j'), (int) $start->format('t'));
+            $end = $start->setDate((int) $start->format('Y'), (int) $start->format('n'), $end_day);
+
+            return array(
+                'start' => $start,
+                'end'   => $end,
+                'days'  => $end_day,
+            );
+        }
+
+        if ('last_month' === $range_key) {
+            $end = $current_start->modify('-1 day');
+            $start = $end->modify('first day of this month');
+
+            return array(
+                'start' => $start,
+                'end'   => $end,
+                'days'  => (int) $end->format('t'),
+            );
+        }
+
+        $end = $current_start->modify('-1 day');
+        $days = max(1, (int) $current_days);
+
+        return array(
+            'start' => $end->modify('-' . ($days - 1) . ' days'),
+            'end'   => $end,
+            'days'  => $days,
         );
     }
 

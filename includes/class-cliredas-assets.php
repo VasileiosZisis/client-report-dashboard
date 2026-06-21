@@ -33,6 +33,9 @@ final class CLIREDAS_Assets
             'noData'                 => __('No data.', 'cliredas-analytics-dashboard'),
             'sessions'               => __('Sessions', 'cliredas-analytics-dashboard'),
             'totalUsers'             => __('Total users', 'cliredas-analytics-dashboard'),
+            /* translators: %s: signed percentage change, for example +12.4% */
+            'deltaTemplate'           => __('%s vs previous period', 'cliredas-analytics-dashboard'),
+            'newDelta'                => __('New vs previous period', 'cliredas-analytics-dashboard'),
             /* translators: %s: chart metric label (e.g. "Sessions" or "Total users"). */
             'overTimeTemplate'       => __('%s over time', 'cliredas-analytics-dashboard'),
             'trafficSources'         => array(

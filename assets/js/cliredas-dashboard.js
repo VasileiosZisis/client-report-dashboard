@@ -116,6 +116,17 @@
     return m + 'm ' + s + 's';
   }
 
+  function formatPercent(value) {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }).format(value);
+    } catch (e) {
+      return Number(value).toFixed(1);
+    }
+  }
+
   function escapeHtml(str) {
     return String(str)
       .replace(/&/g, '&amp;')
@@ -126,6 +137,54 @@
   }
 
   // ---- Rendering: KPIs, Devices, Top Pages ----
+
+  function getKpiDelta(report, key) {
+    const metricKeys = {
+      sessions: 'sessions',
+      users: 'users',
+      pageviews: 'pageviews',
+      engagement_time: 'avg_engagement_seconds',
+    };
+    const metricKey = metricKeys[key];
+    const totals = report && report.totals;
+    const previousTotals =
+      report && report.comparison && report.comparison.totals;
+
+    if (!metricKey || !totals || !previousTotals) return null;
+
+    const current = Number(totals[metricKey]) || 0;
+    const previous = Number(previousTotals[metricKey]) || 0;
+
+    if (previous <= 0 && current > 0) {
+      return {
+        className: 'is-positive',
+        text: i18n.newDelta || 'New vs previous period',
+      };
+    }
+
+    const rawChange = previous > 0 ? ((current - previous) / previous) * 100 : 0;
+    const change = Math.round(rawChange * 10) / 10;
+    let className = 'is-neutral';
+    let sign = '';
+
+    if (change > 0) {
+      className = 'is-positive';
+      sign = '+';
+    } else if (change < 0) {
+      className = 'is-negative';
+      sign = '-';
+    }
+
+    const percentage = sign + formatPercent(Math.abs(change)) + '%';
+
+    return {
+      className: className,
+      text: sprintf(
+        i18n.deltaTemplate || '%s vs previous period',
+        percentage
+      ),
+    };
+  }
 
   function renderKPIs(report) {
     const totals = report.totals || {};
@@ -139,8 +198,27 @@
     $all('.cliredas-kpi').forEach(function (card) {
       const key = card.getAttribute('data-kpi');
       const valueEl = $('.cliredas-kpi-value', card);
-      if (!valueEl) return;
-      if (typeof map[key] !== 'undefined') valueEl.textContent = map[key];
+      const deltaEl = $('.cliredas-kpi-delta', card);
+
+      if (valueEl && typeof map[key] !== 'undefined') {
+        valueEl.textContent = map[key];
+      }
+
+      if (!deltaEl) return;
+
+      const delta = getKpiDelta(report, key);
+      deltaEl.classList.remove('is-positive', 'is-negative', 'is-neutral');
+
+      if (!delta) {
+        deltaEl.textContent = '';
+        deltaEl.hidden = true;
+        deltaEl.classList.add('is-neutral');
+        return;
+      }
+
+      deltaEl.textContent = delta.text;
+      deltaEl.hidden = false;
+      deltaEl.classList.add(delta.className);
     });
   }
 

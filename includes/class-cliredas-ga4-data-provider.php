@@ -70,7 +70,11 @@ final class CLIREDAS_GA4_Data_Provider
 
         if ($cache_enabled && ! $force_refresh) {
             $cached = get_transient($cache_key);
-            if (is_array($cached)) {
+            if (
+                is_array($cached)
+                && isset($cached['comparison']['totals'])
+                && is_array($cached['comparison']['totals'])
+            ) {
                 // If this report was cached before we tracked keys, backfill the cache index on read.
                 $this->record_cache_key($cache_key);
                 $cached['source'] = 'ga4_cache';
@@ -78,12 +82,16 @@ final class CLIREDAS_GA4_Data_Provider
             }
         }
 
-        $dates = $this->get_date_range($range_key);
+        $dates            = $this->get_date_range($range_key);
+        $comparison_dates = $this->get_previous_date_range($range_key);
 
-        $totals = $this->fetch_totals($property_id, $dates);
-        if (is_wp_error($totals)) {
-            return $this->fallback_with_error($range_key, $totals);
+        $period_totals = $this->fetch_totals($property_id, $dates, $comparison_dates);
+        if (is_wp_error($period_totals)) {
+            return $this->fallback_with_error($range_key, $period_totals);
         }
+
+        $totals          = $period_totals['current'];
+        $previous_totals = $period_totals['previous'];
 
         $timeseries = $this->fetch_timeseries($property_id, $dates);
         if (is_wp_error($timeseries)) {
@@ -115,6 +123,10 @@ final class CLIREDAS_GA4_Data_Provider
                 'endDate' => $dates['endDate'],
             ),
             'totals' => $totals,
+            'comparison' => array(
+                'range'  => $comparison_dates,
+                'totals' => $previous_totals,
+            ),
             'timeseries' => $timeseries,
             'top_pages' => $top_pages,
             'devices' => $devices,
@@ -312,7 +324,7 @@ final class CLIREDAS_GA4_Data_Provider
             case 'this_month':
                 return array(
                     'startDate' => $today->format('Y-m-01'),
-                    'endDate'   => 'today',
+                    'endDate'   => $today->format('Y-m-d'),
                 );
             case 'last_30_days':
                 return array('startDate' => '29daysAgo', 'endDate' => 'today');
@@ -323,19 +335,66 @@ final class CLIREDAS_GA4_Data_Provider
     }
 
     /**
-     * Fetch aggregate GA4 totals for the selected range.
+     * Map a plugin range key to its previous comparison period.
+     *
+     * @param string                 $range_key Range key.
+     * @param DateTimeImmutable|null $today Today's date in site timezone.
+     * @return array{startDate:string,endDate:string}
+     */
+    private function get_previous_date_range($range_key, DateTimeImmutable $today = null)
+    {
+        $today = $today ? $today : new DateTimeImmutable('today', wp_timezone());
+
+        switch ($range_key) {
+            case 'last_90_days':
+                return array('startDate' => '179daysAgo', 'endDate' => '90daysAgo');
+            case 'last_month':
+                $previous_month = $today->modify('first day of last month')->modify('-1 month');
+
+                return array(
+                    'startDate' => $previous_month->format('Y-m-01'),
+                    'endDate'   => $previous_month->format('Y-m-t'),
+                );
+            case 'this_month':
+                $previous_month = $today->modify('first day of last month');
+                $end_day        = min((int) $today->format('j'), (int) $previous_month->format('t'));
+                $previous_end   = $previous_month->setDate(
+                    (int) $previous_month->format('Y'),
+                    (int) $previous_month->format('n'),
+                    $end_day
+                );
+
+                return array(
+                    'startDate' => $previous_month->format('Y-m-01'),
+                    'endDate'   => $previous_end->format('Y-m-d'),
+                );
+            case 'last_30_days':
+                return array('startDate' => '59daysAgo', 'endDate' => '30daysAgo');
+            case 'last_7_days':
+            default:
+                return array('startDate' => '13daysAgo', 'endDate' => '7daysAgo');
+        }
+    }
+
+    /**
+     * Fetch aggregate GA4 totals for the selected and previous ranges.
      *
      * @param string $property_id Property id.
      * @param array{startDate:string,endDate:string} $dates Dates.
-     * @return array|\WP_Error
+     * @param array{startDate:string,endDate:string} $comparison_dates Previous-period dates.
+     * @return array{current:array,previous:array}|\WP_Error
      */
-    private function fetch_totals($property_id, array $dates)
+    private function fetch_totals($property_id, array $dates, array $comparison_dates)
     {
         $body = array(
             'dateRanges' => array(
                 array(
                     'startDate' => $dates['startDate'],
                     'endDate'   => $dates['endDate'],
+                ),
+                array(
+                    'startDate' => $comparison_dates['startDate'],
+                    'endDate'   => $comparison_dates['endDate'],
                 ),
             ),
             'metrics' => array(
@@ -346,8 +405,6 @@ final class CLIREDAS_GA4_Data_Provider
                 array('name' => 'userEngagementDuration'),
                 array('name' => 'screenPageViews'),
             ),
-            // Ensure the API returns totals[] in the response.
-            'metricAggregations' => array('TOTAL'),
         );
 
         $data = $this->client->run_report($property_id, $body);
@@ -355,26 +412,90 @@ final class CLIREDAS_GA4_Data_Provider
             return $data;
         }
 
-        $totals = array();
+        $periods = array(
+            0 => $this->empty_totals(),
+            1 => $this->empty_totals(),
+        );
+        $rows = isset($data['rows']) && is_array($data['rows']) ? $data['rows'] : array();
 
-        if (isset($data['totals'][0]['metricValues']) && is_array($data['totals'][0]['metricValues'])) {
-            $totals = $data['totals'][0]['metricValues'];
-        } elseif (isset($data['rows'][0]['metricValues']) && is_array($data['rows'][0]['metricValues'])) {
-            // Some responses return a single row with metricValues (even without totals).
-            $totals = $data['rows'][0]['metricValues'];
+        foreach ($rows as $row_index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $period_index = $this->get_date_range_index($row, $row_index);
+            if (! array_key_exists($period_index, $periods)) {
+                continue;
+            }
+
+            $metric_values = isset($row['metricValues']) && is_array($row['metricValues'])
+                ? $row['metricValues']
+                : array();
+            $periods[$period_index] = $this->format_totals($metric_values);
         }
 
-        $sessions = isset($totals[0]['value']) ? (int) round((float) $totals[0]['value']) : 0;
-        $users    = isset($totals[1]['value']) ? (int) round((float) $totals[1]['value']) : 0;
-        $engagement_total = isset($totals[2]['value']) ? (float) $totals[2]['value'] : 0.0;
-        $avg_engagement = ($sessions > 0) ? (int) round($engagement_total / $sessions) : 0;
-        $pageviews = isset($totals[3]['value']) ? (int) round((float) $totals[3]['value']) : 0;
+        return array(
+            'current'  => $periods[0],
+            'previous' => $periods[1],
+        );
+    }
+
+    /**
+     * Get the date-range index from a GA4 report row.
+     *
+     * @param array $row Report row.
+     * @param int   $fallback_index Row index fallback.
+     * @return int
+     */
+    private function get_date_range_index(array $row, $fallback_index)
+    {
+        $dimensions = isset($row['dimensionValues']) && is_array($row['dimensionValues'])
+            ? $row['dimensionValues']
+            : array();
+
+        foreach ($dimensions as $dimension) {
+            $value = isset($dimension['value']) ? (string) $dimension['value'] : '';
+            if (preg_match('/(\d+)$/', $value, $matches)) {
+                return (int) $matches[1];
+            }
+        }
+
+        return (int) $fallback_index;
+    }
+
+    /**
+     * Format GA4 metric values as dashboard totals.
+     *
+     * @param array $metric_values Metric values.
+     * @return array{sessions:int,users:int,avg_engagement_seconds:int,pageviews:int}
+     */
+    private function format_totals(array $metric_values)
+    {
+        $sessions = isset($metric_values[0]['value']) ? (int) round((float) $metric_values[0]['value']) : 0;
+        $users = isset($metric_values[1]['value']) ? (int) round((float) $metric_values[1]['value']) : 0;
+        $engagement_total = isset($metric_values[2]['value']) ? (float) $metric_values[2]['value'] : 0.0;
+        $pageviews = isset($metric_values[3]['value']) ? (int) round((float) $metric_values[3]['value']) : 0;
 
         return array(
-            'sessions' => $sessions,
-            'users' => $users,
-            'avg_engagement_seconds' => $avg_engagement,
-            'pageviews' => $pageviews,
+            'sessions'               => $sessions,
+            'users'                  => $users,
+            'avg_engagement_seconds' => ($sessions > 0) ? (int) round($engagement_total / $sessions) : 0,
+            'pageviews'              => $pageviews,
+        );
+    }
+
+    /**
+     * Get an empty totals structure.
+     *
+     * @return array{sessions:int,users:int,avg_engagement_seconds:int,pageviews:int}
+     */
+    private function empty_totals()
+    {
+        return array(
+            'sessions'               => 0,
+            'users'                  => 0,
+            'avg_engagement_seconds' => 0,
+            'pageviews'              => 0,
         );
     }
 

@@ -70,6 +70,22 @@
   line-height: 1.2;
 }
 
+.cliredas-kpi-delta {
+  color: #50575e;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 6px;
+}
+
+.cliredas-kpi-delta.is-positive {
+  color: #008a20;
+}
+
+.cliredas-kpi-delta.is-negative {
+  color: #d63638;
+}
+
 .cliredas-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;

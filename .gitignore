@@ -16,7 +16,6 @@ build/
 # Dependency dirs (only if you introduce them later)
 node_modules/
 vendor/
-docs/
 
 # Local env files
 .env

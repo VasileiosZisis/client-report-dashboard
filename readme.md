@@ -8,7 +8,7 @@ This repository is the Free version intended for WordPress.org distribution. A s
 
 - Connect Google Analytics 4 via OAuth (no service account needed)
 - Select a GA4 Property from a dropdown (one active property per WordPress site)
-- Dashboard KPIs: Sessions, Total Users, Pageviews, Avg engagement time
+- Dashboard KPIs with previous-period deltas: Sessions, Total Users, Pageviews, Avg engagement time
 - Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
 - Toggle line chart between Sessions over time and Total Users over time
 - Top pages table: Path, Title, Sessions, Views, Avg engagement time (per page)

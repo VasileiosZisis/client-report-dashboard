@@ -50,13 +50,7 @@ final class CLIREDAS_Upgrade_Page
                 </li>
 
                 <li>
-                    <h2><?php echo esc_html__('Comparison & trend insights', 'cliredas-analytics-dashboard'); ?></h2>
-
-                    <p><strong><?php echo esc_html__('Period comparison for all top-level KPIs:', 'cliredas-analytics-dashboard'); ?></strong></p>
-                    <ul>
-                        <li><?php echo esc_html__('Compare current period vs previous period (e.g. last 30 days vs previous 30 days).', 'cliredas-analytics-dashboard'); ?></li>
-                        <li><?php echo esc_html__('Percentage change indicators with clear green/red highlighting for improvements or declines.', 'cliredas-analytics-dashboard'); ?></li>
-                    </ul>
+                    <h2><?php echo esc_html__('Advanced trend insights', 'cliredas-analytics-dashboard'); ?></h2>
 
                     <p><strong><?php echo esc_html__('Line chart comparison:', 'cliredas-analytics-dashboard'); ?></strong></p>
                     <ul>
