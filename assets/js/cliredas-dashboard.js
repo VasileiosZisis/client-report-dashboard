@@ -351,7 +351,7 @@
     }
 
     tbody.innerHTML = pages
-      .slice(0, 10)
+      .slice(0, 25)
       .map(function (p) {
         return (
           '<tr>' +

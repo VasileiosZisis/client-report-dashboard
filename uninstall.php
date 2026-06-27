@@ -45,6 +45,11 @@ $cliredas_cleanup_site = static function () use ($cliredas_settings_option_key, 
     delete_transient('cliredas_report_this_month');
     delete_transient('cliredas_report_last_month');
     delete_transient('cliredas_report_last_90_days');
+    delete_transient('cliredas_report_v2_last_7_days');
+    delete_transient('cliredas_report_v2_last_30_days');
+    delete_transient('cliredas_report_v2_this_month');
+    delete_transient('cliredas_report_v2_last_month');
+    delete_transient('cliredas_report_v2_last_90_days');
 
     // Delete options.
     delete_option($cliredas_cache_index_option_key);

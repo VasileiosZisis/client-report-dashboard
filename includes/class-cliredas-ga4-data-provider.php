@@ -15,6 +15,11 @@ final class CLIREDAS_GA4_Data_Provider
 {
 
     /**
+     * Report cache schema version.
+     */
+    private const CACHE_SCHEMA_VERSION = 2;
+
+    /**
      * Settings service.
      *
      * @var CLIREDAS_Settings
@@ -228,7 +233,7 @@ final class CLIREDAS_GA4_Data_Provider
     /**
      * Build a stable GA4 cache key.
      *
-     * Format: cliredas_report_{blogId?}_{propertyId}_{rangeKey}
+     * Format: cliredas_report_v{schemaVersion}_{blogId?}_{propertyId}_{rangeKey}
      *
      * @param string $range_key Range key.
      * @param string $property_id GA4 property resource name (e.g. "properties/123").
@@ -241,7 +246,7 @@ final class CLIREDAS_GA4_Data_Provider
         $property_id = str_replace('/', '_', $property_id);
         $property_id = sanitize_key($property_id);
 
-        $parts = array('cliredas_report');
+        $parts = array('cliredas_report', 'v' . self::CACHE_SCHEMA_VERSION);
 
         // Include blog id for cache safety when a persistent object cache is shared (multisite or not).
         if (function_exists('get_current_blog_id')) {
@@ -596,7 +601,7 @@ final class CLIREDAS_GA4_Data_Provider
                     'desc' => true,
                 ),
             ),
-            // Fetch more than we display so Pro can unlock higher counts later without changing queries.
+            // Fetch the full Free table limit.
             'limit' => 25,
         );
 
@@ -670,7 +675,7 @@ final class CLIREDAS_GA4_Data_Provider
             }
         );
 
-        $out = array_slice($out, 0, 10);
+        $out = array_slice($out, 0, 25);
 
         // Make "/" clearer in the UI (titles can be misleading/non-unique in GA4).
         foreach ($out as $i => $row) {

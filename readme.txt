@@ -4,7 +4,7 @@ Tags: analytics, dashboard, reporting, google-analytics, ga4
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,7 +21,7 @@ Use it to show key GA4 performance metrics without sending clients to the GA4 in
 * Dashboard KPIs with previous-period deltas: Sessions, Total users, Pageviews, Avg engagement time
 * Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
 * Toggle line chart between Sessions over time and Total users over time
-* Top pages table with Sessions, Views, and Avg engagement time per page
+* Top pages table showing up to 25 pages with Sessions, Views, and Avg engagement time per page
 * Device breakdown (desktop / mobile / tablet)
 * Traffic sources breakdown (Organic Search / Direct / Referral / Social / Other)
 * Built-in caching (default 15 minutes) for fast dashboards and fewer API calls
@@ -69,6 +69,9 @@ Yes. Enable the option in Settings > Client Report.
 2. Settings page (OAuth credentials, connect/disconnect, property selection).
 
 == Changelog ==
+= 1.3.0 =
+* Increased the Top pages table from 10 to up to 25 rows.
+
 = 1.2.0 =
 * Added previous-period percentage changes to all dashboard KPI cards.
 * Added calendar-aligned comparisons for This month and Last month.
@@ -83,6 +86,9 @@ Yes. Enable the option in Settings > Client Report.
 * Dashboard improvements: chart toggle, pageviews KPI, traffic sources, caching + clear cache
 
 == Upgrade Notice ==
+= 1.3.0 =
+Shows up to 25 rows in the Top pages table.
+
 = 1.2.0 =
 Adds previous-period comparisons to Sessions, Total users, Pageviews, and Avg engagement time.
 

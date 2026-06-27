@@ -22,6 +22,11 @@ final class CLIREDAS_Data_Provider
     const CACHE_INDEX_OPTION = 'cliredas_cache_keys';
 
     /**
+     * Report cache schema version.
+     */
+    private const CACHE_SCHEMA_VERSION = 2;
+
+    /**
      * Get a full report for a date range key.
      *
      * @param string $range_key Range key (e.g. last_7_days).
@@ -261,6 +266,21 @@ final class CLIREDAS_Data_Provider
             array('title' => 'Case Study: Beta', 'url' => '/case-studies/beta/', 'sessions' => (int) round(1400 * $mult)),
             array('title' => 'FAQ', 'url' => '/faq/', 'sessions' => (int) round(1200 * $mult)),
             array('title' => 'Privacy Policy', 'url' => '/privacy-policy/', 'sessions' => (int) round(900 * $mult)),
+            array('title' => 'Resources', 'url' => '/resources/', 'sessions' => (int) round(840 * $mult)),
+            array('title' => 'Portfolio', 'url' => '/portfolio/', 'sessions' => (int) round(790 * $mult)),
+            array('title' => 'Team', 'url' => '/team/', 'sessions' => (int) round(740 * $mult)),
+            array('title' => 'Support', 'url' => '/support/', 'sessions' => (int) round(690 * $mult)),
+            array('title' => 'Careers', 'url' => '/careers/', 'sessions' => (int) round(640 * $mult)),
+            array('title' => 'Newsletter', 'url' => '/newsletter/', 'sessions' => (int) round(590 * $mult)),
+            array('title' => 'Analytics Guide', 'url' => '/guides/analytics/', 'sessions' => (int) round(540 * $mult)),
+            array('title' => 'GA4 Reporting Guide', 'url' => '/guides/ga4-reporting/', 'sessions' => (int) round(500 * $mult)),
+            array('title' => 'SEO Services', 'url' => '/services/seo/', 'sessions' => (int) round(460 * $mult)),
+            array('title' => 'Web Design Services', 'url' => '/services/web-design/', 'sessions' => (int) round(420 * $mult)),
+            array('title' => 'Case Study: Gamma', 'url' => '/case-studies/gamma/', 'sessions' => (int) round(380 * $mult)),
+            array('title' => 'Product A', 'url' => '/products/product-a/', 'sessions' => (int) round(340 * $mult)),
+            array('title' => 'Product B', 'url' => '/products/product-b/', 'sessions' => (int) round(300 * $mult)),
+            array('title' => 'Terms of Service', 'url' => '/terms/', 'sessions' => (int) round(260 * $mult)),
+            array('title' => 'Accessibility', 'url' => '/accessibility/', 'sessions' => (int) round(220 * $mult)),
         );
 
         // Add a views column for UI parity with GA4 provider.
@@ -278,7 +298,7 @@ final class CLIREDAS_Data_Provider
             }
         );
 
-        return array_slice($pages, 0, 10);
+        return array_slice($pages, 0, 25);
     }
 
     /**
@@ -331,7 +351,7 @@ final class CLIREDAS_Data_Provider
      */
     private function get_cache_key($range_key)
     {
-        return 'cliredas_report_' . sanitize_key($range_key);
+        return 'cliredas_report_v' . self::CACHE_SCHEMA_VERSION . '_' . sanitize_key($range_key);
     }
 
     /**
