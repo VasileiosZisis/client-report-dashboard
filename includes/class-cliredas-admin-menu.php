@@ -36,24 +36,15 @@ final class CLIREDAS_Admin_Menu
     private $dashboard_page;
 
     /**
-     * Upgrade page renderer.
-     *
-     * @var CLIREDAS_Upgrade_Page
-     */
-    private $upgrade_page;
-
-    /**
      * Set up the admin menu controller.
      *
      * @param CLIREDAS_Settings       $settings       Settings service.
      * @param CLIREDAS_Dashboard_Page $dashboard_page Dashboard page renderer.
-     * @param CLIREDAS_Upgrade_Page   $upgrade_page   Upgrade page renderer.
      */
-    public function __construct(CLIREDAS_Settings $settings, CLIREDAS_Dashboard_Page $dashboard_page, CLIREDAS_Upgrade_Page $upgrade_page)
+    public function __construct(CLIREDAS_Settings $settings, CLIREDAS_Dashboard_Page $dashboard_page)
     {
         $this->settings       = $settings;
         $this->dashboard_page = $dashboard_page;
-        $this->upgrade_page   = $upgrade_page;
 
         add_action('admin_menu', array($this, 'register_menus'));
     }
@@ -90,16 +81,6 @@ final class CLIREDAS_Admin_Menu
             $capability,
             self::MENU_SLUG,
             array($this->dashboard_page, 'render')
-        );
-
-        // Upgrade page (admin only).
-        add_submenu_page(
-            self::MENU_SLUG,
-            __('Pro (Coming Soon)', 'cliredas-analytics-dashboard'),
-            __('Pro (Coming Soon)', 'cliredas-analytics-dashboard'),
-            'manage_options',
-            'cliredas-upgrade',
-            array($this->upgrade_page, 'render')
         );
 
         // Settings page (admin only).

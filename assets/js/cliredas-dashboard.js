@@ -31,20 +31,13 @@
     el.textContent = msg || '';
   }
 
-  function setRangeHint(rangeKey) {
-    const hint = $('#cliredas-range-hint');
-    if (!hint || !cfg || !cfg.ranges) return;
-
-    const label = cfg.ranges[rangeKey] || cfg.ranges['last_7_days'] || '';
-    const tmpl = i18n.showingTemplate || 'Showing: %s';
-    hint.textContent = label ? sprintf(tmpl, label) : '';
-  }
-
   function setLoading(isLoading) {
     const controls = $('.cliredas-controls');
     const select = $('#cliredas-date-range');
+    const exportButton = $('#cliredas-export-csv-button');
     if (controls) controls.classList.toggle('is-loading', !!isLoading);
     if (select) select.disabled = !!isLoading;
+    if (exportButton) exportButton.disabled = !!isLoading;
 
     setStatus(isLoading ? i18n.loading || 'Loading...' : '');
   }
@@ -523,6 +516,8 @@
     const rangeSelect = $('#cliredas-date-range');
     if (!rangeSelect) return;
 
+    const exportRange = $('#cliredas-export-range');
+
     const chartMetricSelect = $('#cliredas-chart-metric');
     if (chartMetricSelect) {
       try {
@@ -548,7 +543,6 @@
     // Render immediately from embedded initial report (no initial AJAX).
     clearError();
     if (cfg.initialReport) {
-      setRangeHint(rangeSelect.value);
       renderAll(cfg.initialReport);
     }
 
@@ -557,13 +551,13 @@
 
       clearError();
       setLoading(true);
-      setRangeHint(range);
 
       try {
         const report = await fetchReport(range);
         // Keep the last loaded report so chart metric toggles don't require refetch.
         if (cfg) cfg.initialReport = report;
         renderAll(report);
+        if (exportRange) exportRange.value = range;
         setLoading(false);
       } catch (e) {
         setLoading(false);

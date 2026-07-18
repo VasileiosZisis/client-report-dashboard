@@ -4,7 +4,7 @@ Tags: analytics, dashboard, reporting, google-analytics, ga4
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,6 +24,7 @@ Use it to show key GA4 performance metrics without sending clients to the GA4 in
 * Top pages table showing up to 25 pages with Sessions, Views, and Avg engagement time per page
 * Device breakdown (desktop / mobile / tablet)
 * Traffic sources breakdown (Organic Search / Direct / Referral / Social / Other)
+* CSV export for the current dashboard range, including all built-in report blocks
 * Built-in caching (default 15 minutes) for fast dashboards and fewer API calls
 * Clear Cache button (forces a fresh fetch on the next load)
 * Optional access control: allow Editors to view the dashboard
@@ -65,10 +66,15 @@ Yes. OAuth credentials and tokens are stored in the WordPress options table unde
 Yes. Enable the option in Settings > Client Report.
 
 == Screenshots ==
-1. Dashboard (KPIs, chart toggle, top pages, devices, traffic sources).
-2. Settings page (OAuth credentials, connect/disconnect, property selection).
+1. Dashboard (KPIs, chart toggle, top pages).
+2. Dashboard (devices, traffic sources).
+3. Settings page (OAuth credentials, connect/disconnect, property selection).
 
 == Changelog ==
+= 1.4.0 =
+* Added a protected CSV export for all built-in dashboard report blocks.
+* CSV exports clearly identify sample or fallback data and guard against spreadsheet formula injection.
+
 = 1.3.0 =
 * Increased the Top pages table from 10 to up to 25 rows.
 
@@ -86,6 +92,9 @@ Yes. Enable the option in Settings > Client Report.
 * Dashboard improvements: chart toggle, pageviews KPI, traffic sources, caching + clear cache
 
 == Upgrade Notice ==
+= 1.4.0 =
+Exports the current dashboard range as a CSV containing KPIs, time-series data, Top pages, devices, and traffic sources.
+
 = 1.3.0 =
 Shows up to 25 rows in the Top pages table.
 

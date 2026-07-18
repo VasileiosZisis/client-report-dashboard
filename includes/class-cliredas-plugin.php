@@ -160,7 +160,6 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-ga4-data-provider.php';
         require_once __DIR__ . '/class-cliredas-provider-factory.php';
         require_once __DIR__ . '/class-cliredas-dashboard-page.php';
-        require_once __DIR__ . '/class-cliredas-upgrade-page.php';
         require_once __DIR__ . '/class-cliredas-admin-menu.php';
         require_once __DIR__ . '/class-cliredas-admin-screens.php';
         require_once __DIR__ . '/class-cliredas-assets.php';
@@ -173,12 +172,10 @@ final class CLIREDAS_Plugin
         $data_provider  = CLIREDAS_Provider_Factory::get_provider($this->settings);
         new CLIREDAS_Cache_Manager($data_provider);
         $dashboard_page = new CLIREDAS_Dashboard_Page($this->settings, $data_provider);
-        $upgrade_page   = new CLIREDAS_Upgrade_Page();
 
         new CLIREDAS_Admin_Menu(
             $this->settings,
-            $dashboard_page,
-            $upgrade_page
+            $dashboard_page
         );
     }
 

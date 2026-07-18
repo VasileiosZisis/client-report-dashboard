@@ -2,7 +2,7 @@
 
 Cliredas - Client Dashboard for Google Analytics (GA4) adds a clean, client-friendly Google Analytics 4 (GA4) dashboard inside WordPress admin (`wp-admin`).
 
-This repository is the Free version intended for WordPress.org distribution. A separate Pro add-on is planned (menu label: "Pro (Coming Soon)").
+This repository is the Free version intended for WordPress.org distribution. A separate Pro add-on is planned.
 
 ## Key Features (Free)
 
@@ -14,6 +14,7 @@ This repository is the Free version intended for WordPress.org distribution. A s
 - Top pages table with up to 25 rows: Path, Title, Sessions, Views, Avg engagement time (per page)
 - Device breakdown (desktop / mobile / tablet)
 - Traffic sources breakdown (Organic Search / Direct / Referral / Social / Other)
+- CSV export for the current dashboard range, including all built-in report blocks
 - Built-in caching (default 15 minutes) for faster dashboards and fewer API calls
 - Clear cache button (forces a fresh fetch on the next load)
 - Optional access control: allow Editors to view the dashboard

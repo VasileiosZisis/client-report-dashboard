@@ -46,6 +46,7 @@ final class CLIREDAS_Dashboard_Page
 
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
         add_action('wp_ajax_cliredas_get_report', array($this, 'ajax_get_report'));
+        add_action('admin_post_cliredas_export_csv', array($this, 'handle_csv_export'));
     }
 
     /**
@@ -72,7 +73,6 @@ final class CLIREDAS_Dashboard_Page
                 'cliredasNonce' => wp_create_nonce('cliredas_dashboard'),
                 'selectedRange' => $selected_range,
                 'ranges'        => $this->get_date_ranges(),
-                'upgradeUrl'    => admin_url('admin.php?page=cliredas-upgrade'),
                 'initialReport' => $initial_report,
             )
         );
@@ -114,6 +114,75 @@ final class CLIREDAS_Dashboard_Page
     }
 
     /**
+     * Export the selected dashboard report as CSV.
+     *
+     * @return void
+     */
+    public function handle_csv_export()
+    {
+        check_admin_referer('cliredas_export_csv');
+
+        $capability = $this->settings->get_required_capability('dashboard');
+        if (! current_user_can($capability)) {
+            wp_die(
+                esc_html__('You do not have permission to export this report.', 'cliredas-analytics-dashboard'),
+                '',
+                array('response' => 403)
+            );
+        }
+
+        $range_input = filter_input(INPUT_POST, 'cliredas_range', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $range_raw = is_string($range_input) ? sanitize_key($range_input) : '';
+        $ranges = $this->get_date_ranges();
+
+        if ('' === $range_raw || ! array_key_exists($range_raw, $ranges)) {
+            wp_die(
+                esc_html__('Invalid dashboard date range.', 'cliredas-analytics-dashboard'),
+                '',
+                array('response' => 400)
+            );
+        }
+
+        $report = $this->provider->get_report($range_raw);
+        $report = $this->sanitize_report_for_current_user($report);
+
+        $filename = sanitize_file_name(
+            'cliredas-dashboard-' . $range_raw . '-' . wp_date('Y-m-d') . '.csv'
+        );
+
+        if (headers_sent()) {
+            wp_die(
+                esc_html__('The CSV export could not be started because output was already sent.', 'cliredas-analytics-dashboard'),
+                '',
+                array('response' => 500)
+            );
+        }
+
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- CSV downloads require a streamed response.
+        $output = fopen('php://output', 'w');
+        if (false === $output) {
+            wp_die(
+                esc_html__('The CSV export could not be created.', 'cliredas-analytics-dashboard'),
+                '',
+                array('response' => 500)
+            );
+        }
+
+        nocache_headers();
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('X-Content-Type-Options: nosniff');
+
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write the UTF-8 BOM directly to the download stream.
+        fwrite($output, "\xEF\xBB\xBF");
+        $this->write_csv_report($output, $report, $ranges[$range_raw]);
+
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the streamed CSV response.
+        fclose($output);
+        exit;
+    }
+
+    /**
      * Render the dashboard page.
      *
      * @return void
@@ -126,9 +195,8 @@ final class CLIREDAS_Dashboard_Page
             wp_die(esc_html__('You do not have permission to view this page.', 'cliredas-analytics-dashboard'));
         }
 
-        $ranges         = $this->get_date_ranges();
-        $selected_key   = $this->get_current_range_key();
-        $selected_label = isset($ranges[$selected_key]) ? $ranges[$selected_key] : reset($ranges);
+        $ranges       = $this->get_date_ranges();
+        $selected_key = $this->get_current_range_key();
 
         // Initial server-rendered report (so the page is usable without JS).
         $report = $this->provider->get_report($selected_key);
@@ -163,37 +231,43 @@ final class CLIREDAS_Dashboard_Page
             <div class="cliredas-header">
                 <h1 class="cliredas-title"><?php echo esc_html__('Client Report', 'cliredas-analytics-dashboard'); ?></h1>
 
-                <div class="cliredas-controls">
-                    <label for="cliredas-date-range" class="cliredas-control-label">
-                        <?php echo esc_html__('Date range', 'cliredas-analytics-dashboard'); ?>
-                    </label>
+                <div class="cliredas-header-actions">
+                    <div class="cliredas-controls">
+                        <label for="cliredas-date-range" class="cliredas-control-label">
+                            <?php echo esc_html__('Date range', 'cliredas-analytics-dashboard'); ?>
+                        </label>
 
-                    <select id="cliredas-date-range" class="cliredas-select">
-                        <?php foreach ($ranges as $key => $label) : ?>
-                            <option value="<?php echo esc_attr($key); ?>" <?php selected($selected_key, $key); ?>>
-                                <?php echo esc_html($label); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                        <select id="cliredas-date-range" class="cliredas-select">
+                            <?php foreach ($ranges as $key => $label) : ?>
+                                <option value="<?php echo esc_attr($key); ?>" <?php selected($selected_key, $key); ?>>
+                                    <?php echo esc_html($label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
 
-                    <span class="cliredas-range-hint" id="cliredas-range-hint">
-                        <?php
-                        /* translators: %s: selected date range label (e.g. "Last 7 days"). */
-                        echo esc_html(sprintf(__('Showing: %s', 'cliredas-analytics-dashboard'), $selected_label));
-                        ?>
-                    </span>
+                        <span class="cliredas-status" id="cliredas-status" aria-live="polite"></span>
+                    </div>
 
-                    <span class="cliredas-status" id="cliredas-status" aria-live="polite"></span>
-                </div>
-                <?php if (current_user_can('manage_options')) : ?>
-                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="cliredas-clear-cache-form">
-                        <input type="hidden" name="action" value="cliredas_clear_cache">
-                        <?php wp_nonce_field('cliredas_clear_cache'); ?>
-                        <button type="submit" class="button">
-                            <?php echo esc_html__('Clear cache', 'cliredas-analytics-dashboard'); ?>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="cliredas-export-form">
+                        <input type="hidden" name="action" value="cliredas_export_csv">
+                        <input type="hidden" name="cliredas_range" id="cliredas-export-range" value="<?php echo esc_attr($selected_key); ?>">
+                        <?php wp_nonce_field('cliredas_export_csv'); ?>
+                        <button type="submit" class="button button-secondary cliredas-export-button" id="cliredas-export-csv-button">
+                            <span class="dashicons dashicons-download" aria-hidden="true"></span>
+                            <?php echo esc_html__('Export CSV', 'cliredas-analytics-dashboard'); ?>
                         </button>
                     </form>
-                <?php endif; ?>
+
+                    <?php if (current_user_can('manage_options')) : ?>
+                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="cliredas-clear-cache-form">
+                            <input type="hidden" name="action" value="cliredas_clear_cache">
+                            <?php wp_nonce_field('cliredas_clear_cache'); ?>
+                            <button type="submit" class="button">
+                                <?php echo esc_html__('Clear cache', 'cliredas-analytics-dashboard'); ?>
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <div id="cliredas-notice" class="notice notice-error is-dismissible" style="display:none;">
@@ -454,6 +528,342 @@ final class CLIREDAS_Dashboard_Page
         }
 
         return $range;
+    }
+
+    /**
+     * Write all built-in dashboard blocks to a sectioned CSV stream.
+     *
+     * @param resource $output      Writable CSV stream.
+     * @param array    $report      Dashboard report.
+     * @param string   $range_label Selected range label.
+     * @return void
+     */
+    private function write_csv_report($output, array $report, $range_label)
+    {
+        $source = isset($report['source']) ? sanitize_key((string) $report['source']) : '';
+        $is_sample = 'mock' === $source || ! $this->settings->is_ga4_connected();
+        $source_label = $is_sample
+            ? __('Sample data', 'cliredas-analytics-dashboard')
+            : __('Google Analytics 4', 'cliredas-analytics-dashboard');
+
+        $this->write_csv_row($output, array(__('Metadata', 'cliredas-analytics-dashboard')));
+        $this->write_csv_row(
+            $output,
+            array(
+                __('Field', 'cliredas-analytics-dashboard'),
+                __('Value', 'cliredas-analytics-dashboard'),
+            )
+        );
+        $this->write_csv_row(
+            $output,
+            array(__('Date range', 'cliredas-analytics-dashboard'), (string) $range_label)
+        );
+        $this->write_csv_row(
+            $output,
+            array(__('Data source', 'cliredas-analytics-dashboard'), $source_label)
+        );
+        $this->write_csv_row(
+            $output,
+            array(__('Exported at', 'cliredas-analytics-dashboard'), wp_date('Y-m-d H:i:s T'))
+        );
+
+        if (! empty($report['error_message'])) {
+            $this->write_csv_row(
+                $output,
+                array(
+                    __('Warning', 'cliredas-analytics-dashboard'),
+                    trim((string) $report['error_message']),
+                )
+            );
+        } elseif ($is_sample) {
+            $this->write_csv_row(
+                $output,
+                array(
+                    __('Warning', 'cliredas-analytics-dashboard'),
+                    __('This export contains sample data, not Google Analytics data.', 'cliredas-analytics-dashboard'),
+                )
+            );
+        }
+
+        $this->write_csv_row($output, array());
+        $this->write_csv_kpis($output, $report);
+        $this->write_csv_row($output, array());
+        $this->write_csv_timeseries($output, $report);
+        $this->write_csv_row($output, array());
+        $this->write_csv_top_pages($output, $report);
+        $this->write_csv_row($output, array());
+        $this->write_csv_devices($output, $report);
+        $this->write_csv_row($output, array());
+        $this->write_csv_traffic_sources($output, $report);
+    }
+
+    /**
+     * Write the KPI summary section.
+     *
+     * @param resource $output Writable CSV stream.
+     * @param array    $report Dashboard report.
+     * @return void
+     */
+    private function write_csv_kpis($output, array $report)
+    {
+        $metrics = array(
+            'sessions' => __('Sessions', 'cliredas-analytics-dashboard'),
+            'users' => __('Total users', 'cliredas-analytics-dashboard'),
+            'pageviews' => __('Pageviews', 'cliredas-analytics-dashboard'),
+            'avg_engagement_seconds' => __('Avg engagement time (seconds)', 'cliredas-analytics-dashboard'),
+        );
+        $totals = isset($report['totals']) && is_array($report['totals']) ? $report['totals'] : array();
+        $previous_totals = isset($report['comparison']['totals']) && is_array($report['comparison']['totals'])
+            ? $report['comparison']['totals']
+            : array();
+
+        $this->write_csv_row($output, array(__('KPIs', 'cliredas-analytics-dashboard')));
+        $this->write_csv_row(
+            $output,
+            array(
+                __('Metric', 'cliredas-analytics-dashboard'),
+                __('Current', 'cliredas-analytics-dashboard'),
+                __('Previous', 'cliredas-analytics-dashboard'),
+                __('Change', 'cliredas-analytics-dashboard'),
+            )
+        );
+
+        foreach ($metrics as $metric_key => $metric_label) {
+            $current = isset($totals[$metric_key]) ? (int) $totals[$metric_key] : 0;
+            $has_previous = array_key_exists($metric_key, $previous_totals);
+            $previous = $has_previous ? (int) $previous_totals[$metric_key] : 0;
+
+            $this->write_csv_row(
+                $output,
+                array(
+                    $metric_label,
+                    $current,
+                    $has_previous ? $previous : '',
+                    $this->get_csv_change($current, $previous, $has_previous),
+                )
+            );
+        }
+    }
+
+    /**
+     * Write the time-series section.
+     *
+     * @param resource $output Writable CSV stream.
+     * @param array    $report Dashboard report.
+     * @return void
+     */
+    private function write_csv_timeseries($output, array $report)
+    {
+        $this->write_csv_row($output, array(__('Time series', 'cliredas-analytics-dashboard')));
+        $this->write_csv_row(
+            $output,
+            array(
+                __('Date', 'cliredas-analytics-dashboard'),
+                __('Sessions', 'cliredas-analytics-dashboard'),
+                __('Total users', 'cliredas-analytics-dashboard'),
+            )
+        );
+
+        $timeseries = isset($report['timeseries']) && is_array($report['timeseries'])
+            ? $report['timeseries']
+            : array();
+
+        foreach ($timeseries as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $this->write_csv_row(
+                $output,
+                array(
+                    isset($row['date']) ? (string) $row['date'] : '',
+                    isset($row['sessions']) ? (int) $row['sessions'] : 0,
+                    isset($row['users']) ? (int) $row['users'] : 0,
+                )
+            );
+        }
+    }
+
+    /**
+     * Write the Top pages section.
+     *
+     * @param resource $output Writable CSV stream.
+     * @param array    $report Dashboard report.
+     * @return void
+     */
+    private function write_csv_top_pages($output, array $report)
+    {
+        $this->write_csv_row($output, array(__('Top pages', 'cliredas-analytics-dashboard')));
+        $this->write_csv_row(
+            $output,
+            array(
+                __('Page Title', 'cliredas-analytics-dashboard'),
+                __('URL', 'cliredas-analytics-dashboard'),
+                __('Sessions', 'cliredas-analytics-dashboard'),
+                __('Views', 'cliredas-analytics-dashboard'),
+                __('Avg engagement time (seconds)', 'cliredas-analytics-dashboard'),
+            )
+        );
+
+        $top_pages = isset($report['top_pages']) && is_array($report['top_pages'])
+            ? $report['top_pages']
+            : array();
+
+        foreach ($top_pages as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $this->write_csv_row(
+                $output,
+                array(
+                    isset($row['title']) ? (string) $row['title'] : '',
+                    isset($row['url']) ? (string) $row['url'] : '',
+                    isset($row['sessions']) ? (int) $row['sessions'] : 0,
+                    isset($row['views']) ? (int) $row['views'] : 0,
+                    isset($row['avg_engagement_seconds']) ? (int) $row['avg_engagement_seconds'] : 0,
+                )
+            );
+        }
+    }
+
+    /**
+     * Write the device breakdown section.
+     *
+     * @param resource $output Writable CSV stream.
+     * @param array    $report Dashboard report.
+     * @return void
+     */
+    private function write_csv_devices($output, array $report)
+    {
+        $this->write_csv_row($output, array(__('Device breakdown', 'cliredas-analytics-dashboard')));
+        $this->write_csv_row(
+            $output,
+            array(
+                __('Device', 'cliredas-analytics-dashboard'),
+                __('Sessions', 'cliredas-analytics-dashboard'),
+            )
+        );
+
+        $devices = isset($report['devices']) && is_array($report['devices']) ? $report['devices'] : array();
+        foreach ($devices as $device => $sessions) {
+            $this->write_csv_row(
+                $output,
+                array(
+                    ucfirst(str_replace('_', ' ', (string) $device)),
+                    (int) $sessions,
+                )
+            );
+        }
+    }
+
+    /**
+     * Write the traffic sources section.
+     *
+     * @param resource $output Writable CSV stream.
+     * @param array    $report Dashboard report.
+     * @return void
+     */
+    private function write_csv_traffic_sources($output, array $report)
+    {
+        $labels = array(
+            'organic_search' => __('Organic Search', 'cliredas-analytics-dashboard'),
+            'direct' => __('Direct', 'cliredas-analytics-dashboard'),
+            'referral' => __('Referral', 'cliredas-analytics-dashboard'),
+            'social' => __('Social', 'cliredas-analytics-dashboard'),
+            'other' => __('Other', 'cliredas-analytics-dashboard'),
+        );
+        $sources = isset($report['traffic_sources']) && is_array($report['traffic_sources'])
+            ? $report['traffic_sources']
+            : array();
+
+        $this->write_csv_row($output, array(__('Traffic sources', 'cliredas-analytics-dashboard')));
+        $this->write_csv_row(
+            $output,
+            array(
+                __('Source', 'cliredas-analytics-dashboard'),
+                __('Sessions', 'cliredas-analytics-dashboard'),
+            )
+        );
+
+        foreach ($labels as $source_key => $source_label) {
+            $this->write_csv_row(
+                $output,
+                array(
+                    $source_label,
+                    isset($sources[$source_key]) ? (int) $sources[$source_key] : 0,
+                )
+            );
+        }
+    }
+
+    /**
+     * Calculate the CSV comparison value for a KPI.
+     *
+     * @param int  $current      Current-period value.
+     * @param int  $previous     Previous-period value.
+     * @param bool $has_previous Whether comparison data exists.
+     * @return string
+     */
+    private function get_csv_change($current, $previous, $has_previous)
+    {
+        if (! $has_previous) {
+            return '';
+        }
+
+        if ($previous <= 0 && $current > 0) {
+            return __('New', 'cliredas-analytics-dashboard');
+        }
+
+        $change = ($previous > 0) ? round((($current - $previous) / $previous) * 100, 1) : 0.0;
+        $sign = '';
+        if ($change > 0) {
+            $sign = '+';
+        } elseif ($change < 0) {
+            $sign = '-';
+        }
+
+        return $sign . number_format(abs($change), 1, '.', '') . '%';
+    }
+
+    /**
+     * Write a spreadsheet-safe CSV row.
+     *
+     * @param resource $output Writable CSV stream.
+     * @param array    $row    Row values.
+     * @return void
+     */
+    private function write_csv_row($output, array $row)
+    {
+        $safe_row = array_map(array($this, 'prepare_csv_cell'), $row);
+        fputcsv($output, $safe_row, ',', '"', '');
+    }
+
+    /**
+     * Normalize a value and prevent spreadsheet formula execution.
+     *
+     * @param mixed $value CSV cell value.
+     * @return int|float|string
+     */
+    private function prepare_csv_cell($value)
+    {
+        if (is_int($value) || is_float($value)) {
+            return $value;
+        }
+
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+
+        $cell = wp_check_invalid_utf8(wp_strip_all_tags((string) $value));
+        $starts_with_control = 1 === preg_match('/^[\x09\x0D]/', $cell);
+        $starts_with_formula = 1 === preg_match('/^\s*[=+\-@]/u', $cell);
+
+        if ($starts_with_control || $starts_with_formula) {
+            return "'" . $cell;
+        }
+
+        return $cell;
     }
 
     /**
