@@ -36,6 +36,10 @@ final class CLIREDAS_Assets
             'newDelta'                => __('New vs previous period', 'cliredas-analytics-dashboard'),
             /* translators: %s: chart metric label (e.g. "Sessions" or "Total users"). */
             'overTimeTemplate'       => __('%s over time', 'cliredas-analytics-dashboard'),
+            /* translators: %s: sortable table column label. */
+            'sortAscending'          => __('Sort %s ascending', 'cliredas-analytics-dashboard'),
+            /* translators: %s: sortable table column label. */
+            'sortDescending'         => __('Sort %s descending', 'cliredas-analytics-dashboard'),
             'trafficSources'         => array(
                 'organic_search' => __('Organic Search', 'cliredas-analytics-dashboard'),
                 'direct'         => __('Direct', 'cliredas-analytics-dashboard'),

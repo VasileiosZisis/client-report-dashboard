@@ -4,7 +4,7 @@ Tags: analytics, dashboard, reporting, google-analytics, ga4
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,7 +21,7 @@ Use it to show key GA4 performance metrics without sending clients to the GA4 in
 * Dashboard KPIs with previous-period deltas: Sessions, Total users, Pageviews, Avg engagement time
 * Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
 * Toggle line chart between Sessions over time and Total users over time
-* Top pages table showing up to 25 pages with Sessions, Views, and Avg engagement time per page
+* Sortable Top pages table showing up to 25 pages with Sessions, Views, and Avg engagement time per page
 * Device breakdown (desktop / mobile / tablet)
 * Traffic sources breakdown (Organic Search / Direct / Referral / Social / Other)
 * CSV export for the current dashboard range, including all built-in report blocks
@@ -71,6 +71,10 @@ Yes. Enable the option in Settings > Client Report.
 3. Settings page (OAuth credentials, connect/disconnect, property selection).
 
 == Changelog ==
+= 1.5.0 =
+* Added accessible sorting for every Top pages column.
+* Top pages sorting persists across date-range changes and browser visits.
+
 = 1.4.0 =
 * Added a protected CSV export for all built-in dashboard report blocks.
 * CSV exports clearly identify sample or fallback data and guard against spreadsheet formula injection.
@@ -92,6 +96,9 @@ Yes. Enable the option in Settings > Client Report.
 * Dashboard improvements: chart toggle, pageviews KPI, traffic sources, caching + clear cache
 
 == Upgrade Notice ==
+= 1.5.0 =
+Adds accessible, persistent sorting to every Top pages column.
+
 = 1.4.0 =
 Exports the current dashboard range as a CSV containing KPIs, time-series data, Top pages, devices, and traffic sources.
 

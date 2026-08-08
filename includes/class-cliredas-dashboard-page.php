@@ -367,28 +367,55 @@ final class CLIREDAS_Dashboard_Page
                 <div class="cliredas-card cliredas-card-wide">
                     <h2 class="cliredas-card-title"><?php echo esc_html__('Top pages', 'cliredas-analytics-dashboard'); ?></h2>
 
-                    <table class="widefat striped cliredas-table" id="cliredas-top-pages">
-                        <thead>
-                            <tr>
-                                <th><?php echo esc_html__('Page Title', 'cliredas-analytics-dashboard'); ?></th>
-                                <th><?php echo esc_html__('URL', 'cliredas-analytics-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Views', 'cliredas-analytics-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Avg engagement time', 'cliredas-analytics-dashboard'); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ((array) $report['top_pages'] as $row) : ?>
+                    <div class="cliredas-table-scroll">
+                        <table class="widefat striped cliredas-table" id="cliredas-top-pages">
+                            <thead>
                                 <tr>
-                                    <td><?php echo esc_html((string) $row['title']); ?></td>
-                                    <td><code><?php echo esc_html((string) $row['url']); ?></code></td>
-                                    <td><?php echo esc_html(number_format_i18n((int) $row['sessions'])); ?></td>
-                                    <td><?php echo esc_html(number_format_i18n((int) ($row['views'] ?? 0))); ?></td>
-                                    <td><?php echo esc_html($this->format_duration((int) ($row['avg_engagement_seconds'] ?? 0))); ?></td>
+                                    <th scope="col" aria-sort="none">
+                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="title" data-sort-type="text">
+                                            <span class="cliredas-sort-label"><?php echo esc_html__('Page Title', 'cliredas-analytics-dashboard'); ?></span>
+                                            <span class="dashicons dashicons-sort" aria-hidden="true"></span>
+                                        </button>
+                                    </th>
+                                    <th scope="col" aria-sort="none">
+                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="url" data-sort-type="text">
+                                            <span class="cliredas-sort-label"><?php echo esc_html__('URL', 'cliredas-analytics-dashboard'); ?></span>
+                                            <span class="dashicons dashicons-sort" aria-hidden="true"></span>
+                                        </button>
+                                    </th>
+                                    <th scope="col" aria-sort="none">
+                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="sessions" data-sort-type="number">
+                                            <span class="cliredas-sort-label"><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></span>
+                                            <span class="dashicons dashicons-sort" aria-hidden="true"></span>
+                                        </button>
+                                    </th>
+                                    <th scope="col" aria-sort="none">
+                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="views" data-sort-type="number">
+                                            <span class="cliredas-sort-label"><?php echo esc_html__('Views', 'cliredas-analytics-dashboard'); ?></span>
+                                            <span class="dashicons dashicons-sort" aria-hidden="true"></span>
+                                        </button>
+                                    </th>
+                                    <th scope="col" aria-sort="none">
+                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="avg_engagement_seconds" data-sort-type="number">
+                                            <span class="cliredas-sort-label"><?php echo esc_html__('Avg engagement time', 'cliredas-analytics-dashboard'); ?></span>
+                                            <span class="dashicons dashicons-sort" aria-hidden="true"></span>
+                                        </button>
+                                    </th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach ((array) $report['top_pages'] as $row) : ?>
+                                    <tr>
+                                        <td><?php echo esc_html((string) $row['title']); ?></td>
+                                        <td><code><?php echo esc_html((string) $row['url']); ?></code></td>
+                                        <td><?php echo esc_html(number_format_i18n((int) $row['sessions'])); ?></td>
+                                        <td><?php echo esc_html(number_format_i18n((int) ($row['views'] ?? 0))); ?></td>
+                                        <td><?php echo esc_html($this->format_duration((int) ($row['avg_engagement_seconds'] ?? 0))); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div class="cliredas-card">

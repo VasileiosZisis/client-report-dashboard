@@ -120,6 +120,7 @@
 }
 
 .cliredas-card {
+  min-width: 0;
   background: #fff;
   border: 1px solid #dcdcde;
   border-radius: 10px;
@@ -200,6 +201,55 @@
   vertical-align: top;
 }
 
+.cliredas-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+#cliredas-top-pages {
+  min-width: 720px;
+}
+
+.cliredas-sort-button {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  margin: -4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cliredas-sort-button:hover .cliredas-sort-label {
+  color: #135e96;
+  text-decoration: underline;
+}
+
+.cliredas-sort-button:focus-visible {
+  outline: 2px solid #2271b1;
+  outline-offset: 1px;
+}
+
+.cliredas-sort-button .dashicons {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.cliredas-sort-button:not(.is-active) .dashicons {
+  color: #787c82;
+}
+
 .cliredas-footer {
   margin-top: 14px;
   display: flex;
@@ -215,6 +265,11 @@
 @media (max-width: 1000px) {
   .cliredas-header {
     align-items: flex-start;
+  }
+
+  .cliredas-header-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .cliredas-grid {

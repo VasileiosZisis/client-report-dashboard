@@ -3,6 +3,15 @@
 
   const cfg = window.cliredasDashboard;
   const i18n = (cfg && cfg.i18n) || {};
+  const topPagesSortStorageKey = 'cliredas_top_pages_sort';
+  const topPagesColumns = {
+    title: { type: 'text', initialDirection: 'ascending' },
+    url: { type: 'text', initialDirection: 'ascending' },
+    sessions: { type: 'number', initialDirection: 'descending' },
+    views: { type: 'number', initialDirection: 'descending' },
+    avg_engagement_seconds: { type: 'number', initialDirection: 'descending' },
+  };
+  let topPagesSort = loadTopPagesSort();
 
   function $(sel, root) {
     return (root || document).querySelector(sel);
@@ -127,6 +136,152 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  function normalizeTopPagesSort(value) {
+    if (
+      !value ||
+      !Object.prototype.hasOwnProperty.call(topPagesColumns, value.key) ||
+      (value.direction !== 'ascending' && value.direction !== 'descending')
+    ) {
+      return null;
+    }
+
+    return { key: value.key, direction: value.direction };
+  }
+
+  function loadTopPagesSort() {
+    try {
+      const saved = window.localStorage.getItem(topPagesSortStorageKey);
+      return saved ? normalizeTopPagesSort(JSON.parse(saved)) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveTopPagesSort() {
+    try {
+      window.localStorage.setItem(
+        topPagesSortStorageKey,
+        JSON.stringify(topPagesSort)
+      );
+    } catch (e) {}
+  }
+
+  function compareTopPagesText(a, b) {
+    try {
+      return String(a).localeCompare(String(b), undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
+    } catch (e) {
+      const left = String(a).toLowerCase();
+      const right = String(b).toLowerCase();
+      if (left < right) return -1;
+      if (left > right) return 1;
+      return 0;
+    }
+  }
+
+  function getTopPagesRows(pages) {
+    const rows = pages.slice(0, 25).map(function (page, index) {
+      return { page: page, originalIndex: index };
+    });
+
+    if (!topPagesSort) {
+      return rows.map(function (row) {
+        return row.page;
+      });
+    }
+
+    const column = topPagesColumns[topPagesSort.key];
+    const direction = topPagesSort.direction === 'ascending' ? 1 : -1;
+
+    rows.sort(function (left, right) {
+      const leftValue = left.page[topPagesSort.key];
+      const rightValue = right.page[topPagesSort.key];
+      let comparison = 0;
+
+      if (column.type === 'number') {
+        const leftNumber = Number(leftValue) || 0;
+        const rightNumber = Number(rightValue) || 0;
+        comparison = leftNumber - rightNumber;
+      } else {
+        comparison = compareTopPagesText(leftValue || '', rightValue || '');
+      }
+
+      return comparison === 0
+        ? left.originalIndex - right.originalIndex
+        : comparison * direction;
+    });
+
+    return rows.map(function (row) {
+      return row.page;
+    });
+  }
+
+  function updateTopPagesSortHeaders() {
+    $all('#cliredas-top-pages .cliredas-sort-button').forEach(function (button) {
+      const key = button.getAttribute('data-cliredas-sort');
+      const column = topPagesColumns[key];
+      const heading = button.closest('th');
+      const icon = $('.dashicons', button);
+      const label = $('.cliredas-sort-label', button);
+      const isActive = !!topPagesSort && topPagesSort.key === key;
+      const currentDirection = isActive ? topPagesSort.direction : null;
+      const nextDirection = isActive
+        ? currentDirection === 'ascending'
+          ? 'descending'
+          : 'ascending'
+        : column.initialDirection;
+      const actionTemplate =
+        nextDirection === 'ascending'
+          ? i18n.sortAscending || 'Sort %s ascending'
+          : i18n.sortDescending || 'Sort %s descending';
+
+      if (heading) {
+        heading.setAttribute('aria-sort', currentDirection || 'none');
+      }
+
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-label', sprintf(actionTemplate, label.textContent));
+
+      if (icon) {
+        icon.classList.remove('dashicons-sort', 'dashicons-arrow-up', 'dashicons-arrow-down');
+        icon.classList.add(
+          currentDirection === 'ascending'
+            ? 'dashicons-arrow-up'
+            : currentDirection === 'descending'
+              ? 'dashicons-arrow-down'
+              : 'dashicons-sort'
+        );
+      }
+    });
+  }
+
+  function initializeTopPagesSorting() {
+    $all('#cliredas-top-pages .cliredas-sort-button').forEach(function (button) {
+      button.addEventListener('click', function () {
+        const key = button.getAttribute('data-cliredas-sort');
+        const column = topPagesColumns[key];
+        if (!column) return;
+
+        topPagesSort = {
+          key: key,
+          direction:
+            topPagesSort && topPagesSort.key === key
+              ? topPagesSort.direction === 'ascending'
+                ? 'descending'
+                : 'ascending'
+              : column.initialDirection,
+        };
+
+        saveTopPagesSort();
+        renderTopPages((cfg && cfg.initialReport) || {});
+      });
+    });
+
+    updateTopPagesSortHeaders();
   }
 
   // ---- Rendering: KPIs, Devices, Top Pages ----
@@ -337,14 +492,14 @@
     if (!tbody) return;
 
     const pages = report.top_pages || [];
+    updateTopPagesSortHeaders();
     if (!pages.length) {
       const noData = escapeHtml(i18n.noData || 'No data.');
       tbody.innerHTML = '<tr><td colspan="5">' + noData + '</td></tr>';
       return;
     }
 
-    tbody.innerHTML = pages
-      .slice(0, 25)
+    tbody.innerHTML = getTopPagesRows(pages)
       .map(function (p) {
         return (
           '<tr>' +
@@ -517,6 +672,8 @@
     if (!rangeSelect) return;
 
     const exportRange = $('#cliredas-export-range');
+
+    initializeTopPagesSorting();
 
     const chartMetricSelect = $('#cliredas-chart-metric');
     if (chartMetricSelect) {

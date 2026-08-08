@@ -11,7 +11,7 @@ This repository is the Free version intended for WordPress.org distribution. A s
 - Dashboard KPIs with previous-period deltas: Sessions, Total Users, Pageviews, Avg engagement time
 - Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
 - Toggle line chart between Sessions over time and Total Users over time
-- Top pages table with up to 25 rows: Path, Title, Sessions, Views, Avg engagement time (per page)
+- Sortable Top pages table with up to 25 rows: Path, Title, Sessions, Views, Avg engagement time (per page)
 - Device breakdown (desktop / mobile / tablet)
 - Traffic sources breakdown (Organic Search / Direct / Referral / Social / Other)
 - CSV export for the current dashboard range, including all built-in report blocks

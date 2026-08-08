@@ -3,7 +3,7 @@
 Status: Forward-looking roadmap for the current WordPress.org repository.
 
 This document defines features that belong in the Free plugin after version
-`1.4.0`. It is an actionable product roadmap, not a release schedule or an
+`1.5.0`. It is an actionable product roadmap, not a release schedule or an
 implementation specification.
 
 Related documents:
@@ -43,9 +43,10 @@ The following recommendations are already delivered and are not backlog items:
 | KPI deltas against the previous period | Delivered in `1.2.0` |
 | Up to 25 Top pages rows | Delivered in `1.3.0` |
 | CSV export for all built-in dashboard blocks | Delivered in `1.4.0` |
+| Sortable Top pages columns | Delivered in `1.5.0` |
 
-The Top pages recommendation is only partially complete because interactive
-table sorting is still pending.
+The Top pages recommendation is complete: the table displays up to 25 rows and
+supports persistent client-side sorting for every column.
 
 ## Priority definitions
 
@@ -53,9 +54,9 @@ table sorting is still pending.
 - **Priority 1:** Retention and reliability work for the next Free releases.
 - **Priority 2:** Product polish after the core workflow is stable.
 
-## FREE-01: Sortable Top pages table
+## FREE-01: Sortable Top pages table (Delivered in 1.5.0)
 
-**Priority:** 0
+**Status:** Delivered
 
 **Intent:** Make the existing 25-row table easier to inspect without changing
 the report provider or requesting more GA4 data.
@@ -66,12 +67,12 @@ the report provider or requesting more GA4 data.
 - Preserve provider order until the user explicitly selects a sort.
 - Toggle ascending and descending order from each column header.
 - Use text-aware sorting for Page Title and URL and numeric sorting for metrics.
-- Retain the active sort for the current browser session and reapply it after an
-  AJAX date-range change.
+- Retain the active sort across browser visits and reapply it after an AJAX
+  date-range change.
 - Expose the active direction with `aria-sort`; keyboard users must be able to
   operate every sortable header.
-- Keep sorting client-side. Do not add API calls, options, pagination, or stored
-  preferences.
+- Keep sorting client-side. Do not add API calls, options, pagination, or
+  server-stored preferences.
 
 **Dependencies:** None beyond the current Top pages table and dashboard script.
 
@@ -250,12 +251,11 @@ status language.
 
 ## Recommended sequence
 
-1. FREE-01 Sortable Top pages table.
-2. FREE-03 Setup wizard and connection diagnostics.
-3. FREE-05 OAuth secret hardening and local diagnostics.
-4. FREE-04 Stale-while-revalidate report caching.
-5. FREE-02 Weekly admin digest.
-6. FREE-06 Dashboard filtering, empty states, and accessibility polish.
+1. FREE-03 Setup wizard and connection diagnostics.
+2. FREE-05 OAuth secret hardening and local diagnostics.
+3. FREE-04 Stale-while-revalidate report caching.
+4. FREE-02 Weekly admin digest.
+5. FREE-06 Dashboard filtering, empty states, and accessibility polish.
 
 ## Recommended feature packaging coverage
 
@@ -265,7 +265,6 @@ This repository owns the Free recommendations from the research report:
 |---|---|
 | Additional month and 90-day presets | Delivered in `1.1.0` |
 | KPI deltas versus previous period | Delivered in `1.2.0` |
-| Twenty-five Top pages rows and sorting | Row count delivered; sorting is FREE-01 |
+| Twenty-five Top pages rows and sorting | Delivered in `1.3.0` and `1.5.0` |
 | Basic CSV export | Delivered in `1.4.0` |
 | Simple weekly one-recipient admin digest | Planned as FREE-02 |
-
