@@ -2,9 +2,9 @@
 Contributors: vzisis
 Tags: analytics, dashboard, reporting, google-analytics, ga4
 Requires at least: 6.0
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.0
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,6 +17,7 @@ Use it to show key GA4 performance metrics without sending clients to the GA4 in
 
 == Key Features ==
 * Connect Google Analytics 4 via OAuth (no service account needed)
+* Guided GA4 setup assistant with public URL, OAuth, token, and property diagnostics
 * Select your GA4 Property from a dropdown
 * Dashboard KPIs with previous-period deltas: Sessions, Total users, Pageviews, Avg engagement time
 * Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
@@ -39,7 +40,7 @@ When enabled and connected, the plugin sends requests to:
 
 Data sent includes your OAuth client credentials (Client ID + Client Secret), authorization codes, refresh/access tokens, and API request parameters (selected property, date range, requested dimensions/metrics).
 
-These requests are only made when an authorized WordPress admin user connects GA4 and when the dashboard needs to load or refresh data.
+These requests are only made when an authorized WordPress admin user connects GA4, explicitly runs connection diagnostics, or when the dashboard needs to load or refresh data.
 
 Google privacy policy: https://policies.google.com/privacy
 
@@ -47,10 +48,12 @@ Google privacy policy: https://policies.google.com/privacy
 1. Upload the plugin folder to /wp-content/plugins/ or install via Plugins > Add New (when published).
 2. Activate the plugin.
 3. Go to Client Report in the admin menu.
-4. Go to Settings > Client Report and add your Google OAuth Client ID and Client Secret.
-5. If the site is behind a public tunnel or reverse proxy (for example, ngrok), enter the public site URL in Public OAuth base URL and save settings.
-6. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI.
-7. Click Connect Google Analytics, complete the consent screen, then select a GA4 Property.
+4. Go to Settings > Client Report and open the GA4 Setup Assistant.
+5. Add your Google OAuth Client ID and Client Secret.
+6. If the site is behind a public tunnel or reverse proxy (for example, ngrok), enter the public site URL in Public OAuth base URL and save settings.
+7. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI.
+8. Click Connect Google Analytics, complete the consent screen, then select a GA4 Property.
+9. Run diagnostics to verify the refresh token and property access.
 
 == Frequently Asked Questions ==
 = Does this connect to Google Analytics 4? =
@@ -62,15 +65,23 @@ Google OAuth redirect URIs must use a public top-level domain (e.g. .com, .org).
 = Does this plugin store tokens/secrets in the database? =
 Yes. OAuth credentials and tokens are stored in the WordPress options table under the `cliredas_settings` option. The plugin never displays your saved client secret back in the UI.
 
+The latest connection diagnostic result is stored in user meta for the administrator who ran it. It contains statuses, safe messages, a timestamp, and a non-sensitive configuration fingerprint; it does not contain credentials, tokens, or raw Google responses.
+
 = Can Editors see the dashboard? =
 Yes. Enable the option in Settings > Client Report.
 
 == Screenshots ==
 1. Dashboard (KPIs, chart toggle, top pages).
 2. Dashboard (devices, traffic sources).
-3. Settings page (OAuth credentials, connect/disconnect, property selection).
+3. Settings page (setup assistant, OAuth credentials, connection diagnostics, property selection).
+4. GA4 Setup Assistant showing successful OAuth, token, and property diagnostics.
 
 == Changelog ==
+= 1.6.0 =
+* Added a rerunnable GA4 Setup Assistant to the plugin settings page.
+* Added protected diagnostics for OAuth URL configuration, token health, and GA4 property access.
+* Consolidated settings-page token and property requests through the shared GA4 API client.
+
 = 1.5.0 =
 * Added accessible sorting for every Top pages column.
 * Top pages sorting persists across date-range changes and browser visits.
@@ -96,6 +107,9 @@ Yes. Enable the option in Settings > Client Report.
 * Dashboard improvements: chart toggle, pageviews KPI, traffic sources, caching + clear cache
 
 == Upgrade Notice ==
+= 1.6.0 =
+Adds guided GA4 setup checks and explicit connection diagnostics to the settings page.
+
 = 1.5.0 =
 Adds accessible, persistent sorting to every Top pages column.
 

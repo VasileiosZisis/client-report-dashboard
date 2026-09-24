@@ -3,7 +3,7 @@
 Status: Forward-looking roadmap for the current WordPress.org repository.
 
 This document defines features that belong in the Free plugin after version
-`1.5.0`. It is an actionable product roadmap, not a release schedule or an
+`1.6.0`. It is an actionable product roadmap, not a release schedule or an
 implementation specification.
 
 Related documents:
@@ -44,6 +44,7 @@ The following recommendations are already delivered and are not backlog items:
 | Up to 25 Top pages rows | Delivered in `1.3.0` |
 | CSV export for all built-in dashboard blocks | Delivered in `1.4.0` |
 | Sortable Top pages columns | Delivered in `1.5.0` |
+| Setup assistant and connection diagnostics | Delivered in `1.6.0` |
 
 The Top pages recommendation is complete: the table displays up to 25 rows and
 supports persistent client-side sorting for every column.
@@ -121,9 +122,9 @@ outside wp-admin, and stable cached-report behavior from FREE-04.
 - Email output escapes external GA4 values and does not disclose credentials,
   tokens, internal API errors, or mock data.
 
-## FREE-03: Setup wizard and connection diagnostics
+## FREE-03: Setup wizard and connection diagnostics (Delivered in 1.6.0)
 
-**Priority:** 0
+**Status:** Delivered
 
 **Intent:** Reduce OAuth setup friction without taking over the WordPress admin
 experience.
@@ -251,11 +252,10 @@ status language.
 
 ## Recommended sequence
 
-1. FREE-03 Setup wizard and connection diagnostics.
-2. FREE-05 OAuth secret hardening and local diagnostics.
-3. FREE-04 Stale-while-revalidate report caching.
-4. FREE-02 Weekly admin digest.
-5. FREE-06 Dashboard filtering, empty states, and accessibility polish.
+1. FREE-05 OAuth secret hardening and local diagnostics.
+2. FREE-04 Stale-while-revalidate report caching.
+3. FREE-02 Weekly admin digest.
+4. FREE-06 Dashboard filtering, empty states, and accessibility polish.
 
 ## Recommended feature packaging coverage
 

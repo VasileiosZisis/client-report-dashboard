@@ -20,6 +20,7 @@ $cliredas_settings_option_key    = 'cliredas_settings';
 $cliredas_cache_index_option_key = 'cliredas_cache_keys';
 $cliredas_oauth_state_meta_key   = 'cliredas_ga4_oauth_state';
 $cliredas_oauth_state_token_meta_key = 'cliredas_ga4_oauth_state_token';
+$cliredas_setup_diagnostics_meta_key = 'cliredas_setup_diagnostics';
 
 /**
  * Cleanup for a single site/blog context.
@@ -80,4 +81,5 @@ if (is_multisite() && function_exists('get_sites') && function_exists('switch_to
 if (function_exists('delete_metadata')) {
     delete_metadata('user', 0, $cliredas_oauth_state_meta_key, '', true);
     delete_metadata('user', 0, $cliredas_oauth_state_token_meta_key, '', true);
+    delete_metadata('user', 0, $cliredas_setup_diagnostics_meta_key, '', true);
 }

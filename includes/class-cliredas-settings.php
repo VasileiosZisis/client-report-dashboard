@@ -52,8 +52,25 @@ final class CLIREDAS_Settings
         'ga4_token_expires'     => 0,
     );
 
+    /**
+     * Shared GA4 API client.
+     *
+     * @var CLIREDAS_GA4_Client
+     */
+    private $ga4_client;
+
+    /**
+     * Setup diagnostics service.
+     *
+     * @var CLIREDAS_Setup_Diagnostics
+     */
+    private $setup_diagnostics;
+
     public function __construct()
     {
+        $this->ga4_client        = new CLIREDAS_GA4_Client($this);
+        $this->setup_diagnostics = new CLIREDAS_Setup_Diagnostics($this, $this->ga4_client);
+
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_menu', array($this, 'add_options_page'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
@@ -342,7 +359,7 @@ final class CLIREDAS_Settings
             wp_die(esc_html__('You do not have permission to access this page.', 'cliredas-analytics-dashboard'));
         }
     ?>
-        <div class="wrap">
+        <div class="wrap cliredas-settings-wrap">
             <h1><?php echo esc_html__('Client Report Settings', 'cliredas-analytics-dashboard'); ?></h1>
 
             <?php
@@ -475,6 +492,19 @@ final class CLIREDAS_Settings
             <?php endif; ?>
 
             <?php
+            $diagnostics_complete = false;
+            if (
+                isset($_GET['cliredas_diagnostics_nonce'])
+                && wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['cliredas_diagnostics_nonce'])), 'cliredas_diagnostics_notice')
+            ) {
+                $diagnostics_complete = isset($_GET['cliredas_diagnostics'])
+                    && 'complete' === sanitize_key(wp_unslash($_GET['cliredas_diagnostics']));
+            }
+
+            $this->render_setup_assistant($diagnostics_complete);
+            ?>
+
+            <?php
             // Only show errors (not the success message).
             $settings_updated = filter_input(INPUT_GET, 'settings-updated', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
             if (! is_string($settings_updated) || '' === $settings_updated) {
@@ -513,6 +543,192 @@ final class CLIREDAS_Settings
     }
 
     /**
+     * Render the inline GA4 setup assistant.
+     *
+     * @param bool $diagnostics_complete Whether this request follows a diagnostic run.
+     * @return void
+     */
+    private function render_setup_assistant($diagnostics_complete)
+    {
+        $state        = $this->setup_diagnostics->get_state();
+        $checks       = $state['checks'];
+        $passed       = (int) $state['passed'];
+        $total        = (int) $state['total'];
+        $is_complete  = $passed === $total;
+        $connect_url  = wp_nonce_url(
+            admin_url('admin-post.php?action=cliredas_ga4_connect'),
+            'cliredas_ga4_connect'
+        );
+        $redirect_uri = $this->get_ga4_redirect_uri();
+        $status_labels = array(
+            'pass'    => __('Passed', 'cliredas-analytics-dashboard'),
+            'warning' => __('Warning', 'cliredas-analytics-dashboard'),
+            'fail'    => __('Needs attention', 'cliredas-analytics-dashboard'),
+            'blocked' => __('Blocked', 'cliredas-analytics-dashboard'),
+            'not_run' => __('Not checked', 'cliredas-analytics-dashboard'),
+        );
+        $status_icons = array(
+            'pass'    => 'dashicons-yes-alt',
+            'warning' => 'dashicons-warning',
+            'fail'    => 'dashicons-dismiss',
+            'blocked' => 'dashicons-lock',
+            'not_run' => 'dashicons-marker',
+        );
+        ?>
+        <details class="cliredas-setup-assistant" <?php echo (! $is_complete || $diagnostics_complete) ? 'open' : ''; ?>>
+            <summary class="cliredas-setup-summary">
+                <span class="cliredas-setup-summary-title"><?php echo esc_html__('GA4 Setup Assistant', 'cliredas-analytics-dashboard'); ?></span>
+                <span class="cliredas-setup-progress">
+                    <?php
+                    echo esc_html(
+                        sprintf(
+                            /* translators: 1: passed setup checks, 2: total setup checks. */
+                            __('%1$d of %2$d checks passed', 'cliredas-analytics-dashboard'),
+                            $passed,
+                            $total
+                        )
+                    );
+                    ?>
+                </span>
+            </summary>
+
+            <div class="cliredas-setup-content">
+                <p><?php echo esc_html__('Review the connection steps below. Remote checks run only when you select Run diagnostics.', 'cliredas-analytics-dashboard'); ?></p>
+
+                <?php if ($diagnostics_complete) : ?>
+                    <div class="notice notice-info inline">
+                        <p><?php echo esc_html__('GA4 diagnostics completed.', 'cliredas-analytics-dashboard'); ?></p>
+                    </div>
+                <?php endif; ?>
+
+                <ol class="cliredas-setup-checks">
+                    <?php foreach ($checks as $key => $check) : ?>
+                        <?php
+                        $status = isset($check['status'], $status_labels[$check['status']]) ? $check['status'] : 'not_run';
+                        $category = isset($check['category']) ? sanitize_key($check['category']) : '';
+                        ?>
+                        <li class="cliredas-setup-check is-<?php echo esc_attr($status); ?>">
+                            <span class="dashicons <?php echo esc_attr($status_icons[$status]); ?>" aria-hidden="true"></span>
+                            <div class="cliredas-setup-check-body">
+                                <div class="cliredas-setup-check-heading">
+                                    <strong><?php echo esc_html($check['label']); ?></strong>
+                                    <span class="cliredas-setup-status">
+                                        <?php echo esc_html($status_labels[$status]); ?>
+                                    </span>
+                                    <?php if ('pass' !== $status && '' !== $category) : ?>
+                                        <span class="cliredas-setup-category"><?php echo esc_html($this->get_diagnostic_category_label($category)); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <p><?php echo esc_html($check['message']); ?></p>
+                                <?php $this->render_setup_action((string) $key, (string) $check['action'], $connect_url, $redirect_uri); ?>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+
+                <div class="cliredas-setup-footer">
+                    <form class="cliredas-diagnostics-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="cliredas_run_diagnostics" />
+                        <?php wp_nonce_field('cliredas_run_diagnostics'); ?>
+                        <button type="submit" class="button button-secondary" data-running-label="<?php echo esc_attr__('Running diagnostics...', 'cliredas-analytics-dashboard'); ?>">
+                            <?php echo esc_html__('Run diagnostics', 'cliredas-analytics-dashboard'); ?>
+                        </button>
+                    </form>
+
+                    <?php if (! empty($state['ran_at'])) : ?>
+                        <p class="description">
+                            <?php
+                            echo esc_html(
+                                sprintf(
+                                    /* translators: %s: date and time of the last diagnostic run. */
+                                    __('Last remote check: %s', 'cliredas-analytics-dashboard'),
+                                    wp_date(
+                                        get_option('date_format') . ' ' . get_option('time_format'),
+                                        (int) $state['ran_at']
+                                    )
+                                )
+                            );
+                            ?>
+                        </p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </details>
+        <?php
+    }
+
+    /**
+     * Render a corrective action for one setup check.
+     *
+     * @param string $check_key    Check key.
+     * @param string $action       Action key.
+     * @param string $connect_url  Protected connect URL.
+     * @param string $redirect_uri Computed redirect URI.
+     * @return void
+     */
+    private function render_setup_action($check_key, $action, $connect_url, $redirect_uri)
+    {
+        if ('public_url' === $action) {
+            echo '<p class="cliredas-setup-action"><a href="#cliredas_ga4_redirect_base_url">' . esc_html__('Review Public OAuth base URL', 'cliredas-analytics-dashboard') . '</a></p>';
+            return;
+        }
+
+        if ('credentials' === $action) {
+            echo '<p class="cliredas-setup-action"><a href="#cliredas_ga4_client_id">' . esc_html__('Review OAuth credentials', 'cliredas-analytics-dashboard') . '</a></p>';
+            return;
+        }
+
+        if ('connection' === $action) {
+            echo '<p class="cliredas-setup-action"><a class="button button-small" href="' . esc_url($connect_url) . '">' . esc_html__('Connect or reconnect Google Analytics', 'cliredas-analytics-dashboard') . '</a></p>';
+            return;
+        }
+
+        if ('property' === $action) {
+            echo '<p class="cliredas-setup-action"><a href="#cliredas_ga4_property_id">' . esc_html__('Review GA4 property', 'cliredas-analytics-dashboard') . '</a></p>';
+            return;
+        }
+
+        if ('redirect_uri' === $action && 'redirect_uri' === $check_key) {
+            ?>
+            <div class="cliredas-redirect-action">
+                <code id="cliredas-setup-redirect-uri"><?php echo esc_html($redirect_uri); ?></code>
+                <button type="button"
+                    class="button button-small cliredas-copy-button"
+                    data-copy-target="cliredas-setup-redirect-uri"
+                    data-copied-label="<?php echo esc_attr__('Copied', 'cliredas-analytics-dashboard'); ?>">
+                    <?php echo esc_html__('Copy URI', 'cliredas-analytics-dashboard'); ?>
+                </button>
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">
+                    <?php echo esc_html__('Open Google Cloud credentials', 'cliredas-analytics-dashboard'); ?>
+                </a>
+                <span class="screen-reader-text cliredas-copy-status" aria-live="polite"></span>
+            </div>
+            <?php
+        }
+    }
+
+    /**
+     * Get a user-facing diagnostic category label.
+     *
+     * @param string $category Diagnostic category.
+     * @return string
+     */
+    private function get_diagnostic_category_label($category)
+    {
+        $labels = array(
+            'configuration'      => __('Configuration', 'cliredas-analytics-dashboard'),
+            'authentication'     => __('Authentication', 'cliredas-analytics-dashboard'),
+            'permission'         => __('Permission', 'cliredas-analytics-dashboard'),
+            'quota'              => __('Quota', 'cliredas-analytics-dashboard'),
+            'property_selection' => __('Property selection', 'cliredas-analytics-dashboard'),
+            'network'            => __('Network', 'cliredas-analytics-dashboard'),
+            'google_service'     => __('Google service', 'cliredas-analytics-dashboard'),
+        );
+
+        return isset($labels[$category]) ? $labels[$category] : __('Setup', 'cliredas-analytics-dashboard');
+    }
+
+    /**
      * Render GA4 connection status field.
      *
      * @return void
@@ -541,7 +757,7 @@ final class CLIREDAS_Settings
 
         $token_error_message = '';
         if ($connected) {
-            $token = $this->get_valid_access_token();
+            $token = $this->ga4_client->get_valid_access_token();
             if (is_wp_error($token)) {
                 $status_text = __('Connected (reconnect required)', 'cliredas-analytics-dashboard');
                 $token_error_message = trim((string) $token->get_error_message());
@@ -650,6 +866,7 @@ final class CLIREDAS_Settings
         $value    = isset($settings['ga4_client_id']) ? (string) $settings['ga4_client_id'] : '';
     ?>
         <input type="text"
+            id="cliredas_ga4_client_id"
             class="regular-text"
             name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_client_id]"
             value="<?php echo esc_attr($value); ?>"
@@ -675,6 +892,7 @@ final class CLIREDAS_Settings
 	        </p>
 
 	        <input type="password"
+	            id="cliredas_ga4_client_secret"
 	            class="regular-text"
 	            name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_client_secret]"
 	            value=""
@@ -699,7 +917,7 @@ final class CLIREDAS_Settings
     {
         $redirect_uri = $this->get_ga4_redirect_uri();
     ?>
-        <input type="text" class="large-text code" readonly value="<?php echo esc_attr($redirect_uri); ?>" />
+        <input type="text" id="cliredas_ga4_redirect_uri" class="large-text code" readonly value="<?php echo esc_attr($redirect_uri); ?>" />
         <p class="description">
             <?php echo esc_html__('Add this exact URL as an Authorized redirect URI in your Google OAuth client.', 'cliredas-analytics-dashboard'); ?>
         </p>
@@ -717,6 +935,7 @@ final class CLIREDAS_Settings
         $value    = isset($settings['ga4_redirect_base_url']) ? (string) $settings['ga4_redirect_base_url'] : '';
     ?>
         <input type="url"
+            id="cliredas_ga4_redirect_base_url"
             class="regular-text"
             name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_redirect_base_url]"
             value="<?php echo esc_attr($value); ?>"
@@ -801,7 +1020,7 @@ final class CLIREDAS_Settings
 
         $selected = isset($settings['ga4_property_id']) ? (string) $settings['ga4_property_id'] : '';
 
-        $properties = $this->get_ga4_properties();
+        $properties = $this->ga4_client->list_properties();
         if (is_wp_error($properties)) {
             $code = (string) $properties->get_error_code();
             $msg  = trim((string) $properties->get_error_message());
@@ -814,6 +1033,8 @@ final class CLIREDAS_Settings
                     'missing_refresh_token',
                     'missing_client_id',
                     'missing_client_secret',
+                    'token_revoked',
+                    'token_credentials_invalid',
                     'token_refresh_failed',
                     'token_refresh_invalid',
                     'token_refresh_missing_access_token',
@@ -843,7 +1064,7 @@ final class CLIREDAS_Settings
         }
 
     ?>
-        <select name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_property_id]" class="regular-text">
+        <select id="cliredas_ga4_property_id" name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_property_id]" class="regular-text">
             <option value=""><?php echo esc_html__('Select a property', 'cliredas-analytics-dashboard'); ?></option>
             <?php foreach ($properties as $property_id => $label) : ?>
                 <option value="<?php echo esc_attr((string) $property_id); ?>" <?php selected($selected, (string) $property_id); ?>>
@@ -862,208 +1083,4 @@ final class CLIREDAS_Settings
     <?php
     }
 
-    /**
-     * Get a valid access token, refreshing it when needed.
-     *
-     * @return string|\WP_Error
-     */
-    private function get_valid_access_token()
-    {
-        $settings = $this->get_settings();
-
-        $access_token = isset($settings['ga4_access_token']) ? trim((string) $settings['ga4_access_token']) : '';
-        $expires_at   = isset($settings['ga4_token_expires']) ? (int) $settings['ga4_token_expires'] : 0;
-
-        if ('' !== $access_token && $expires_at > (time() + 60)) {
-            return $access_token;
-        }
-
-        $refresh_token = isset($settings['ga4_refresh_token']) ? trim((string) $settings['ga4_refresh_token']) : '';
-        if ('' === $refresh_token) {
-            return new WP_Error('missing_refresh_token', __('Missing refresh token. Please reconnect Google Analytics.', 'cliredas-analytics-dashboard'));
-        }
-
-        $client_id = isset($settings['ga4_client_id']) ? trim((string) $settings['ga4_client_id']) : '';
-        if ('' === $client_id) {
-            return new WP_Error('missing_client_id', __('Missing OAuth Client ID.', 'cliredas-analytics-dashboard'));
-        }
-
-        $client_secret = isset($settings['ga4_client_secret']) ? trim((string) $settings['ga4_client_secret']) : '';
-        if ('' === $client_secret) {
-            return new WP_Error('missing_client_secret', __('Missing OAuth Client Secret.', 'cliredas-analytics-dashboard'));
-        }
-
-        $response = wp_remote_post(
-            'https://oauth2.googleapis.com/token',
-            array(
-                'timeout' => 20,
-                'body'    => array(
-                    'client_id'     => $client_id,
-                    'client_secret' => $client_secret,
-                    'refresh_token' => $refresh_token,
-                    'grant_type'    => 'refresh_token',
-                ),
-            )
-        );
-
-        if (is_wp_error($response)) {
-            return new WP_Error('token_refresh_failed', $response->get_error_message());
-        }
-
-        $status = (int) wp_remote_retrieve_response_code($response);
-        $body   = (string) wp_remote_retrieve_body($response);
-        $data   = json_decode($body, true);
-
-        if (! is_array($data)) {
-            return new WP_Error('token_refresh_invalid', __('Invalid token refresh response from Google.', 'cliredas-analytics-dashboard'));
-        }
-
-        if (200 !== $status) {
-            $remote_error = isset($data['error']) ? (string) $data['error'] : '';
-            $remote_desc  = isset($data['error_description']) ? (string) $data['error_description'] : '';
-            $msg = $remote_error ? $remote_error : __('Token refresh failed.', 'cliredas-analytics-dashboard');
-            if ('' !== $remote_desc) {
-                $msg .= ' - ' . $remote_desc;
-            }
-            return new WP_Error('token_refresh_failed', $msg);
-        }
-
-        $new_access_token = isset($data['access_token']) ? trim((string) $data['access_token']) : '';
-        if ('' === $new_access_token) {
-            return new WP_Error('token_refresh_missing_access_token', __('Token refresh response is missing access_token.', 'cliredas-analytics-dashboard'));
-        }
-
-        $expires_in = isset($data['expires_in']) ? (int) $data['expires_in'] : 0;
-        if ($expires_in <= 0) {
-            $expires_in = 3600;
-        }
-
-        $settings['ga4_access_token']  = $new_access_token;
-        $settings['ga4_token_expires'] = time() + max(60, $expires_in - 60);
-        $settings['ga4_connected']     = 1;
-
-        update_option(self::OPTION_KEY, $settings);
-
-        return $new_access_token;
-    }
-
-    /**
-     * Fetch accessible GA4 properties via Google Analytics Admin API.
-     *
-     * @return array<string,string>|\WP_Error
-     */
-    private function get_ga4_properties()
-    {
-        $properties = array();
-
-        $token = $this->get_valid_access_token();
-        if (is_wp_error($token)) {
-            return $token;
-        }
-
-        $base_url = 'https://analyticsadmin.googleapis.com/v1beta/accountSummaries';
-
-        $page_token = '';
-        $seen_tokens = array();
-        $max_pages = 20;
-
-        for ($page = 0; $page < $max_pages; $page++) {
-            $args = array(
-                'pageSize' => 200,
-            );
-
-            if ('' !== $page_token) {
-                if (isset($seen_tokens[$page_token])) {
-                    break;
-                }
-                $seen_tokens[$page_token] = true;
-                $args['pageToken'] = $page_token;
-            }
-
-            $url = add_query_arg($args, $base_url);
-
-            $response = wp_remote_get(
-                $url,
-                array(
-                    'timeout' => 20,
-                    'headers' => array(
-                        'Authorization' => 'Bearer ' . $token,
-                    ),
-                )
-            );
-
-            // If the access token expired mid-loop, refresh once and retry this page.
-            if (! is_wp_error($response) && 401 === (int) wp_remote_retrieve_response_code($response)) {
-                $token = $this->get_valid_access_token();
-                if (is_wp_error($token)) {
-                    return $token;
-                }
-
-                $response = wp_remote_get(
-                    $url,
-                    array(
-                        'timeout' => 20,
-                        'headers' => array(
-                            'Authorization' => 'Bearer ' . $token,
-                        ),
-                    )
-                );
-            }
-
-            if (is_wp_error($response)) {
-                return new WP_Error('admin_api_failed', $response->get_error_message());
-            }
-
-            $status = (int) wp_remote_retrieve_response_code($response);
-            $body   = (string) wp_remote_retrieve_body($response);
-            $data   = json_decode($body, true);
-
-            if (! is_array($data)) {
-                return new WP_Error('admin_api_invalid', __('Invalid response from Google Analytics Admin API.', 'cliredas-analytics-dashboard'));
-            }
-
-            if (200 !== $status) {
-                $msg = __('Failed to load properties from Google Analytics Admin API.', 'cliredas-analytics-dashboard');
-                if (isset($data['error']['message'])) {
-                    $msg .= ' ' . sanitize_text_field((string) $data['error']['message']);
-                }
-                return new WP_Error('admin_api_failed', $msg);
-            }
-
-            $account_summaries = isset($data['accountSummaries']) && is_array($data['accountSummaries']) ? $data['accountSummaries'] : array();
-
-            foreach ($account_summaries as $summary) {
-                if (! is_array($summary)) {
-                    continue;
-                }
-
-                $property_summaries = isset($summary['propertySummaries']) && is_array($summary['propertySummaries']) ? $summary['propertySummaries'] : array();
-                foreach ($property_summaries as $property_summary) {
-                    if (! is_array($property_summary)) {
-                        continue;
-                    }
-
-                    $property_id = isset($property_summary['property']) ? (string) $property_summary['property'] : '';
-                    $display_name = isset($property_summary['displayName']) ? (string) $property_summary['displayName'] : '';
-
-                    $property_id = trim($property_id);
-                    if ('' === $property_id) {
-                        continue;
-                    }
-
-                    $label = $display_name ? $display_name : $property_id;
-                    $properties[$property_id] = $label;
-                }
-            }
-
-            $page_token = isset($data['nextPageToken']) ? trim((string) $data['nextPageToken']) : '';
-            if ('' === $page_token) {
-                break;
-            }
-        }
-
-        asort($properties, SORT_NATURAL | SORT_FLAG_CASE);
-
-        return $properties;
-    }
 }

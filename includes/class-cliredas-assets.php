@@ -91,6 +91,13 @@ final class CLIREDAS_Assets
      */
     public static function enqueue_settings_assets()
     {
+        wp_enqueue_style(
+            'cliredas-settings',
+            CLIREDAS_PLUGIN_URL . 'assets/css/cliredas-settings.css',
+            array(),
+            CLIREDAS_VERSION
+        );
+
         wp_enqueue_script(
             'cliredas-settings',
             CLIREDAS_PLUGIN_URL . 'assets/js/cliredas-settings.js',

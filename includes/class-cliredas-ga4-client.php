@@ -68,6 +68,18 @@ final class CLIREDAS_GA4_Client
             return $access_token;
         }
 
+        return $this->refresh_access_token();
+    }
+
+    /**
+     * Force an access-token refresh using the saved refresh token.
+     *
+     * @return string|\WP_Error
+     */
+    public function refresh_access_token()
+    {
+        $settings = $this->settings->get_settings();
+
         $refresh_token = isset($settings['ga4_refresh_token']) ? trim((string) $settings['ga4_refresh_token']) : '';
         if ('' === $refresh_token) {
             return new WP_Error('missing_refresh_token', __('Missing refresh token. Please reconnect Google Analytics.', 'cliredas-analytics-dashboard'));
@@ -97,7 +109,7 @@ final class CLIREDAS_GA4_Client
         );
 
         if (is_wp_error($response)) {
-            return new WP_Error('token_refresh_failed', $response->get_error_message());
+            return new WP_Error('token_refresh_network', __('Unable to contact Google to refresh the access token.', 'cliredas-analytics-dashboard'));
         }
 
         $status = (int) wp_remote_retrieve_response_code($response);
@@ -116,6 +128,20 @@ final class CLIREDAS_GA4_Client
                 return new WP_Error(
                     'token_revoked',
                     __('Google revoked the token (invalid_grant). Please reconnect Google Analytics.', 'cliredas-analytics-dashboard')
+                );
+            }
+
+            if (in_array($remote_error, array('invalid_client', 'unauthorized_client'), true)) {
+                return new WP_Error(
+                    'token_credentials_invalid',
+                    __('Google rejected the saved OAuth client credentials.', 'cliredas-analytics-dashboard')
+                );
+            }
+
+            if (429 === $status) {
+                return new WP_Error(
+                    'ga4_quota_exceeded',
+                    __('Google temporarily rate-limited the token refresh request.', 'cliredas-analytics-dashboard')
                 );
             }
 

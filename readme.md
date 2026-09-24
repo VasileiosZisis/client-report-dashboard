@@ -7,6 +7,7 @@ This repository is the Free version intended for WordPress.org distribution. A s
 ## Key Features (Free)
 
 - Connect Google Analytics 4 via OAuth (no service account needed)
+- Guided GA4 setup assistant with public URL, OAuth, token, and property diagnostics
 - Select a GA4 Property from a dropdown (one active property per WordPress site)
 - Dashboard KPIs with previous-period deltas: Sessions, Total Users, Pageviews, Avg engagement time
 - Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
@@ -29,15 +30,19 @@ When enabled and connected, the plugin communicates with Google services:
 
 Data sent includes your OAuth client credentials (Client ID + Client Secret), authorization codes, refresh/access tokens, and API request parameters (selected property, date range, requested dimensions/metrics).
 
+Requests are made when an administrator connects GA4, explicitly runs connection diagnostics, or when the dashboard loads or refreshes GA4 data.
+
 ## Installation (from this repo)
 
 1. Copy/clone this repo into `wp-content/plugins/cliredas-analytics-dashboard/`
 2. Activate "Cliredas - Client Dashboard for Google Analytics (GA4)" in `wp-admin` -> Plugins
-3. Go to `Settings` -> `Client Report` and enter your Google OAuth Client ID and Client Secret
-4. If the site is behind a public tunnel or reverse proxy (for example, ngrok), enter the public site URL in `Public OAuth base URL` and save settings
-5. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI
-6. Click "Connect Google Analytics", complete the consent screen, then select a GA4 Property
-7. Visit `Client Report` -> `Dashboard`
+3. Go to `Settings` -> `Client Report` and open the GA4 Setup Assistant
+4. Enter your Google OAuth Client ID and Client Secret
+5. If the site is behind a public tunnel or reverse proxy (for example, ngrok), enter the public site URL in `Public OAuth base URL` and save settings
+6. In Google Cloud Console, add the Redirect URI shown in Settings as an Authorized redirect URI
+7. Click "Connect Google Analytics", complete the consent screen, then select a GA4 Property
+8. Run diagnostics to verify token health and property access
+9. Visit `Client Report` -> `Dashboard`
 
 ## Compatibility
 
@@ -57,6 +62,7 @@ Data sent includes your OAuth client credentials (Client ID + Client Secret), au
 
 - Plugin settings are stored in the WordPress options table under the `cliredas_settings` option.
 - The plugin stores OAuth tokens/credentials there and does not display your saved client secret back in the UI.
+- The latest diagnostic statuses, safe messages, timestamp, and non-sensitive configuration fingerprint are stored in `cliredas_setup_diagnostics` user meta for the administrator who ran them. Credentials, tokens, and raw Google responses are not stored there.
 
 ## License
 
