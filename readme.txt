@@ -4,7 +4,7 @@ Tags: google analytics, google analytics dashboard, ga4, wordpress analytics, an
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -441,9 +441,31 @@ OAuth credentials and tokens are stored in the WordPress options table under the
 
 The plugin does not display the saved Client Secret back in the settings interface.
 
+Client secrets, refresh tokens, and access tokens use Sodium secretbox when available, falling back to OpenSSL AES-256-GCM. Separate field/site keys are derived from WordPress auth and secure-auth secret material. Existing plaintext values migrate automatically during an administrator's normal admin initialization.
+
+If neither authenticated-encryption backend is available, plaintext compatibility remains enabled and Settings displays a warning. Enable Sodium or OpenSSL AES-256-GCM to migrate saved plaintext values.
+
+Changing WordPress security salts or site context can make saved credentials unreadable. Restore the original secret material and site context, or re-enter the Client Secret and reconnect. Disconnect clears tokens but preserves credentials; explicit secret clearing removes all three sensitive fields. Database restores and moves require compatible secret material and site context.
+
+Encryption protects stored database values, not a compromised WordPress installation, runtime memory, or backups containing both the database and encryption material. Keys and plaintext copies are not stored alongside ciphertext.
+
 The latest connection diagnostic result is stored in user meta for the administrator who ran it. The diagnostic record contains statuses, safe messages, a timestamp, and a non-sensitive configuration fingerprint.
 
 It does not contain credentials, tokens, or raw Google API responses.
+
+= What do local diagnostics and audit history store? =
+
+Local diagnostics show credential-storage status, the available backend, access-token expiry, refresh-token presence, and the latest retained refresh outcome without making Google requests. Use Run diagnostics separately for remote health validation.
+
+The non-autoloaded `cliredas_audit_log` option retains the latest 100 connection, disconnect, secret-clearing, actual token-refresh, cache-clearing, and CSV export outcomes. It stores only allow-listed event/outcome codes, Unix timestamps, and actor IDs. It never stores URLs, report contents, credentials, tokens, or raw error messages and sends no external telemetry.
+
+Only administrators can view this history on the settings page. Uninstall removes audit storage for each site.
+
+= Where can I see release changes? =
+
+After an upgrade, administrators see a dismissible release announcement on the plugin Dashboard and Settings pages only. Fresh installations do not receive an upgrade announcement. Release notes remain available in a collapsible Settings section.
+
+Dismissal is remembered per administrator, site, and release in `cliredas_dismissed_release_notices` user meta. The non-autoloaded `cliredas_release_state` option tracks installed and announced releases. Uninstall removes both records. Dismissing release news never hides credential-recovery or connection warnings.
 
 = Does Cliredas send my analytics data to another service? =
 
@@ -452,6 +474,13 @@ Cliredas communicates with Google APIs and your WordPress site as described in t
 It does not send analytics reporting data to a separate Cliredas analytics service.
 
 == Changelog ==
+
+= 1.7.0 =
+
+* Added authenticated encryption for OAuth secrets and tokens with automatic legacy migration.
+* Added local storage/token diagnostics and administrator-only audit history capped at 100 events.
+* Replaced raw upstream OAuth error feedback with predefined corrective messages.
+* Added dismissible administrator-only release announcements and local release notes.
 
 = 1.6.0 =
 
@@ -468,3 +497,9 @@ It does not send analytics reporting data to a separate Cliredas analytics servi
 
 * Added protected CSV export for all built-in dashboard report blocks.
 * CSV exports identify sample or fallback data and protect against spreadsheet formula injection.
+
+== Upgrade Notice ==
+
+= 1.7.0 =
+
+OAuth secrets migrate to encrypted storage on supported hosts. Preserve your WordPress security salts when restoring databases; changed salts may require re-entering the Client Secret and reconnecting.

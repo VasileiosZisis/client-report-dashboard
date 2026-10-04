@@ -3,7 +3,7 @@
 Status: Forward-looking roadmap for the current WordPress.org repository.
 
 This document defines features that belong in the Free plugin after version
-`1.6.0`. It is an actionable product roadmap, not a release schedule or an
+`1.7.0`. It is an actionable product roadmap, not a release schedule or an
 implementation specification.
 
 Related documents:
@@ -45,6 +45,7 @@ The following recommendations are already delivered and are not backlog items:
 | CSV export for all built-in dashboard blocks | Delivered in `1.4.0` |
 | Sortable Top pages columns | Delivered in `1.5.0` |
 | Setup assistant and connection diagnostics | Delivered in `1.6.0` |
+| OAuth secret hardening and local diagnostics | Delivered in `1.7.0` |
 
 The Top pages recommendation is complete: the table displays up to 25 rows and
 supports persistent client-side sorting for every column.
@@ -185,9 +186,9 @@ making normal dashboard use wait on every expired cache entry.
   warning to authorized users.
 - Multisite cache keys remain isolated by site and property.
 
-## FREE-05: OAuth secret hardening and local diagnostics
+## FREE-05: OAuth secret hardening and local diagnostics (Delivered in 1.7.0)
 
-**Priority:** 0
+**Status:** Delivered
 
 **Intent:** Protect stored credentials and create enough local diagnostic state
 to support setup, exports, and scheduled reporting safely.
@@ -196,14 +197,16 @@ to support setup, exports, and scheduled reporting safely.
 
 - Encrypt client secrets and OAuth tokens at rest using authenticated encryption
   derived from WordPress-managed secret material when the runtime supports it.
-- Migrate existing plaintext values transparently after a verified settings read
-  or save; never display stored secrets back to the browser.
+- Migrate existing plaintext values during administrator admin initialization;
+  never display stored secrets back to the browser. Hosts without authenticated
+  encryption retain compatibility with an explicit warning.
 - Treat decryption failure, including WordPress salt changes, as a reconnect
   condition rather than silently discarding unrelated settings.
 - Preserve GA4 read-only as the default and only Free OAuth scope.
 - Add token-expiry and refresh-health diagnostics without logging token values.
-- Keep a local audit log capped at the latest 100 connect, disconnect, refresh,
-  cache-clear, CSV export, and digest events.
+- Keep a local audit log capped at the latest 100 connect, disconnect,
+  secret-clearing, actual refresh, cache-clear, and CSV export events. Digest
+  events will be added with FREE-02.
 - Store only event type, timestamp, actor ID when available, and safe outcome.
   Do not store report contents, credentials, tokens, or external telemetry.
 
@@ -214,7 +217,8 @@ uninstall cleanup.
 
 - Existing connected installations migrate without forcing a reconnect when
   decryption material is valid.
-- Secrets are not present as plaintext in newly stored option values.
+- Secrets are not present as plaintext in newly stored option values on hosts
+  with authenticated encryption support.
 - Failed decrypt or token refresh paths are recoverable and actionable.
 - Audit retention is bounded and all audit data is removed during uninstall.
 - No new request leaves the site except documented Google API calls and enabled
@@ -252,10 +256,9 @@ status language.
 
 ## Recommended sequence
 
-1. FREE-05 OAuth secret hardening and local diagnostics.
-2. FREE-04 Stale-while-revalidate report caching.
-3. FREE-02 Weekly admin digest.
-4. FREE-06 Dashboard filtering, empty states, and accessibility polish.
+1. FREE-04 Stale-while-revalidate report caching.
+2. FREE-02 Weekly admin digest.
+3. FREE-06 Dashboard filtering, empty states, and accessibility polish.
 
 ## Recommended feature packaging coverage
 

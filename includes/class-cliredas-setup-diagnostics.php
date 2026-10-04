@@ -262,7 +262,12 @@ final class CLIREDAS_Setup_Diagnostics
         $settings = $this->settings->get_settings();
         $checks   = $this->get_local_checks($settings);
 
-        if ('fail' === $checks['credentials']['status'] || empty($settings['ga4_refresh_token'])) {
+        $readable = CLIREDAS_Credential_Store::instance()->check_readable();
+        if (is_wp_error($readable)) {
+            $checks['token_health'] = $this->check_from_error($readable, __('Refresh-token health', 'cliredas-analytics-dashboard'), 'credentials');
+            $checks['property_availability']['status'] = 'blocked';
+            $checks['property_availability']['message'] = __('Recover saved credentials before checking properties.', 'cliredas-analytics-dashboard');
+        } elseif ('fail' === $checks['credentials']['status'] || empty($settings['ga4_refresh_token'])) {
             $checks['token_health'] = $this->make_check(
                 'blocked',
                 'authentication',
@@ -511,6 +516,10 @@ final class CLIREDAS_Setup_Diagnostics
         $code = (string) $error->get_error_code();
 
         $map = array(
+            'credential_decryption_failed' => array('configuration', CLIREDAS_Credential_Store::error('credential_decryption_failed')->get_error_message()),
+            'credential_backend_unavailable' => array('configuration', CLIREDAS_Credential_Store::error('credential_backend_unavailable')->get_error_message()),
+            'credential_encryption_failed' => array('configuration', CLIREDAS_Credential_Store::error('credential_encryption_failed')->get_error_message()),
+            'credential_save_failed' => array('configuration', CLIREDAS_Credential_Store::error('credential_save_failed')->get_error_message()),
             'missing_client_id' => array('configuration', __('The OAuth Client ID is missing.', 'cliredas-analytics-dashboard')),
             'missing_client_secret' => array('configuration', __('The OAuth Client Secret is missing.', 'cliredas-analytics-dashboard')),
             'missing_refresh_token' => array('authentication', __('The refresh token is missing. Reconnect Google Analytics.', 'cliredas-analytics-dashboard')),
@@ -523,7 +532,7 @@ final class CLIREDAS_Setup_Diagnostics
             'ga4_quota_exceeded' => array('quota', __('Google API quota is currently exhausted. Try again later.', 'cliredas-analytics-dashboard')),
             'ga4_not_found' => array('property_selection', __('The selected GA4 property could not be found.', 'cliredas-analytics-dashboard')),
             'api_invalid' => array('google_service', __('Google returned an invalid API response. Try again later.', 'cliredas-analytics-dashboard')),
-            'api_failed' => array('network', __('The Google Analytics API request failed. Check connectivity and try again.', 'cliredas-analytics-dashboard')),
+            'api_network' => array('network', __('The Google Analytics API request failed. Check connectivity and try again.', 'cliredas-analytics-dashboard')),
         );
 
         $classified = isset($map[$code]) ? $map[$code] : array(
@@ -588,9 +597,11 @@ final class CLIREDAS_Setup_Diagnostics
         $data = array(
             'client_id'    => isset($settings['ga4_client_id']) ? trim((string) $settings['ga4_client_id']) : '',
             'has_secret'   => ! empty($settings['ga4_client_secret']),
+            'secret_revision' => hash_hmac('sha256', isset($settings['ga4_client_secret']) ? (string) $settings['ga4_client_secret'] : '', wp_salt('auth')),
             'redirect_uri' => $this->settings->get_ga4_redirect_uri(),
             'connected'    => ! empty($settings['ga4_connected']),
             'has_refresh'  => ! empty($settings['ga4_refresh_token']),
+            'refresh_revision' => hash_hmac('sha256', isset($settings['ga4_refresh_token']) ? (string) $settings['ga4_refresh_token'] : '', wp_salt('auth')),
             'property_id'  => isset($settings['ga4_property_id']) ? trim((string) $settings['ga4_property_id']) : '',
         );
 

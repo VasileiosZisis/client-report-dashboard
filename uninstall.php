@@ -55,10 +55,12 @@ $cliredas_cleanup_site = static function () use ($cliredas_settings_option_key, 
     // Delete options.
     delete_option($cliredas_cache_index_option_key);
     delete_option($cliredas_settings_option_key);
+    delete_option('cliredas_audit_log');
+    delete_option('cliredas_release_state');
 };
 
 if (is_multisite() && function_exists('get_sites') && function_exists('switch_to_blog') && function_exists('restore_current_blog')) {
-    $cliredas_site_ids = get_sites(array('fields' => 'ids'));
+    $cliredas_site_ids = get_sites(array('fields' => 'ids', 'number' => 0));
 
     if (is_array($cliredas_site_ids) && ! empty($cliredas_site_ids)) {
         foreach ($cliredas_site_ids as $cliredas_site_id) {
@@ -73,6 +75,8 @@ if (is_multisite() && function_exists('get_sites') && function_exists('switch_to
     // Clean up any accidental network-level storage.
     delete_site_option($cliredas_cache_index_option_key);
     delete_site_option($cliredas_settings_option_key);
+    delete_site_option('cliredas_audit_log');
+    delete_site_option('cliredas_release_state');
 } else {
     $cliredas_cleanup_site();
 }
@@ -82,4 +86,5 @@ if (function_exists('delete_metadata')) {
     delete_metadata('user', 0, $cliredas_oauth_state_meta_key, '', true);
     delete_metadata('user', 0, $cliredas_oauth_state_token_meta_key, '', true);
     delete_metadata('user', 0, $cliredas_setup_diagnostics_meta_key, '', true);
+    delete_metadata('user', 0, 'cliredas_dismissed_release_notices', '', true);
 }

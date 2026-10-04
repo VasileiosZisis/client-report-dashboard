@@ -1,0 +1,49 @@
+.cliredas-header > .cliredas-release-notice {
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  min-width: 0;
+  order: 1;
+}
+
+.cliredas-release-notice ul,
+.cliredas-release-changelog ul {
+  list-style: disc;
+  margin: 8px 0 12px 22px;
+}
+
+.cliredas-release-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cliredas-release-dismiss-form {
+  margin: 0;
+}
+
+.cliredas-release-error {
+  color: #b32d2e;
+}
+
+.cliredas-release-changelog {
+  max-width: 960px;
+  margin-top: 24px;
+  scroll-margin-top: 48px;
+}
+
+.cliredas-release-changelog summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-weight: 600;
+}
+
+.cliredas-release-changelog summary:focus-visible {
+  outline: 2px solid #2271b1;
+  outline-offset: 2px;
+}
+
+.cliredas-release-changelog h3 {
+  font-size: 14px;
+}

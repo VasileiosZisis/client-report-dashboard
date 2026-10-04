@@ -136,6 +136,7 @@ final class CLIREDAS_Dashboard_Page
         $ranges = $this->get_date_ranges();
 
         if ('' === $range_raw || ! array_key_exists($range_raw, $ranges)) {
+            CLIREDAS_Audit_Log::record('csv_export', 'invalid_range');
             wp_die(
                 esc_html__('Invalid dashboard date range.', 'cliredas-analytics-dashboard'),
                 '',
@@ -151,6 +152,7 @@ final class CLIREDAS_Dashboard_Page
         );
 
         if (headers_sent()) {
+            CLIREDAS_Audit_Log::record('csv_export', 'output_failed');
             wp_die(
                 esc_html__('The CSV export could not be started because output was already sent.', 'cliredas-analytics-dashboard'),
                 '',
@@ -161,6 +163,7 @@ final class CLIREDAS_Dashboard_Page
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- CSV downloads require a streamed response.
         $output = fopen('php://output', 'w');
         if (false === $output) {
+            CLIREDAS_Audit_Log::record('csv_export', 'output_failed');
             wp_die(
                 esc_html__('The CSV export could not be created.', 'cliredas-analytics-dashboard'),
                 '',
@@ -174,11 +177,18 @@ final class CLIREDAS_Dashboard_Page
         header('X-Content-Type-Options: nosniff');
 
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write the UTF-8 BOM directly to the download stream.
-        fwrite($output, "\xEF\xBB\xBF");
-        $this->write_csv_report($output, $report, $ranges[$range_raw]);
+        $written = fwrite($output, "\xEF\xBB\xBF");
+        $failed = 3 !== $written;
+        try {
+            $this->write_csv_report($output, $report, $ranges[$range_raw]);
+        } catch (Throwable $exception) {
+            $failed = true;
+        }
 
         // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the streamed CSV response.
-        fclose($output);
+        $closed = fclose($output);
+        $outcome = isset($report['source']) && in_array($report['source'], array('ga4', 'ga4_cache'), true) ? 'success' : 'sample_data';
+        CLIREDAS_Audit_Log::record('csv_export', $failed || ! $closed ? 'output_failed' : $outcome);
         exit;
     }
 
@@ -858,12 +868,15 @@ final class CLIREDAS_Dashboard_Page
      *
      * @param resource $output Writable CSV stream.
      * @param array    $row    Row values.
+     * @throws RuntimeException When the stream cannot accept a CSV row.
      * @return void
      */
     private function write_csv_row($output, array $row)
     {
         $safe_row = array_map(array($this, 'prepare_csv_cell'), $row);
-        fputcsv($output, $safe_row, ',', '"', '');
+        if (false === fputcsv($output, $safe_row, ',', '"', '')) {
+            throw new RuntimeException('cliredas_csv_write_failed');
+        }
     }
 
     /**

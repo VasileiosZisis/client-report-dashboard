@@ -55,15 +55,26 @@ final class CLIREDAS_Plugin
      *
      * Creates default settings so first install behaves as expected.
      *
+     * @param bool $network_wide Whether activation applies to the network.
      * @return void
      */
-    public static function activate()
+    public static function activate($network_wide = false)
     {
         $defaults = array(
             'allow_editors' => 0,
         );
 
         $existing = get_option(self::OPTION_KEY, null);
+
+        if ($network_wide && is_multisite()) {
+            foreach (get_sites(array('fields' => 'ids', 'number' => 0)) as $site_id) {
+                switch_to_blog((int) $site_id);
+                CLIREDAS_Release_Notices::initialize_install(null === get_option(self::OPTION_KEY, null));
+                restore_current_blog();
+            }
+        } else {
+            CLIREDAS_Release_Notices::initialize_install(null === $existing);
+        }
 
         // First install: add defaults.
         if (null === $existing) {
@@ -91,6 +102,13 @@ final class CLIREDAS_Plugin
      */
     private function setup_hooks()
     {
+        require_once __DIR__ . '/class-cliredas-local-store.php';
+        require_once __DIR__ . '/class-cliredas-credential-crypto.php';
+        require_once __DIR__ . '/class-cliredas-credential-store.php';
+        require_once __DIR__ . '/class-cliredas-audit-log.php';
+        require_once __DIR__ . '/class-cliredas-release-notices.php';
+        CLIREDAS_Credential_Store::instance();
+
         add_action('plugins_loaded', array($this, 'on_plugins_loaded'), 10);
         add_action('init', array($this, 'on_init'), 10);
 
@@ -168,6 +186,7 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-ga4-auth.php';
 
         $this->settings = new CLIREDAS_Settings();
+        new CLIREDAS_Release_Notices();
 
         new CLIREDAS_GA4_Auth($this->settings);
         $data_provider  = CLIREDAS_Provider_Factory::get_provider($this->settings);

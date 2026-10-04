@@ -8,6 +8,8 @@ This repository is the Free version intended for WordPress.org distribution. A s
 
 - Connect Google Analytics 4 via OAuth (no service account needed)
 - Guided GA4 setup assistant with public URL, OAuth, token, and property diagnostics
+- Encrypted OAuth storage where supported, local token diagnostics, and administrator-only audit history
+- Dismissible administrator release announcements on plugin pages, with local release notes
 - Select a GA4 Property from a dropdown (one active property per WordPress site)
 - Dashboard KPIs with previous-period deltas: Sessions, Total Users, Pageviews, Avg engagement time
 - Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
@@ -47,7 +49,7 @@ Requests are made when an administrator connects GA4, explicitly runs connection
 ## Compatibility
 
 - Requires WordPress 6.0 or later
-- Tested up to WordPress 7.0
+- Tested up to WordPress 7.1
 - Requires PHP 7.4 or later
 
 ## Local Development Notes
@@ -63,6 +65,29 @@ Requests are made when an administrator connects GA4, explicitly runs connection
 - Plugin settings are stored in the WordPress options table under the `cliredas_settings` option.
 - The plugin stores OAuth tokens/credentials there and does not display your saved client secret back in the UI.
 - The latest diagnostic statuses, safe messages, timestamp, and non-sensitive configuration fingerprint are stored in `cliredas_setup_diagnostics` user meta for the administrator who ran them. Credentials, tokens, and raw Google responses are not stored there.
+
+### OAuth Storage and Recovery
+
+Client secrets, refresh tokens, and access tokens are encrypted with native Sodium secretbox, or OpenSSL AES-256-GCM when Sodium is unavailable. Separate field/site keys are derived from WordPress auth and secure-auth secret material. Existing plaintext credentials migrate automatically during an administrator's normal admin initialization. Hosts without either authenticated-encryption backend retain plaintext compatibility with a settings warning; enable a supported extension to migrate them.
+
+Changing WordPress security salts or the site context can make stored credentials unreadable. Restore the original secret material and site context, or re-enter the Client Secret and reconnect. Disconnect clears tokens but preserves credentials. Explicit secret clearing removes all three sensitive values. Keep compatible secret material when restoring or moving a database.
+
+Encryption protects database values, not a compromised WordPress installation, runtime memory, or backups containing both database values and encryption material. Keys and plaintext copies are not stored alongside ciphertext.
+
+Local diagnostics show storage/backend state, token expiry, refresh-token presence, and the latest retained refresh outcome without contacting Google. The separate Run diagnostics action performs remote health checks.
+
+The non-autoloaded `cliredas_audit_log` option retains the latest 100 connection, disconnect, secret-clearing, actual refresh, cache-clearing, and CSV export outcomes. Entries contain only allow-listed event/outcome codes, Unix timestamps, and actor IDs. No URLs, reports, credentials, tokens, or raw errors are retained, and no audit telemetry leaves the site. Administrators can inspect the history on the settings page; uninstall removes it per site.
+
+## Changelog
+
+Release announcements appear only on the plugin Dashboard and Settings pages after upgrades, not fresh installs. Dismissal is remembered per administrator and site in `cliredas_dismissed_release_notices` user meta. The non-autoloaded `cliredas_release_state` option tracks installed and announced releases. Local release notes remain available in Settings; dismissing announcements never hides operational warnings. Both records are removed on uninstall.
+
+### 1.7.0
+
+- Added authenticated OAuth credential encryption and automatic legacy migration.
+- Added local storage/token diagnostics and bounded administrator-only audit history.
+- Replaced raw upstream OAuth error feedback with predefined recovery messages.
+- Added persistent, administrator-only release announcements and local release notes.
 
 ## License
 

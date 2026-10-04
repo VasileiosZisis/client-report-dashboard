@@ -210,12 +210,20 @@ final class CLIREDAS_Settings
      */
     public function get_settings()
     {
-        $stored = get_option(self::OPTION_KEY, array());
-        if (! is_array($stored)) {
-            $stored = array();
-        }
+        $stored = CLIREDAS_Credential_Store::instance()->read();
 
         return wp_parse_args($stored, $this->defaults);
+    }
+
+    /**
+     * Persist a patch without replacing unrelated or unreadable stored values.
+     *
+     * @param array $changes Fields to update.
+     * @return true|WP_Error
+     */
+    public function save_settings(array $changes)
+    {
+        return CLIREDAS_Credential_Store::instance()->save($changes);
     }
 
     /**
@@ -256,7 +264,7 @@ final class CLIREDAS_Settings
     public function sanitize_settings($input)
     {
         $existing  = $this->get_settings();
-        $sanitized = $existing;
+        $sanitized = wp_parse_args(CLIREDAS_Credential_Store::instance()->get_raw(), $this->defaults);
 
         if (is_array($input)) {
             $clear_secret = ! empty($input['cliredas_clear_ga4_client_secret']);
@@ -277,7 +285,7 @@ final class CLIREDAS_Settings
             // Client secret: don't wipe on blank saves, but allow explicit clearing.
             if ($clear_secret) {
                 $sanitized['ga4_client_secret'] = '';
-            } elseif (isset($input['ga4_client_secret'])) {
+            } elseif (isset($input['ga4_client_secret']) && is_string($input['ga4_client_secret'])) {
                 // Only update secret when user actually enters a new one.
                 $new_secret = trim((string) wp_unslash($input['ga4_client_secret']));
                 if ('' !== $new_secret) {
@@ -304,16 +312,23 @@ final class CLIREDAS_Settings
                 }
             }
 
-            if (isset($input['ga4_refresh_token'])) {
+            if (isset($input['ga4_refresh_token']) && is_string($input['ga4_refresh_token'])) {
                 $sanitized['ga4_refresh_token'] = sanitize_text_field(wp_unslash($input['ga4_refresh_token']));
             }
 
-            if (isset($input['ga4_access_token'])) {
+            if (isset($input['ga4_access_token']) && is_string($input['ga4_access_token'])) {
                 $sanitized['ga4_access_token'] = sanitize_text_field(wp_unslash($input['ga4_access_token']));
             }
 
             if (isset($input['ga4_token_expires'])) {
                 $sanitized['ga4_token_expires'] = absint(wp_unslash($input['ga4_token_expires']));
+            }
+            if ($clear_secret) {
+                $sanitized['ga4_refresh_token'] = '';
+                $sanitized['ga4_access_token'] = '';
+                $sanitized['ga4_connected'] = 0;
+                $sanitized['ga4_token_expires'] = 0;
+                $sanitized['ga4_property_id'] = '';
             }
         }
 
@@ -365,7 +380,6 @@ final class CLIREDAS_Settings
             <?php
             $ga4_notice = '';
             $ga4_error = '';
-            $ga4_error_desc = '';
 
             if (
                 isset($_GET['cliredas_ga4_notice_nonce']) &&
@@ -373,7 +387,6 @@ final class CLIREDAS_Settings
             ) {
                 $ga4_notice = isset($_GET['cliredas_ga4_notice']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_notice'])) : '';
                 $ga4_error = isset($_GET['cliredas_ga4_error']) ? sanitize_key(wp_unslash($_GET['cliredas_ga4_error'])) : '';
-                $ga4_error_desc = isset($_GET['cliredas_ga4_error_desc']) ? sanitize_text_field(wp_unslash($_GET['cliredas_ga4_error_desc'])) : '';
             }
 
 	            $ga4_notice_message = '';
@@ -382,18 +395,16 @@ final class CLIREDAS_Settings
 	            if ('' !== $ga4_error) {
 	                $ga4_notice_class = 'notice notice-error is-dismissible';
 
-	                if (0 === strpos($ga4_error, 'oauth_') && 'oauth_access_denied' !== $ga4_error) {
-	                    $oauth_code = substr($ga4_error, strlen('oauth_'));
-	                    $oauth_code = sanitize_key($oauth_code);
-
-	                    $ga4_notice_message = sprintf(
-	                        /* translators: %s: Google OAuth error code */
-	                        __('Google OAuth error: %s', 'cliredas-analytics-dashboard'),
-	                        $oauth_code ? $oauth_code : __('unknown', 'cliredas-analytics-dashboard')
-	                    );
-	                }
-
 	                switch ($ga4_error) {
+                    case 'credential_decryption_failed':
+                    case 'credential_backend_unavailable':
+                    case 'credential_encryption_failed':
+                    case 'credential_save_failed':
+                        $ga4_notice_message = CLIREDAS_Credential_Store::error($ga4_error)->get_error_message();
+                        break;
+                    case 'token_exchange_network':
+                        $ga4_notice_message = __('Google could not be reached. Check the server connection and try connecting again.', 'cliredas-analytics-dashboard');
+                        break;
 	                    case 'missing_client_id':
 	                        $ga4_notice_message = __('Missing OAuth Client ID. Save your Client ID first, then click Connect again.', 'cliredas-analytics-dashboard');
 	                        break;
@@ -460,9 +471,6 @@ final class CLIREDAS_Settings
 	            <?php if ('' !== $ga4_notice_message) : ?>
 	                <div class="<?php echo esc_attr($ga4_notice_class); ?>">
 	                    <p><?php echo esc_html($ga4_notice_message); ?></p>
-	                    <?php if ('' !== $ga4_error_desc && '' !== $ga4_error) : ?>
-	                        <p class="description"><?php echo esc_html($ga4_error_desc); ?></p>
-	                    <?php endif; ?>
 	                </div>
 	            <?php endif; ?>
 
@@ -502,6 +510,7 @@ final class CLIREDAS_Settings
             }
 
             $this->render_setup_assistant($diagnostics_complete);
+            $this->render_local_diagnostics();
             ?>
 
             <?php
@@ -528,6 +537,7 @@ final class CLIREDAS_Settings
                 <?php wp_nonce_field('cliredas_clear_cache'); ?>
                 <?php submit_button(__('Clear cached reports', 'cliredas-analytics-dashboard'), 'secondary', 'submit', false); ?>
             </form>
+            <?php CLIREDAS_Release_Notices::render_changelog(); ?>
         </div>
     <?php
     }
@@ -654,6 +664,97 @@ final class CLIREDAS_Settings
                 </div>
             </div>
         </details>
+        <?php
+    }
+
+    /**
+     * Render local credential health and bounded audit history for administrators.
+     *
+     * @return void
+     */
+    private function render_local_diagnostics()
+    {
+        if (! current_user_can('manage_options')) {
+            return;
+        }
+        $status = CLIREDAS_Credential_Store::instance()->get_status();
+        $settings = $this->get_settings();
+        $entries = CLIREDAS_Audit_Log::get_entries();
+        $refresh = null;
+        foreach ($entries as $entry) {
+            if ('refresh' === $entry['event']) {
+                $refresh = $entry;
+                break;
+            }
+        }
+        $backend_labels = array('sodium' => 'Sodium secretbox', 'aes-256-gcm' => 'OpenSSL AES-256-GCM');
+        $backend = isset($backend_labels[$status['backend']]) ? $backend_labels[$status['backend']] : __('Unavailable', 'cliredas-analytics-dashboard');
+        $storage_text = __('No credentials saved', 'cliredas-analytics-dashboard');
+        if ($status['plaintext'] > 0) {
+            $storage_text = __('Legacy plaintext storage', 'cliredas-analytics-dashboard');
+        } elseif ($status['encrypted'] > 0) {
+            $storage_text = __('Encrypted at rest', 'cliredas-analytics-dashboard');
+        }
+        if (is_wp_error($status['error'])) {
+            $storage_text = __('Recovery required', 'cliredas-analytics-dashboard');
+        }
+        $expires = isset($settings['ga4_token_expires']) ? (int) $settings['ga4_token_expires'] : 0;
+        $date_format = get_option('date_format') . ' ' . get_option('time_format');
+        ?>
+        <section class="cliredas-local-diagnostics" aria-labelledby="cliredas-local-diagnostics-title">
+            <h2 id="cliredas-local-diagnostics-title"><?php echo esc_html__('Local diagnostics', 'cliredas-analytics-dashboard'); ?></h2>
+            <?php if (is_wp_error($status['error'])) : ?>
+                <div class="notice notice-error inline"><p><?php echo esc_html($status['error']->get_error_message()); ?></p></div>
+            <?php elseif ('' === $status['backend']) : ?>
+                <div class="notice notice-warning inline"><p><?php echo esc_html__('Authenticated encryption is unavailable on this host. Legacy plaintext storage remains enabled. Ask your host to enable Sodium or OpenSSL AES-256-GCM; saved plaintext credentials will then migrate automatically.', 'cliredas-analytics-dashboard'); ?></p></div>
+            <?php endif; ?>
+            <dl class="cliredas-local-health">
+                <dt><?php echo esc_html__('Credential storage', 'cliredas-analytics-dashboard'); ?></dt><dd><?php echo esc_html($storage_text); ?></dd>
+                <dt><?php echo esc_html__('Encryption backend', 'cliredas-analytics-dashboard'); ?></dt><dd><?php echo esc_html($backend); ?></dd>
+                <dt><?php echo esc_html__('Access-token expiry', 'cliredas-analytics-dashboard'); ?></dt>
+                <dd><?php echo $expires > 0 ? esc_html(wp_date($date_format, $expires)) : esc_html__('Not available', 'cliredas-analytics-dashboard'); ?>
+                    <?php if ($expires > 0) : ?>
+                        <span class="cliredas-setup-status"><?php echo $expires <= time() + 60 ? esc_html__('Refresh due', 'cliredas-analytics-dashboard') : esc_html__('Valid', 'cliredas-analytics-dashboard'); ?></span>
+                    <?php endif; ?>
+                </dd>
+                <dt><?php echo esc_html__('Refresh token', 'cliredas-analytics-dashboard'); ?></dt><dd><?php echo $status['has_refresh'] ? esc_html__('Saved', 'cliredas-analytics-dashboard') : esc_html__('Missing', 'cliredas-analytics-dashboard'); ?></dd>
+                <dt><?php echo esc_html__('Most recent token refresh', 'cliredas-analytics-dashboard'); ?></dt>
+                <dd><?php echo $refresh ? esc_html(CLIREDAS_Audit_Log::outcome_label($refresh['outcome']) . ' - ' . wp_date($date_format, $refresh['timestamp'])) : esc_html__('No refresh recorded in retained history', 'cliredas-analytics-dashboard'); ?></dd>
+            </dl>
+            <details class="cliredas-audit-history">
+                <summary><?php echo esc_html__('Local audit history', 'cliredas-analytics-dashboard'); ?></summary>
+                <?php if (empty($entries)) : ?>
+                    <p><?php echo esc_html__('No operations recorded yet.', 'cliredas-analytics-dashboard'); ?></p>
+                <?php else : ?>
+                    <div class="cliredas-audit-scroll" tabindex="0" role="region" aria-label="<?php echo esc_attr__('Local audit history', 'cliredas-analytics-dashboard'); ?>">
+                        <table class="widefat striped">
+                            <caption class="screen-reader-text"><?php echo esc_html__('Latest 100 operations, newest first', 'cliredas-analytics-dashboard'); ?></caption>
+                            <thead><tr>
+                                <th scope="col"><?php echo esc_html__('Time', 'cliredas-analytics-dashboard'); ?></th>
+                                <th scope="col"><?php echo esc_html__('Operation', 'cliredas-analytics-dashboard'); ?></th>
+                                <th scope="col"><?php echo esc_html__('Actor', 'cliredas-analytics-dashboard'); ?></th>
+                                <th scope="col"><?php echo esc_html__('Outcome', 'cliredas-analytics-dashboard'); ?></th>
+                            </tr></thead>
+                            <tbody>
+                                <?php foreach ($entries as $entry) : ?>
+                                    <tr>
+                                        <td><?php echo esc_html(wp_date($date_format, $entry['timestamp'])); ?></td>
+                                        <td><?php echo esc_html(CLIREDAS_Audit_Log::event_label($entry['event'])); ?></td>
+                                        <td>
+                                        <?php
+                                        /* translators: %d: WordPress user ID. */
+                                        echo $entry['actor_id'] ? esc_html(sprintf(__('User #%d', 'cliredas-analytics-dashboard'), $entry['actor_id'])) : esc_html__('Background', 'cliredas-analytics-dashboard');
+                                        ?>
+                                        </td>
+                                        <td><?php echo esc_html(CLIREDAS_Audit_Log::outcome_label($entry['outcome'])); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </details>
+        </section>
         <?php
     }
 

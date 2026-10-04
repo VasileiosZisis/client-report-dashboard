@@ -50,6 +50,7 @@ final class CLIREDAS_Cache_Manager
         if (is_object($this->provider) && method_exists($this->provider, 'clear_all_cache')) {
             $cleared = (int) $this->provider->clear_all_cache();
         }
+        CLIREDAS_Audit_Log::record('cache_clear', 'success');
 
         $redirect = wp_get_referer();
         if (! $redirect) {

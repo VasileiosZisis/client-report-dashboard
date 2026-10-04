@@ -59,6 +59,10 @@ final class CLIREDAS_GA4_Client
      */
     public function get_valid_access_token()
     {
+        $readable = CLIREDAS_Credential_Store::instance()->check_readable();
+        if (is_wp_error($readable)) {
+            return $readable;
+        }
         $settings = $this->settings->get_settings();
 
         $access_token = isset($settings['ga4_access_token']) ? trim((string) $settings['ga4_access_token']) : '';
@@ -78,6 +82,26 @@ final class CLIREDAS_GA4_Client
      */
     public function refresh_access_token()
     {
+        $attempted = false;
+        $result = $this->perform_token_refresh($attempted);
+        if ($attempted) {
+            CLIREDAS_Audit_Log::record('refresh', is_wp_error($result) ? CLIREDAS_Audit_Log::outcome($result) : 'success');
+        }
+        return $result;
+    }
+
+    /**
+     * Perform one explicit refresh and persist only its token changes.
+     *
+     * @param bool $attempted Whether a Google request was attempted.
+     * @return string|WP_Error
+     */
+    private function perform_token_refresh(&$attempted)
+    {
+        $readable = CLIREDAS_Credential_Store::instance()->check_readable(array('ga4_client_secret', 'ga4_refresh_token'));
+        if (is_wp_error($readable)) {
+            return $readable;
+        }
         $settings = $this->settings->get_settings();
 
         $refresh_token = isset($settings['ga4_refresh_token']) ? trim((string) $settings['ga4_refresh_token']) : '';
@@ -95,6 +119,7 @@ final class CLIREDAS_GA4_Client
             return new WP_Error('missing_client_secret', __('Missing OAuth Client Secret.', 'cliredas-analytics-dashboard'));
         }
 
+        $attempted = true;
         $response = wp_remote_post(
             self::TOKEN_ENDPOINT,
             array(
@@ -121,8 +146,7 @@ final class CLIREDAS_GA4_Client
         }
 
         if (200 !== $status) {
-            $remote_error = isset($data['error']) ? (string) $data['error'] : '';
-            $remote_desc  = isset($data['error_description']) ? (string) $data['error_description'] : '';
+            $remote_error = isset($data['error']) && is_string($data['error']) ? $data['error'] : '';
 
             if ('invalid_grant' === $remote_error) {
                 return new WP_Error(
@@ -145,14 +169,10 @@ final class CLIREDAS_GA4_Client
                 );
             }
 
-            $msg = $remote_error ? $remote_error : __('Token refresh failed.', 'cliredas-analytics-dashboard');
-            if ('' !== $remote_desc) {
-                $msg .= ' - ' . $remote_desc;
-            }
-            return new WP_Error('token_refresh_failed', $msg);
+            return new WP_Error('token_refresh_failed', __('Google could not refresh the access token. Try again or reconnect Google Analytics.', 'cliredas-analytics-dashboard'));
         }
 
-        $new_access_token = isset($data['access_token']) ? trim((string) $data['access_token']) : '';
+        $new_access_token = isset($data['access_token']) && is_string($data['access_token']) ? trim($data['access_token']) : '';
         if ('' === $new_access_token) {
             return new WP_Error('token_refresh_missing_access_token', __('Token refresh response is missing access_token.', 'cliredas-analytics-dashboard'));
         }
@@ -162,11 +182,14 @@ final class CLIREDAS_GA4_Client
             $expires_in = 3600;
         }
 
-        $settings['ga4_access_token']  = $new_access_token;
-        $settings['ga4_token_expires'] = time() + max(60, $expires_in - 60);
-        $settings['ga4_connected']     = 1;
-
-        update_option(CLIREDAS_Settings::OPTION_KEY, $settings);
+        $saved = $this->settings->save_settings(array(
+            'ga4_access_token' => $new_access_token,
+            'ga4_token_expires' => time() + max(60, $expires_in - 60),
+            'ga4_connected' => 1,
+        ));
+        if (is_wp_error($saved)) {
+            return $saved;
+        }
 
         return $new_access_token;
     }
@@ -312,7 +335,7 @@ final class CLIREDAS_GA4_Client
         }
 
         if (is_wp_error($response)) {
-            return new WP_Error('api_failed', $response->get_error_message());
+            return new WP_Error('api_network', __('Unable to contact the Google Analytics API. Check connectivity and try again.', 'cliredas-analytics-dashboard'));
         }
 
         $status = (int) wp_remote_retrieve_response_code($response);
@@ -377,7 +400,7 @@ final class CLIREDAS_GA4_Client
         }
 
         if (is_wp_error($response)) {
-            return new WP_Error('api_failed', $response->get_error_message());
+            return new WP_Error('api_network', __('Unable to contact the Google Analytics API. Check connectivity and try again.', 'cliredas-analytics-dashboard'));
         }
 
         $status = (int) wp_remote_retrieve_response_code($response);
@@ -408,33 +431,29 @@ final class CLIREDAS_GA4_Client
 
         $err = isset($data['error']) && is_array($data['error']) ? $data['error'] : array();
         $status_text = isset($err['status']) ? strtoupper((string) $err['status']) : '';
-        $message = isset($err['message']) ? sanitize_text_field((string) $err['message']) : '';
-        /* translators: %s: error message returned by Google APIs. */
-        $detail = ('' !== $message) ? sprintf(__(' (Google: %s)', 'cliredas-analytics-dashboard'), $message) : '';
 
         if (403 === $http_status || 'PERMISSION_DENIED' === $status_text) {
             return new WP_Error(
                 'ga4_permission_denied',
-                __('Permission denied by Google Analytics API. Please reconnect and ensure your Google user has access to the selected property.', 'cliredas-analytics-dashboard') . $detail
+                __('Permission denied by Google Analytics API. Please reconnect and ensure your Google user has access to the selected property.', 'cliredas-analytics-dashboard')
             );
         }
 
         if (404 === $http_status || 'NOT_FOUND' === $status_text) {
             return new WP_Error(
                 'ga4_not_found',
-                __('GA4 property not found. Select a valid property in Settings and try again.', 'cliredas-analytics-dashboard') . $detail
+                __('GA4 property not found. Select a valid property in Settings and try again.', 'cliredas-analytics-dashboard')
             );
         }
 
         if (429 === $http_status || 'RESOURCE_EXHAUSTED' === $status_text) {
             return new WP_Error(
                 'ga4_quota_exceeded',
-                __('Google API quota exceeded. Please try again later.', 'cliredas-analytics-dashboard') . $detail
+                __('Google API quota exceeded. Please try again later.', 'cliredas-analytics-dashboard')
             );
         }
 
         $msg = __('Google API request failed.', 'cliredas-analytics-dashboard');
-        $msg .= $detail;
 
         return new WP_Error('api_failed', $msg);
     }

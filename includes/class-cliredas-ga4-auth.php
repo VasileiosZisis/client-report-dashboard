@@ -29,6 +29,13 @@ final class CLIREDAS_GA4_Auth
     private $settings;
 
     /**
+     * Whether the current callback passed OAuth state validation.
+     *
+     * @var bool
+     */
+    private $callback_verified = false;
+
+    /**
      * Set up the GA4 auth controller.
      *
      * @param CLIREDAS_Settings $settings Settings service.
@@ -96,8 +103,14 @@ final class CLIREDAS_GA4_Auth
             wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
 
+        $readable = CLIREDAS_Credential_Store::instance()->check_readable(array('ga4_client_secret'));
+        if (is_wp_error($readable)) {
+            CLIREDAS_Audit_Log::record('connect', 'storage_failed');
+            $this->safe_redirect_with_flag(array('cliredas_ga4_error' => $readable->get_error_code()));
+        }
         $auth_url = $this->get_authorization_url();
         if ('' === $auth_url) {
+            CLIREDAS_Audit_Log::record('connect', 'configuration');
             $this->safe_redirect_with_flag(array('cliredas_ga4_error' => 'missing_client_id'));
         }
 
@@ -125,10 +138,6 @@ final class CLIREDAS_GA4_Auth
      */
     public function handle_oauth_callback()
     {
-        if (! current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
-        }
-
         $state = isset($_GET['state']) ? sanitize_text_field(wp_unslash($_GET['state'])) : '';
         $state = trim($state);
 
@@ -171,20 +180,20 @@ final class CLIREDAS_GA4_Auth
             );
         }
 
+        if (! current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
+        }
+
         // State is valid; delete it to prevent replay. A new Connect flow will set a new state.
         delete_user_meta(get_current_user_id(), 'cliredas_ga4_oauth_state_token');
+        $this->callback_verified = true;
 
         $error = isset($_GET['error']) ? sanitize_key(wp_unslash($_GET['error'])) : '';
-        $error_description = isset($_GET['error_description']) ? sanitize_text_field(wp_unslash($_GET['error_description'])) : '';
 
         if ('' !== $error) {
             $args = array(
-                'cliredas_ga4_error' => 'oauth_' . $error,
+                'cliredas_ga4_error' => 'access_denied' === $error ? 'oauth_access_denied' : 'oauth_failed',
             );
-
-            if ('' !== $error_description) {
-                $args['cliredas_ga4_error_desc'] = $error_description;
-            }
 
             $this->safe_redirect_with_flag($args);
         }
@@ -216,25 +225,6 @@ final class CLIREDAS_GA4_Auth
                 'cliredas_ga4_error' => $error_code,
             );
 
-            // Avoid duplicate messages for "simple" errors where the Settings screen already shows
-            // a clear explanation.
-            $simple_errors = array(
-                'missing_client_id',
-                'missing_client_secret',
-                'missing_code',
-                'missing_state',
-                'invalid_state',
-            );
-
-            if (! in_array($error_code, $simple_errors, true)) {
-                $desc = (string) $result->get_error_message();
-                $desc = sanitize_text_field($desc);
-                $desc = trim($desc);
-                if ('' !== $desc) {
-                    $args['cliredas_ga4_error_desc'] = substr($desc, 0, 300);
-                }
-            }
-
             $this->safe_redirect_with_flag($args);
         }
 
@@ -248,21 +238,20 @@ final class CLIREDAS_GA4_Auth
             $this->safe_redirect_with_flag(
                 array(
                     'cliredas_ga4_error' => 'missing_refresh_token',
-                    'cliredas_ga4_error_desc' => __('Google did not return a refresh token. Try again with a fresh consent (you may need to revoke access in your Google Account and reconnect).', 'cliredas-analytics-dashboard'),
                 )
             );
         }
 
-        $current['ga4_access_token']  = $access_token;
-        $current['ga4_token_expires'] = $expires_at;
+        $changes = array('ga4_access_token' => $access_token, 'ga4_token_expires' => $expires_at, 'ga4_connected' => 1);
 
         if ('' !== $refresh_token) {
-            $current['ga4_refresh_token'] = $refresh_token;
+            $changes['ga4_refresh_token'] = $refresh_token;
         }
 
-        $current['ga4_connected'] = 1;
-
-        update_option(CLIREDAS_Settings::OPTION_KEY, $current);
+        $saved = $this->settings->save_settings($changes);
+        if (is_wp_error($saved)) {
+            $this->safe_redirect_with_flag(array('cliredas_ga4_error' => $saved->get_error_code()));
+        }
 
         $this->safe_redirect_with_flag(array('cliredas_ga4_notice' => 'connected'));
     }
@@ -275,6 +264,10 @@ final class CLIREDAS_GA4_Auth
      */
     private function exchange_code_for_tokens($code)
     {
+        $readable = CLIREDAS_Credential_Store::instance()->check_readable(array('ga4_client_secret'));
+        if (is_wp_error($readable)) {
+            return $readable;
+        }
         $code = trim((string) $code);
         if ('' === $code) {
             return new WP_Error('missing_code', __('Missing authorization code.', 'cliredas-analytics-dashboard'));
@@ -307,7 +300,7 @@ final class CLIREDAS_GA4_Auth
         );
 
         if (is_wp_error($response)) {
-            return new WP_Error('token_exchange_failed', $response->get_error_message());
+            return new WP_Error('token_exchange_network', __('Unable to contact Google to complete the connection. Check connectivity and try again.', 'cliredas-analytics-dashboard'));
         }
 
         $status = (int) wp_remote_retrieve_response_code($response);
@@ -319,18 +312,10 @@ final class CLIREDAS_GA4_Auth
         }
 
         if (200 !== $status) {
-            $remote_error = isset($data['error']) ? (string) $data['error'] : '';
-            $remote_desc  = isset($data['error_description']) ? (string) $data['error_description'] : '';
-
-            $msg = $remote_error ? $remote_error : __('Token exchange failed.', 'cliredas-analytics-dashboard');
-            if ('' !== $remote_desc) {
-                $msg .= ' - ' . $remote_desc;
-            }
-
-            return new WP_Error('token_exchange_failed', $msg);
+            return new WP_Error('token_exchange_failed', __('Google could not complete the connection. Verify your OAuth credentials and try connecting again.', 'cliredas-analytics-dashboard'));
         }
 
-        $access_token = isset($data['access_token']) ? trim((string) $data['access_token']) : '';
+        $access_token = isset($data['access_token']) && is_string($data['access_token']) ? trim($data['access_token']) : '';
         if ('' === $access_token) {
             return new WP_Error('token_missing_access_token', __('Google token response is missing access_token.', 'cliredas-analytics-dashboard'));
         }
@@ -340,7 +325,7 @@ final class CLIREDAS_GA4_Auth
             $expires_in = 3600;
         }
 
-        $refresh_token = isset($data['refresh_token']) ? trim((string) $data['refresh_token']) : '';
+        $refresh_token = isset($data['refresh_token']) && is_string($data['refresh_token']) ? trim($data['refresh_token']) : '';
 
         return array(
             'access_token'  => $access_token,
@@ -362,16 +347,12 @@ final class CLIREDAS_GA4_Auth
             wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
 
-        $current = $this->settings->get_settings();
-
         // Keep credentials; clear connection and token-ish fields.
-        $current['ga4_connected']     = 0;
-        $current['ga4_refresh_token'] = '';
-        $current['ga4_access_token']  = '';
-        $current['ga4_token_expires'] = 0;
-        $current['ga4_property_id']   = '';
-
-        update_option(CLIREDAS_Plugin::OPTION_KEY, $current);
+        $saved = $this->settings->save_settings(array('ga4_connected' => 0, 'ga4_refresh_token' => '', 'ga4_access_token' => '', 'ga4_token_expires' => 0, 'ga4_property_id' => ''));
+        CLIREDAS_Audit_Log::record('disconnect', is_wp_error($saved) ? CLIREDAS_Audit_Log::outcome($saved) : 'success');
+        if (is_wp_error($saved)) {
+            $this->safe_redirect_with_flag(array('cliredas_ga4_error' => $saved->get_error_code()));
+        }
 
         $this->safe_redirect_with_flag(array('cliredas_ga4_notice' => 'disconnected'));
     }
@@ -388,20 +369,12 @@ final class CLIREDAS_GA4_Auth
             wp_die(esc_html__('You do not have permission to do this.', 'cliredas-analytics-dashboard'));
         }
 
-        $current = $this->settings->get_settings();
-
-        $current['ga4_client_secret'] = '';
-        // Signal to the sanitize callback that this blank value is intentional (clear action).
-        $current['cliredas_clear_ga4_client_secret'] = 1;
-
         // Clearing the secret effectively disables token refresh, so also disconnect and clear tokens.
-        $current['ga4_connected']     = 0;
-        $current['ga4_refresh_token'] = '';
-        $current['ga4_access_token']  = '';
-        $current['ga4_token_expires'] = 0;
-        $current['ga4_property_id']   = '';
-
-        update_option(CLIREDAS_Settings::OPTION_KEY, $current);
+        $saved = $this->settings->save_settings(array('ga4_client_secret' => '', 'ga4_connected' => 0, 'ga4_refresh_token' => '', 'ga4_access_token' => '', 'ga4_token_expires' => 0, 'ga4_property_id' => ''));
+        CLIREDAS_Audit_Log::record('secret_clear', is_wp_error($saved) ? CLIREDAS_Audit_Log::outcome($saved) : 'success');
+        if (is_wp_error($saved)) {
+            $this->safe_redirect_with_flag(array('cliredas_ga4_error' => $saved->get_error_code()));
+        }
 
         $this->safe_redirect_with_flag(array('cliredas_ga4_notice' => 'secret_cleared'));
     }
@@ -474,6 +447,15 @@ final class CLIREDAS_GA4_Auth
      */
     private function safe_redirect_with_flag(array $args)
     {
+        unset($args['cliredas_ga4_error_desc']);
+        if ($this->callback_verified) {
+            $code = isset($args['cliredas_ga4_error']) ? $args['cliredas_ga4_error'] : '';
+            $outcome = '' === $code ? 'success' : CLIREDAS_Audit_Log::outcome(new WP_Error($code));
+            if (in_array($code, array('oauth_access_denied', 'missing_code', 'invalid_code'), true)) {
+                $outcome = 'authentication';
+            }
+            CLIREDAS_Audit_Log::record('connect', $outcome);
+        }
         $args['cliredas_ga4_notice_nonce'] = wp_create_nonce('cliredas_ga4_notice');
         $url = admin_url('options-general.php?page=' . CLIREDAS_Settings::SETTINGS_PAGE_SLUG);
         $url = add_query_arg($args, $url);

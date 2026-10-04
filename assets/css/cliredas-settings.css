@@ -169,3 +169,60 @@
     flex-direction: column;
   }
 }
+
+.cliredas-local-diagnostics {
+  max-width: 960px;
+  margin: 24px 0;
+}
+
+.cliredas-local-diagnostics > .notice {
+  margin: 12px 0;
+}
+
+.cliredas-local-health {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  gap: 10px 16px;
+  margin: 16px 0;
+}
+
+.cliredas-local-health dt {
+  font-weight: 600;
+}
+
+.cliredas-local-health dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cliredas-audit-history summary {
+  padding: 8px 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cliredas-audit-history summary:focus-visible,
+.cliredas-audit-scroll:focus-visible {
+  outline: 2px solid #2271b1;
+  outline-offset: 2px;
+}
+
+.cliredas-audit-scroll {
+  overflow-x: auto;
+  max-height: 420px;
+}
+
+.cliredas-audit-scroll table {
+  min-width: 540px;
+}
+
+@media (max-width: 600px) {
+  .cliredas-local-health {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .cliredas-local-health dd {
+    margin-bottom: 10px;
+  }
+}
