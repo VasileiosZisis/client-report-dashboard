@@ -22,6 +22,14 @@ This repository is the Free version intended for WordPress.org distribution. A s
 - Clear cache button (forces a fresh fetch on the next load)
 - Optional access control: allow Editors to view the dashboard
 
+## Documentation and Roadmaps
+
+- [Product scope](docs/product-scope.md): authoritative Free/Pro feature placement and product boundaries
+- [Free roadmap](docs/free-roadmap.md): implemented `1.7.0` baseline, completed milestones, and planned Free work
+- [Pro roadmap](docs/pro-roadmap.md): planned separate add-on catalog and client-reporting delivery sequence
+
+Feature placement includes future work; it does not mean a feature has shipped. The Key Features list above describes current Free functionality. Custom dates, year-to-date, chart comparison overlays, weekly digests, settings transfer, and a basic Search Console overview remain planned. All Pro functionality is planned.
+
 ## External Services (Google APIs)
 
 When enabled and connected, the plugin communicates with Google services:
