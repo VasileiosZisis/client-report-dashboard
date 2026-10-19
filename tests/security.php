@@ -26,7 +26,10 @@ final class CLIREDAS_Security_Fixture_DB
      *
      * @var array
      */
-    public $state = array('cliredas_settings' => array(), 'cliredas_audit_log' => array(), 'fail' => false, 'conflict' => null);
+    public $state = array('cliredas_settings' => array(), 'cliredas_audit_log' => array(),
+        'cliredas_report_cache' => array('generation' => 'fixture', 'entries' => array()),
+        'cron' => array('version' => 2), 'fail' => false, 'conflict' => null,
+    );
 
     /**
      * Capture parameters without building executable SQL.
@@ -125,6 +128,8 @@ final class CLIREDAS_Security_Tests
         CLIREDAS_Plugin::instance()->bootstrap_admin();
         wp_salt('auth');
         wp_salt('secure_auth');
+        wp_salt('nonce');
+        wp_salt('logged_in');
         $original_db = $wpdb;
         $alloptions = wp_load_alloptions();
         $original_user = get_current_user_id();

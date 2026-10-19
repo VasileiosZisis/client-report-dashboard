@@ -971,6 +971,7 @@ final class CLIREDAS_Settings
             class="regular-text"
             name="<?php echo esc_attr(self::OPTION_KEY); ?>[ga4_client_id]"
             value="<?php echo esc_attr($value); ?>"
+            <?php // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Example OAuth client ID text; no remote asset is loaded. ?>
             placeholder="<?php echo esc_attr__('1234-abc.apps.googleusercontent.com', 'cliredas-analytics-dashboard'); ?>" />
         <p class="description">
             <?php echo esc_html__('From Google Cloud Console → OAuth consent screen / Credentials.', 'cliredas-analytics-dashboard'); ?>

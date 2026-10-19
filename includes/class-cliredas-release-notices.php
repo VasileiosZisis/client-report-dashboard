@@ -35,16 +35,16 @@ final class CLIREDAS_Release_Notices
      */
     public static function get_release_notes()
     {
-        if ('1.7.0' !== CLIREDAS_VERSION) {
+        if ('1.8.0' !== CLIREDAS_VERSION) {
             return array();
         }
         return array(
             'highlights' => array(
-                __('OAuth secrets and tokens now use encrypted storage on supported hosts.', 'cliredas-analytics-dashboard'),
-                __('Settings now includes local credential and token diagnostics.', 'cliredas-analytics-dashboard'),
-                __('Administrator-only audit history records the latest 100 connection, refresh, cache, and export operations.', 'cliredas-analytics-dashboard'),
+                __('Last-good GA4 reports remain available for up to 24 hours while expired data refreshes in the background.', 'cliredas-analytics-dashboard'),
+                __('The dashboard shows Fresh, Refreshing or Stale status and updates automatically when a pending refresh completes.', 'cliredas-analytics-dashboard'),
+                __('CSV exports include freshness and resolved dates, and cache clearing also removes retained reports and pending refreshes.', 'cliredas-analytics-dashboard'),
             ),
-            'detail' => __('Existing plaintext credentials migrate automatically on supported hosts. Preserve your WordPress security salts when restoring or moving a database; changed salts or site context may require re-entering the Client Secret and reconnecting.', 'cliredas-analytics-dashboard'),
+            'detail' => __('Reports are fresh for 15 minutes by default. Last-good data is retained only for the same reporting dates and connection. Background refresh depends on WP-Cron. Existing report caches are rebuilt on first use; Clear Cache requests new data on the next dashboard load.', 'cliredas-analytics-dashboard'),
         );
     }
 

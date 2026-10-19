@@ -43,6 +43,7 @@ final class CLIREDAS_Data_Provider
             && isset($cached['comparison']['totals'])
             && is_array($cached['comparison']['totals'])
         ) {
+            $cached['source'] = 'mock';
             return $cached;
         }
 
@@ -86,7 +87,10 @@ final class CLIREDAS_Data_Provider
             'range' => array(
                 'key'  => $range_key,
                 'days' => $days,
+                'startDate' => $start->format('Y-m-d'),
+                'endDate' => $start->modify('+' . ($days - 1) . ' days')->format('Y-m-d'),
             ),
+            'source' => 'mock',
             'totals' => array(
                 'sessions'               => $current_period['totals']['sessions'],
                 'users'                  => $current_period['totals']['users'],
@@ -400,12 +404,16 @@ final class CLIREDAS_Data_Provider
      */
     public function clear_all_cache()
     {
+        $retained = CLIREDAS_Report_Cache::clear();
+        if (false === $retained) {
+            return false;
+        }
         $keys = get_option(self::CACHE_INDEX_OPTION, array());
         if (! is_array($keys)) {
             $keys = array();
         }
 
-        $cleared = 0;
+        $cleared = $retained;
 
         foreach ($keys as $key) {
             $key = sanitize_key($key);

@@ -4,8 +4,9 @@ This document tracks implementation status and delivery order for the Free
 plugin. [Product scope](product-scope.md) owns feature placement; the
 [Pro roadmap](pro-roadmap.md) covers the separate planned paid add-on.
 
-The current implemented baseline is **1.7.0**. Stale-while-revalidate caching,
-additional dashboard polish, custom dates/year-to-date, chart comparison
+The current implementation baseline is **1.8.0**, including FREE-04
+stale-while-revalidate caching. Additional dashboard
+polish, custom dates/year-to-date, chart comparison
 overlays, the weekly digest, settings portability, and a basic Search Console
 overview are **planned, not shipped**.
 No future release numbers, dates, or effort estimates are assigned here.
@@ -26,6 +27,7 @@ milestones are recorded in Git history.
 | 1.5.0: Top pages sorting (FREE-01) | Accessible client-side sorting for every column, provider order until a sort is selected, and persistence across date changes/browser visits. |
 | 1.6.0: Setup and diagnostics (FREE-03) | Rerunnable setup assistant; public URL, OAuth configuration, token-health, and property-access diagnostics; shared GA4 API client for settings requests. |
 | 1.7.0: Security and maintenance (FREE-05) | Authenticated OAuth secret/token encryption where supported, legacy migration and recovery guidance, local diagnostics, administrator-only audit history capped at 100 events, safe OAuth recovery messages, scoped dismissible upgrade announcements, and local release notes. |
+| 1.8.0: Report freshness and recovery (FREE-04) | Bounded last-good GA4 reports, background refresh with renewable locks and failure cooldowns, freshness status and automatic updates, exact-date/connection cache isolation, CSV freshness metadata, and lifecycle cleanup. |
 
 Encryption uses Sodium secretbox or OpenSSL AES-256-GCM when available. Hosts
 without either retain plaintext compatibility with a warning. Security salt or
@@ -33,8 +35,8 @@ site-context changes can require credential recovery; encryption is not a claim
 of protection against a compromised installation or all backup exposure.
 
 Current KPI comparisons use previous-period totals; the chart does not yet show
-a previous-period series. Current caching uses expiring transients and does not
-provide last-good stale recovery. Disconnected or failed requests can show
+a previous-period series. Current caching uses a bounded last-good store and background stale recovery
+introduced in 1.8.0. Disconnected or failed requests can show
 explicitly identified mock data; CSV exports label sample/fallback output.
 Background reporting must never treat that fallback as real analytics.
 
@@ -43,23 +45,38 @@ Background reporting must never treat that fallback as real analytics.
 Historical feature IDs are retained so earlier references remain understandable.
 The order below determines delivery, not the numeric ID.
 
-1. **FREE-04:** Data freshness and stale-while-revalidate caching (Free foundation).
-2. **FREE-02:** Optional weekly, unbranded owner digest (high priority).
-3. **FREE-06:** Dashboard filtering, empty states, and accessibility polish.
-4. **FREE-07:** Custom dates and year-to-date for existing dashboard metrics.
-5. **FREE-08:** Previous-period chart overlay.
-6. **FREE-09:** Basic non-secret settings import/export.
-7. **FREE-10:** Basic Search Console overview (later).
+1. **FREE-02:** Optional weekly, unbranded owner digest (high priority).
+2. **FREE-06:** Dashboard filtering, empty states, and accessibility polish.
+3. **FREE-07:** Custom dates and year-to-date for existing dashboard metrics.
+4. **FREE-08:** Previous-period chart overlay.
+5. **FREE-09:** Basic non-secret settings import/export.
+6. **FREE-10:** Basic Search Console overview (later).
 
 Trustworthy reporting is the Free foundation: connection diagnostics are already
-delivered in FREE-03/FREE-05; freshness status and last-good recovery are the next
-foundation work in FREE-04. The owner digest follows that work to create recurring
+delivered in FREE-03/FREE-05; freshness status and last-good recovery are
+delivered in FREE-04 (1.8.0). The owner digest follows that work to create recurring
 value and encourage continued use; it does not depend on custom dates or chart
 overlays.
 
 ### FREE-04: Stale-while-revalidate report caching
 
-**Status:** Planned; Free foundation, first in delivery order.
+**Status:** Implemented in 1.8.0; Free foundation.
+
+**Implemented policy:** Fresh for 15 minutes by default; last-good data is
+eligible for at most 24 hours from its successful fetch and only for identical
+resolved dates. One non-autoloaded, conditionally updated `cliredas_report_cache`
+option separates successful payloads from refresh-attempt metadata and retains
+at most 20 contexts. Two-minute renewable leases prevent concurrent fetching;
+failures use a five-minute cooldown. Single WP-Cron refresh events run on demand;
+daily cleanup removes expired inactive records. An open dashboard polls cached
+status every five seconds for up to three minutes, pausing while hidden.
+
+Google permission/property/credential failures invalidate retained reports.
+Clear Cache, connection/access changes, deactivation and uninstall remove owned
+work and invalidate in-flight publication. Legacy entries are discarded rather
+than promoted. Background refresh depends on WP-Cron execution.
+
+Provider/status/export regressions are documented in [tests](../tests/README.md).
 
 **Purpose:** Show the last successful real report promptly while refreshing an
 expired entry, and retain usable data when a refresh fails.
@@ -80,14 +97,14 @@ without relying on wp-admin bootstrap.
 - Successful refreshes replace data and freshness metadata together; failures
   preserve last-good data and show actionable status to authorized users.
 - Show fresh, refreshing, and stale states plus the last successful refresh time
-  in the site timezone. Define bounded stale retention before implementation.
+  in the site timezone. Last-good retention is bounded to 24 hours from retrieval.
 - Clear cache removes both fresh and last-good entries; the next load fetches
   again. Expired locks recover, and refresh work/retained data are cleaned up
   when no longer valid or on uninstall.
 
 ### FREE-02: Optional weekly, unbranded owner digest
 
-**Status:** Planned; high priority, immediately after FREE-04.
+**Status:** Planned; high priority, next after the implemented FREE-04 foundation.
 
 **Purpose:** Create recurring value and encourage continued use through a simple
 owner summary, while leaving branded client-report composition and delivery

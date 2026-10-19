@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Cliredas - Client Dashboard for Google Analytics (GA4) 1.7.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/cliredas-analytics-dashboard\n"
+"Project-Id-Version: Cliredas - Client Dashboard for Google Analytics (GA4) 1.8.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/client-report-dashboard\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-04T19:19:18+00:00\n"
+"POT-Creation-Date: 2026-10-19T16:33:32+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: cliredas-analytics-dashboard\n"
@@ -36,7 +36,7 @@ msgstr ""
 
 #: includes/class-cliredas-admin-menu.php:59
 #: includes/class-cliredas-admin-menu.php:68
-#: includes/class-cliredas-dashboard-page.php:242
+#: includes/class-cliredas-dashboard-page.php:286
 #: includes/class-cliredas-settings.php:199
 msgid "Client Report"
 msgstr ""
@@ -72,84 +72,114 @@ msgid "No data."
 msgstr ""
 
 #: includes/class-cliredas-assets.php:32
-#: includes/class-cliredas-dashboard-page.php:219
-#: includes/class-cliredas-dashboard-page.php:366
-#: includes/class-cliredas-dashboard-page.php:398
-#: includes/class-cliredas-dashboard-page.php:438
-#: includes/class-cliredas-dashboard-page.php:463
-#: includes/class-cliredas-dashboard-page.php:647
-#: includes/class-cliredas-dashboard-page.php:699
-#: includes/class-cliredas-dashboard-page.php:739
-#: includes/class-cliredas-dashboard-page.php:781
-#: includes/class-cliredas-dashboard-page.php:822
+#: includes/class-cliredas-dashboard-page.php:575
+msgid "Sample data — not Google Analytics results."
+msgstr ""
+
+#. translators: %s: last successful refresh time in the site timezone.
+#: includes/class-cliredas-assets.php:34
+#: includes/class-cliredas-dashboard-page.php:582
+#, php-format
+msgid "Last successful refresh: %s"
+msgstr ""
+
+#: includes/class-cliredas-assets.php:35
+msgid "The refresh is taking longer than expected. Reload the dashboard to check again. Background work depends on WP-Cron."
+msgstr ""
+
+#: includes/class-cliredas-assets.php:36
+msgid "This report has reached its 24-hour retention limit. Reload the dashboard to request current data."
+msgstr ""
+
+#: includes/class-cliredas-assets.php:37
+#: includes/class-cliredas-dashboard-page.php:488
+#: includes/class-cliredas-dashboard-page.php:526
+#: includes/class-cliredas-dashboard-page.php:653
+#: includes/class-cliredas-dashboard-page.php:885
+#: includes/class-cliredas-ga4-data-provider.php:232
+#: includes/class-cliredas-settings.php:691
+msgid "Unavailable"
+msgstr ""
+
+#: includes/class-cliredas-assets.php:38
+#: includes/class-cliredas-dashboard-page.php:257
+#: includes/class-cliredas-dashboard-page.php:411
+#: includes/class-cliredas-dashboard-page.php:443
+#: includes/class-cliredas-dashboard-page.php:483
+#: includes/class-cliredas-dashboard-page.php:511
+#: includes/class-cliredas-dashboard-page.php:725
+#: includes/class-cliredas-dashboard-page.php:777
+#: includes/class-cliredas-dashboard-page.php:817
+#: includes/class-cliredas-dashboard-page.php:859
+#: includes/class-cliredas-dashboard-page.php:904
 msgid "Sessions"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:33
-#: includes/class-cliredas-dashboard-page.php:223
-#: includes/class-cliredas-dashboard-page.php:367
-#: includes/class-cliredas-dashboard-page.php:648
-#: includes/class-cliredas-dashboard-page.php:700
+#: includes/class-cliredas-assets.php:39
+#: includes/class-cliredas-dashboard-page.php:261
+#: includes/class-cliredas-dashboard-page.php:412
+#: includes/class-cliredas-dashboard-page.php:726
+#: includes/class-cliredas-dashboard-page.php:778
 msgid "Total users"
 msgstr ""
 
 #. translators: %s: signed percentage change, for example +12.4%
-#: includes/class-cliredas-assets.php:35
-#: includes/class-cliredas-dashboard-page.php:998
+#: includes/class-cliredas-assets.php:41
+#: includes/class-cliredas-dashboard-page.php:1083
 #, php-format
 msgid "%s vs previous period"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:36
-#: includes/class-cliredas-dashboard-page.php:975
+#: includes/class-cliredas-assets.php:42
+#: includes/class-cliredas-dashboard-page.php:1060
 msgid "New vs previous period"
 msgstr ""
 
 #. translators: %s: chart metric label (e.g. "Sessions" or "Total users").
-#: includes/class-cliredas-assets.php:38
+#: includes/class-cliredas-assets.php:44
 #, php-format
 msgid "%s over time"
 msgstr ""
 
 #. translators: %s: sortable table column label.
-#: includes/class-cliredas-assets.php:40
+#: includes/class-cliredas-assets.php:46
 #, php-format
 msgid "Sort %s ascending"
 msgstr ""
 
 #. translators: %s: sortable table column label.
-#: includes/class-cliredas-assets.php:42
+#: includes/class-cliredas-assets.php:48
 #, php-format
 msgid "Sort %s descending"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:44
-#: includes/class-cliredas-dashboard-page.php:470
-#: includes/class-cliredas-dashboard-page.php:807
+#: includes/class-cliredas-assets.php:50
+#: includes/class-cliredas-dashboard-page.php:518
+#: includes/class-cliredas-dashboard-page.php:889
 msgid "Organic Search"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:45
-#: includes/class-cliredas-dashboard-page.php:471
-#: includes/class-cliredas-dashboard-page.php:808
+#: includes/class-cliredas-assets.php:51
+#: includes/class-cliredas-dashboard-page.php:519
+#: includes/class-cliredas-dashboard-page.php:890
 msgid "Direct"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:46
-#: includes/class-cliredas-dashboard-page.php:472
-#: includes/class-cliredas-dashboard-page.php:809
+#: includes/class-cliredas-assets.php:52
+#: includes/class-cliredas-dashboard-page.php:520
+#: includes/class-cliredas-dashboard-page.php:891
 msgid "Referral"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:47
-#: includes/class-cliredas-dashboard-page.php:473
-#: includes/class-cliredas-dashboard-page.php:810
+#: includes/class-cliredas-assets.php:53
+#: includes/class-cliredas-dashboard-page.php:521
+#: includes/class-cliredas-dashboard-page.php:892
 msgid "Social"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:48
-#: includes/class-cliredas-dashboard-page.php:474
-#: includes/class-cliredas-dashboard-page.php:811
+#: includes/class-cliredas-assets.php:54
+#: includes/class-cliredas-dashboard-page.php:522
+#: includes/class-cliredas-dashboard-page.php:893
 msgid "Other"
 msgstr ""
 
@@ -228,9 +258,13 @@ msgstr ""
 #: includes/class-cliredas-cache-manager.php:45
 #: includes/class-cliredas-ga4-auth.php:103
 #: includes/class-cliredas-ga4-auth.php:184
-#: includes/class-cliredas-ga4-auth.php:347
-#: includes/class-cliredas-ga4-auth.php:369
+#: includes/class-cliredas-ga4-auth.php:350
+#: includes/class-cliredas-ga4-auth.php:372
 msgid "You do not have permission to do this."
+msgstr ""
+
+#: includes/class-cliredas-cache-manager.php:53
+msgid "The cache could not be cleared. Try again; if the problem persists, check database access."
 msgstr ""
 
 #: includes/class-cliredas-credential-store.php:70
@@ -249,227 +283,246 @@ msgstr ""
 msgid "The connection could not be saved. Existing settings were preserved. Try again."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:93
+#: includes/class-cliredas-dashboard-page.php:100
+#: includes/class-cliredas-dashboard-page.php:128
 #: includes/class-cliredas-release-notices.php:316
 #: includes/class-cliredas-release-notices.php:335
 msgid "Permission denied."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:128
+#: includes/class-cliredas-dashboard-page.php:133
+msgid "Invalid report context."
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:137
+#: includes/class-cliredas-dashboard-page.php:141
+msgid "The report context changed. Reload the dashboard."
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:167
 msgid "You do not have permission to export this report."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:141
+#: includes/class-cliredas-dashboard-page.php:180
 msgid "Invalid dashboard date range."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:157
+#: includes/class-cliredas-dashboard-page.php:196
 msgid "The CSV export could not be started because output was already sent."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:168
+#: includes/class-cliredas-dashboard-page.php:207
 msgid "The CSV export could not be created."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:205
+#: includes/class-cliredas-dashboard-page.php:244
 msgid "You do not have permission to view this page."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:227
-#: includes/class-cliredas-dashboard-page.php:649
+#: includes/class-cliredas-dashboard-page.php:265
+#: includes/class-cliredas-dashboard-page.php:727
 msgid "Pageviews"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:231
-#: includes/class-cliredas-dashboard-page.php:410
+#: includes/class-cliredas-dashboard-page.php:269
+#: includes/class-cliredas-dashboard-page.php:455
 msgid "Avg engagement time"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:247
-#: includes/class-cliredas-dashboard-page.php:596
+#: includes/class-cliredas-dashboard-page.php:291
+#: includes/class-cliredas-dashboard-page.php:667
 msgid "Date range"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:267
+#: includes/class-cliredas-dashboard-page.php:311
 msgid "Export CSV"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:276
+#: includes/class-cliredas-dashboard-page.php:320
 msgid "Clear cache"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:291
+#: includes/class-cliredas-dashboard-page.php:335
 msgid "GA4 is not connected yet, so you are seeing sample data."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:294
+#: includes/class-cliredas-dashboard-page.php:338
 msgid "Connect Google Analytics in Settings"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:297
+#: includes/class-cliredas-dashboard-page.php:341
 msgid "Please ask an administrator to connect Google Analytics in Settings."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:311
+#: includes/class-cliredas-dashboard-page.php:356
 msgid "Open Settings"
 msgstr ""
 
 #. translators: %d: number of cache entries cleared
-#: includes/class-cliredas-dashboard-page.php:329
+#: includes/class-cliredas-dashboard-page.php:374
 #, php-format
 msgid "Cache cleared (%d entries)."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:361
+#: includes/class-cliredas-dashboard-page.php:406
 msgid "Sessions over time"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:364
+#: includes/class-cliredas-dashboard-page.php:409
 msgid "Chart"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:378
-#: includes/class-cliredas-dashboard-page.php:733
+#: includes/class-cliredas-dashboard-page.php:423
+#: includes/class-cliredas-dashboard-page.php:811
 msgid "Top pages"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:386
-#: includes/class-cliredas-dashboard-page.php:737
+#: includes/class-cliredas-dashboard-page.php:431
+#: includes/class-cliredas-dashboard-page.php:815
 msgid "Page Title"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:392
-#: includes/class-cliredas-dashboard-page.php:738
+#: includes/class-cliredas-dashboard-page.php:437
+#: includes/class-cliredas-dashboard-page.php:816
 msgid "URL"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:404
-#: includes/class-cliredas-dashboard-page.php:740
+#: includes/class-cliredas-dashboard-page.php:449
+#: includes/class-cliredas-dashboard-page.php:818
 msgid "Views"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:432
-#: includes/class-cliredas-dashboard-page.php:776
+#: includes/class-cliredas-dashboard-page.php:477
+#: includes/class-cliredas-dashboard-page.php:854
 msgid "Device breakdown"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:437
-#: includes/class-cliredas-dashboard-page.php:780
+#: includes/class-cliredas-dashboard-page.php:482
+#: includes/class-cliredas-dashboard-page.php:858
 msgid "Device"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:453
-#: includes/class-cliredas-dashboard-page.php:817
+#: includes/class-cliredas-dashboard-page.php:501
+#: includes/class-cliredas-dashboard-page.php:885
+#: includes/class-cliredas-dashboard-page.php:899
 msgid "Traffic sources"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:462
-#: includes/class-cliredas-dashboard-page.php:821
+#: includes/class-cliredas-dashboard-page.php:510
+#: includes/class-cliredas-dashboard-page.php:903
 msgid "Source"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:508
-msgid "GA4 data is temporarily unavailable. Please ask an administrator to reconnect Google Analytics."
+#: includes/class-cliredas-dashboard-page.php:562
+msgid "GA4 data could not be refreshed. Please ask an administrator to check the connection and reporting status."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:525
-#: includes/class-cliredas-dashboard-page.php:536
+#: includes/class-cliredas-dashboard-page.php:596
+#: includes/class-cliredas-dashboard-page.php:607
 msgid "Last 7 days"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:526
+#: includes/class-cliredas-dashboard-page.php:597
 msgid "Last 30 days"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:527
+#: includes/class-cliredas-dashboard-page.php:598
 msgid "This month"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:528
+#: includes/class-cliredas-dashboard-page.php:599
 msgid "Last month"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:529
+#: includes/class-cliredas-dashboard-page.php:600
 msgid "Last 90 days"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:583
+#: includes/class-cliredas-dashboard-page.php:654
 msgid "Sample data"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:584
+#: includes/class-cliredas-dashboard-page.php:655
 msgid "Google Analytics 4"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:586
+#: includes/class-cliredas-dashboard-page.php:657
 msgid "Metadata"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:590
+#: includes/class-cliredas-dashboard-page.php:661
 msgid "Field"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:591
+#: includes/class-cliredas-dashboard-page.php:662
 msgid "Value"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:600
+#: includes/class-cliredas-dashboard-page.php:671
 msgid "Data source"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:604
+#: includes/class-cliredas-dashboard-page.php:673
+msgid "Data freshness"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:675
+msgid "Resolved dates"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:679
 msgid "Exported at"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:611
-#: includes/class-cliredas-dashboard-page.php:619
+#: includes/class-cliredas-dashboard-page.php:686
+#: includes/class-cliredas-dashboard-page.php:694
 #: includes/class-cliredas-settings.php:575
 msgid "Warning"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:620
+#: includes/class-cliredas-dashboard-page.php:695
 msgid "This export contains sample data, not Google Analytics data."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:650
-#: includes/class-cliredas-dashboard-page.php:741
+#: includes/class-cliredas-dashboard-page.php:728
+#: includes/class-cliredas-dashboard-page.php:819
 msgid "Avg engagement time (seconds)"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:657
+#: includes/class-cliredas-dashboard-page.php:735
 msgid "KPIs"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:661
+#: includes/class-cliredas-dashboard-page.php:739
 msgid "Metric"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:662
+#: includes/class-cliredas-dashboard-page.php:740
 msgid "Current"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:663
+#: includes/class-cliredas-dashboard-page.php:741
 msgid "Previous"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:664
+#: includes/class-cliredas-dashboard-page.php:742
 msgid "Change"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:694
+#: includes/class-cliredas-dashboard-page.php:772
 msgid "Time series"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:698
+#: includes/class-cliredas-dashboard-page.php:776
 msgid "Date"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:852
+#: includes/class-cliredas-dashboard-page.php:934
 msgid "New"
 msgstr ""
 
 #. translators: %d: number of seconds
-#: includes/class-cliredas-dashboard-page.php:925
+#: includes/class-cliredas-dashboard-page.php:1007
 #, php-format
 msgid "%d second"
 msgid_plural "%d seconds"
@@ -477,140 +530,174 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: minutes, 2: seconds
-#: includes/class-cliredas-dashboard-page.php:932
+#: includes/class-cliredas-dashboard-page.php:1014
 #, php-format
 msgid "%1$dm %2$ds"
 msgstr ""
 
-#: includes/class-cliredas-ga4-auth.php:273
+#: includes/class-cliredas-ga4-auth.php:276
 msgid "Missing authorization code."
 msgstr ""
 
-#: includes/class-cliredas-ga4-auth.php:280
-#: includes/class-cliredas-ga4-client.php:114
+#: includes/class-cliredas-ga4-auth.php:283
+#: includes/class-cliredas-ga4-client.php:118
 msgid "Missing OAuth Client ID."
 msgstr ""
 
-#: includes/class-cliredas-ga4-auth.php:285
-#: includes/class-cliredas-ga4-client.php:119
+#: includes/class-cliredas-ga4-auth.php:288
+#: includes/class-cliredas-ga4-client.php:123
 msgid "Missing OAuth Client Secret."
 msgstr ""
 
-#: includes/class-cliredas-ga4-auth.php:303
+#: includes/class-cliredas-ga4-auth.php:306
 msgid "Unable to contact Google to complete the connection. Check connectivity and try again."
 msgstr ""
 
-#: includes/class-cliredas-ga4-auth.php:311
+#: includes/class-cliredas-ga4-auth.php:314
 msgid "Invalid token response from Google."
 msgstr ""
 
-#: includes/class-cliredas-ga4-auth.php:315
+#: includes/class-cliredas-ga4-auth.php:318
 msgid "Google could not complete the connection. Verify your OAuth credentials and try connecting again."
 msgstr ""
 
-#: includes/class-cliredas-ga4-auth.php:320
+#: includes/class-cliredas-ga4-auth.php:323
 msgid "Google token response is missing access_token."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:109
+#: includes/class-cliredas-ga4-client.php:113
 msgid "Missing refresh token. Please reconnect Google Analytics."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:137
+#: includes/class-cliredas-ga4-client.php:141
 msgid "Unable to contact Google to refresh the access token."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:145
+#: includes/class-cliredas-ga4-client.php:149
 msgid "Invalid token refresh response from Google."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:154
+#: includes/class-cliredas-ga4-client.php:158
 msgid "Google revoked the token (invalid_grant). Please reconnect Google Analytics."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:161
+#: includes/class-cliredas-ga4-client.php:165
 #: includes/class-cliredas-setup-diagnostics.php:527
 msgid "Google rejected the saved OAuth client credentials."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:168
+#: includes/class-cliredas-ga4-client.php:172
 msgid "Google temporarily rate-limited the token refresh request."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:172
+#: includes/class-cliredas-ga4-client.php:176
 msgid "Google could not refresh the access token. Try again or reconnect Google Analytics."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:177
+#: includes/class-cliredas-ga4-client.php:181
 msgid "Token refresh response is missing access_token."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:286
+#: includes/class-cliredas-ga4-client.php:290
 msgid "Missing GA4 property id."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:338
-#: includes/class-cliredas-ga4-client.php:403
+#: includes/class-cliredas-ga4-client.php:342
+#: includes/class-cliredas-ga4-client.php:407
 msgid "Unable to contact the Google Analytics API. Check connectivity and try again."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:346
-#: includes/class-cliredas-ga4-client.php:411
+#: includes/class-cliredas-ga4-client.php:350
+#: includes/class-cliredas-ga4-client.php:415
 msgid "Invalid API response from Google."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:438
+#: includes/class-cliredas-ga4-client.php:443
 msgid "Permission denied by Google Analytics API. Please reconnect and ensure your Google user has access to the selected property."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:445
+#: includes/class-cliredas-ga4-client.php:451
 msgid "GA4 property not found. Select a valid property in Settings and try again."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:452
+#: includes/class-cliredas-ga4-client.php:458
 msgid "Google API quota exceeded. Please try again later."
 msgstr ""
 
-#: includes/class-cliredas-ga4-client.php:456
+#: includes/class-cliredas-ga4-client.php:462
 msgid "Google API request failed."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:63
-msgid "GA4 is connected but no property is selected yet. Select a GA4 Property in Settings."
+#: includes/class-cliredas-ga4-data-provider.php:53
+msgid "Connect Google Analytics and select a property in Settings."
 msgstr ""
 
-#. translators: %s: error message
-#: includes/class-cliredas-ga4-data-provider.php:146
-#, php-format
-msgid "Traffic sources unavailable. %s"
+#: includes/class-cliredas-ga4-data-provider.php:209
+msgid "The report context changed. Reload the dashboard to request the current reporting period."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:302
+#: includes/class-cliredas-ga4-data-provider.php:212
+msgid "The report cache could not be saved. Check database access and reload the dashboard. Eligible last-good data has been preserved."
+msgstr ""
+
+#: includes/class-cliredas-ga4-data-provider.php:215
+msgid "The background refresh could not be scheduled. Ask an administrator to check WP-Cron, then reload after five minutes."
+msgstr ""
+
+#: includes/class-cliredas-ga4-data-provider.php:218
+msgid "Google Analytics access is unavailable. Review credentials and property access in Settings, then reconnect."
+msgstr ""
+
+#: includes/class-cliredas-ga4-data-provider.php:220
+msgid "The report could not be refreshed. Last-good data is shown only while eligible. Check the connection in Settings and try again after five minutes."
+msgstr ""
+
+#: includes/class-cliredas-ga4-data-provider.php:231
+msgid "Fresh"
+msgstr ""
+
+#: includes/class-cliredas-ga4-data-provider.php:231
+msgid "Refreshing"
+msgstr ""
+
+#: includes/class-cliredas-ga4-data-provider.php:232
+msgid "Stale"
+msgstr ""
+
+#: includes/class-cliredas-ga4-data-provider.php:254
+msgid "A real report is being refreshed. Analytics values are unavailable until it completes."
+msgstr ""
+
+#: includes/class-cliredas-ga4-data-provider.php:289
+msgid "Traffic sources are unavailable. Other report blocks contain real GA4 data."
+msgstr ""
+
+#: includes/class-cliredas-ga4-data-provider.php:313
 msgid "GA4 report failed. Showing mock data."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:683
+#: includes/class-cliredas-ga4-data-provider.php:694
 msgid "Landing Page"
 msgstr ""
 
-#: includes/class-cliredas-plugin.php:235
+#: includes/class-cliredas-plugin.php:266
 msgid "Unserializing is not allowed."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:43
-msgid "OAuth secrets and tokens now use encrypted storage on supported hosts."
+msgid "Last-good GA4 reports remain available for up to 24 hours while expired data refreshes in the background."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:44
-msgid "Settings now includes local credential and token diagnostics."
+msgid "The dashboard shows Fresh, Refreshing or Stale status and updates automatically when a pending refresh completes."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:45
-msgid "Administrator-only audit history records the latest 100 connection, refresh, cache, and export operations."
+msgid "CSV exports include freshness and resolved dates, and cache clearing also removes retained reports and pending refreshes."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:47
-msgid "Existing plaintext credentials migrate automatically on supported hosts. Preserve your WordPress security salts when restoring or moving a database; changed salts or site context may require re-entering the Client Secret and reconnecting."
+msgid "Reports are fresh for 15 minutes by default. Last-good data is retained only for the same reporting dates and connection. Background refresh depends on WP-Cron. Existing report caches are rebuilt on first use; Clear Cache requests new data on the next dashboard load."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:173
@@ -833,10 +920,6 @@ msgstr ""
 msgid "Last remote check: %s"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:691
-msgid "Unavailable"
-msgstr ""
-
 #: includes/class-cliredas-settings.php:692
 msgid "No credentials saved"
 msgstr ""
@@ -890,7 +973,7 @@ msgid "Refresh token"
 msgstr ""
 
 #: includes/class-cliredas-settings.php:720
-#: includes/class-cliredas-settings.php:992
+#: includes/class-cliredas-settings.php:993
 msgid "Saved"
 msgstr ""
 
@@ -1036,91 +1119,91 @@ msgid "Save your Client ID first."
 msgstr ""
 
 #: includes/class-cliredas-settings.php:903
-#: includes/class-cliredas-settings.php:1156
+#: includes/class-cliredas-settings.php:1157
 msgid "Reconnect Google Analytics"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:974
+#: includes/class-cliredas-settings.php:975
 msgid "1234-abc.apps.googleusercontent.com"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:976
+#: includes/class-cliredas-settings.php:977
 msgid "From Google Cloud Console → OAuth consent screen / Credentials."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:991
+#: includes/class-cliredas-settings.php:992
 msgid "Client secret:"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:992
+#: includes/class-cliredas-settings.php:993
 msgid "Not set"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1001
+#: includes/class-cliredas-settings.php:1002
 msgid "Enter to replace"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1001
+#: includes/class-cliredas-settings.php:1002
 msgid "Enter client secret"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1003
+#: includes/class-cliredas-settings.php:1004
 msgid "Leave blank to keep the currently saved secret."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1009
+#: includes/class-cliredas-settings.php:1010
 msgid "This will clear the saved client secret and disconnect GA4. Continue?"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1010
+#: includes/class-cliredas-settings.php:1011
 msgid "Clear secret"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1023
+#: includes/class-cliredas-settings.php:1024
 msgid "Add this exact URL as an Authorized redirect URI in your Google OAuth client."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1045
+#: includes/class-cliredas-settings.php:1046
 msgid "Optional. Use this when WordPress is behind a public tunnel or reverse proxy. Enter only the public site URL, such as an HTTPS ngrok URL, without a path."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1048
+#: includes/class-cliredas-settings.php:1049
 msgid "When this is set, open wp-admin through the same public URL before connecting so the OAuth callback uses the same login session."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1072
+#: includes/class-cliredas-settings.php:1073
 msgid "Public OAuth base URL must be a valid URL."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1085
+#: includes/class-cliredas-settings.php:1086
 msgid "Public OAuth base URL must include only a scheme and host, without a path query, fragment, or credentials."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1095
+#: includes/class-cliredas-settings.php:1096
 msgid "Public OAuth base URL must use HTTPS, except localhost URLs used for local testing."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1118
+#: includes/class-cliredas-settings.php:1119
 msgid "Connect Google Analytics first to load available properties."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1146
+#: includes/class-cliredas-settings.php:1147
 msgid "Unable to load GA4 properties right now."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1163
+#: includes/class-cliredas-settings.php:1164
 msgid "No GA4 properties were found for this Google account."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1169
+#: includes/class-cliredas-settings.php:1170
 msgid "Select a property"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1177
+#: includes/class-cliredas-settings.php:1178
 msgid "This selects which GA4 property the dashboard will report on."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1181
+#: includes/class-cliredas-settings.php:1182
 msgid "No property selected yet. Choose one to enable GA4 reporting for the dashboard."
 msgstr ""
 

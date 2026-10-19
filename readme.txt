@@ -1,10 +1,10 @@
-=== Cliredas – Client Dashboard for Google Analytics (GA4) ===
+=== Cliredas - Client Dashboard for Google Analytics (GA4) ===
 Contributors: vzisis
 Tags: google analytics, google analytics dashboard, ga4, wordpress analytics, analytics
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.7.0
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,6 +38,7 @@ The dashboard includes:
 * Top-performing pages.
 * Device breakdown.
 * Traffic-source breakdown.
+* Report freshness status and last-good recovery during temporary outages.
 
 This makes Cliredas useful when users need to understand website performance without working through the full Google Analytics reporting interface.
 
@@ -261,7 +262,7 @@ Data sent to Google can include:
 * Requested date ranges.
 * Requested dimensions and metrics.
 
-These requests are made when an authorized WordPress administrator connects Google Analytics, explicitly runs connection diagnostics, or when the dashboard needs to load or refresh analytics data.
+These requests are made when an authorized WordPress administrator connects Google Analytics, explicitly runs connection diagnostics, or when the dashboard needs to load or refresh analytics data, including WP-Cron background refreshes for reports previously requested on the dashboard.
 
 Google Privacy Policy:
 https://policies.google.com/privacy
@@ -405,11 +406,14 @@ Yes, if an administrator enables Editor access under Settings > Client Report.
 
 = How often does Cliredas fetch Google Analytics data? =
 
-Report data is cached for 15 minutes by default.
+Report data is fresh for 15 minutes by default. Expired reports display last-good real data for up to 24 hours from retrieval, only for the same resolved dates and connection, while one background refresh is pending. Freshness reflects retrieval time, not Google's data-processing completeness.
 
-This reduces unnecessary API requests and improves dashboard loading performance.
+Fresh, Refreshing, and Stale labels include the last successful refresh in your site's timezone. An open dashboard checks pending cached results every five seconds for up to three minutes, pausing while hidden.
 
-Use the Clear Cache action when you want the next dashboard load to request fresh data.
+Background refresh depends on WP-Cron. If WP-Cron is disabled, configure a system cron runner or use Clear Cache for a new synchronous load. Failures retain eligible last-good data with a five-minute retry cooldown; detected permission or credential loss hides retained reports.
+
+The non-autoloaded cliredas_report_cache option retains at most 20 contexts. Expired data is never served; daily cleanup removes inactive records. Clear Cache removes fresh, retained, and legacy reports plus scheduled refreshes. Connection/access changes and deactivation invalidate report data and work; uninstall removes storage and events per site. CSV metadata includes freshness and resolved dates.
+
 
 = What is the GA4 Setup Assistant? =
 
@@ -475,6 +479,16 @@ It does not send analytics reporting data to a separate Cliredas analytics servi
 
 == Changelog ==
 
+= 1.8.0 =
+
+* Added last-good GA4 report recovery for up to 24 hours while expired data refreshes in the background.
+* Added Fresh, Refreshing, and Stale status with the last successful refresh time in the site timezone.
+* Added automatic dashboard updates when a pending background refresh completes.
+* Isolated cached reports by site, connection, property, timezone, and resolved reporting dates.
+* Added refresh locking, failure cooldowns, bounded storage, and scheduled cleanup.
+* Added freshness and resolved-date metadata to CSV exports, with explicit unavailable states for missing data.
+* Extended Clear Cache, connection changes, deactivation, and uninstall to invalidate retained reports and scheduled refreshes.
+
 = 1.7.0 =
 
 * Added authenticated encryption for OAuth secrets and tokens with automatic legacy migration.
@@ -499,6 +513,10 @@ It does not send analytics reporting data to a separate Cliredas analytics servi
 * CSV exports identify sample or fallback data and protect against spreadsheet formula injection.
 
 == Upgrade Notice ==
+
+= 1.8.0 =
+
+Existing report caches are rebuilt on first use. Last-good data can remain available for up to 24 hours for the same reporting dates and connection. Background refresh requires WP-Cron execution; use Clear Cache for a new synchronous fetch on the next dashboard load.
 
 = 1.7.0 =
 

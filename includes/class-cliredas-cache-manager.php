@@ -47,8 +47,15 @@ final class CLIREDAS_Cache_Manager
 
         $cleared = 0;
 
-        if (is_object($this->provider) && method_exists($this->provider, 'clear_all_cache')) {
-            $cleared = (int) $this->provider->clear_all_cache();
+        // Always clear the shared store, even when an integration swaps providers.
+        $cleared = (new CLIREDAS_Data_Provider())->clear_all_cache();
+        if (false === $cleared) {
+            wp_die(esc_html__('The cache could not be cleared. Try again; if the problem persists, check database access.', 'cliredas-analytics-dashboard'));
+        }
+        // Preserve cache-clear behavior supplied by an integration's own provider.
+        if (is_object($this->provider) && ! $this->provider instanceof CLIREDAS_Data_Provider
+            && ! $this->provider instanceof CLIREDAS_GA4_Data_Provider && method_exists($this->provider, 'clear_all_cache')) {
+            $cleared += max(0, (int) $this->provider->clear_all_cache());
         }
         CLIREDAS_Audit_Log::record('cache_clear', 'success');
 

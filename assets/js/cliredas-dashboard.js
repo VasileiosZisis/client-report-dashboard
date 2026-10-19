@@ -12,6 +12,94 @@
     avg_engagement_seconds: { type: 'number', initialDirection: 'descending' },
   };
   let topPagesSort = loadTopPagesSort();
+  let pollTimer = null;
+  let pollController = null;
+  let reportEpoch = 0;
+  let retentionTimer = null;
+
+  function stopPolling() {
+    reportEpoch += 1;
+    clearTimeout(pollTimer);
+    if (pollController) pollController.abort();
+    pollController = null;
+  }
+
+  function renderFreshness(report) {
+    clearTimeout(retentionTimer);
+    const retention = report.freshness && report.freshness.retained_until;
+    if (retention) {
+      retentionTimer = setTimeout(function () {
+        stopPolling();
+        clearDisplayedAnalytics(i18n.reportExpired);
+      }, Math.max(0, retention * 1000 - Date.now()));
+    }
+    const el = $('#cliredas-freshness');
+    if (!el) return;
+    const freshness = report.freshness || {};
+    let text = report.source === 'mock' ? i18n.sampleData : freshness.label || (report.source === 'unavailable' ? i18n.blockUnavailable : '');
+    if (freshness.last_success_label) {
+      text += ' · ' + sprintf(i18n.lastSuccess, freshness.last_success_label);
+    }
+    el.textContent = text || '';
+    el.dataset.state = freshness.state || report.source || '';
+  }
+
+  function clearDisplayedAnalytics(message) {
+    const report = { source: 'unavailable', totals: {}, timeseries: [], top_pages: [], devices: {}, traffic_sources: {}, error_message: message };
+    cfg.initialReport = report;
+    renderAll(report);
+  }
+
+  function watchReport(report, range) {
+    stopPolling();
+    const freshness = report.freshness || {};
+    if (!freshness.pending || !freshness.context_id) return;
+    const epoch = reportEpoch;
+    const deadline = Date.now() + 180000;
+    async function poll() {
+      if (epoch !== reportEpoch) return;
+      if (freshness.retained_until && Date.now() >= freshness.retained_until * 1000) {
+        clearDisplayedAnalytics(i18n.refreshWaiting);
+        stopPolling();
+        return;
+      }
+      if (Date.now() >= deadline) {
+        setStatus(i18n.refreshWaiting);
+        stopPolling();
+        return;
+      }
+      if (document.hidden) {
+        pollTimer = setTimeout(poll, 5000);
+        return;
+      }
+      pollController = new AbortController();
+      try {
+        const next = await fetchReport(range, freshness.context_id, pollController.signal);
+        if (epoch !== reportEpoch) return;
+        if (!next.freshness || next.freshness.context_id !== freshness.context_id) {
+          clearDisplayedAnalytics(i18n.refreshWaiting);
+          stopPolling();
+          return;
+        }
+        cfg.initialReport = next;
+        renderAll(next);
+        if (!next.freshness.pending) {
+          stopPolling();
+          return;
+        }
+      } catch (error) {
+        if (epoch !== reportEpoch || error.name === 'AbortError') return;
+        if (error.status === 403 || error.status === 409) clearDisplayedAnalytics(error.message);
+        else setStatus(i18n.refreshWaiting);
+        stopPolling();
+        return;
+      }
+      pollTimer = setTimeout(poll, 5000);
+    }
+    pollTimer = setTimeout(poll, 5000);
+  }
+
+  window.addEventListener('pagehide', stopPolling);
 
   function $(sel, root) {
     return (root || document).querySelector(sel);
@@ -349,12 +437,12 @@
       const deltaEl = $('.cliredas-kpi-delta', card);
 
       if (valueEl && typeof map[key] !== 'undefined') {
-        valueEl.textContent = map[key];
+        valueEl.textContent = report.source === 'unavailable' ? '—' : map[key];
       }
 
       if (!deltaEl) return;
 
-      const delta = getKpiDelta(report, key);
+      const delta = report.source === 'unavailable' ? null : getKpiDelta(report, key);
       deltaEl.classList.remove('is-positive', 'is-negative', 'is-neutral');
 
       if (!delta) {
@@ -373,6 +461,10 @@
   function renderDevices(report) {
     const tbody = $('#cliredas-devices tbody');
     if (!tbody) return;
+    if (report.source === 'unavailable') {
+      tbody.innerHTML = '<tr><td colspan="2">' + escapeHtml(i18n.blockUnavailable) + '</td></tr>';
+      return;
+    }
 
     const devices = report.devices || {};
     const order = ['desktop', 'mobile', 'tablet'];
@@ -399,6 +491,15 @@
     const tbody = $('#cliredas-traffic-sources tbody');
     const canvas = $('#cliredas-traffic-sources-chart');
     if (!tbody || !canvas) return;
+    if (report.source === 'unavailable' || report.traffic_sources_unavailable) {
+      tbody.innerHTML = '<tr><td colspan="2">' + escapeHtml(i18n.blockUnavailable) + '</td></tr>';
+      canvas.style.display = 'none';
+      if (trafficChart) {
+        trafficChart.destroy();
+        trafficChart = null;
+      }
+      return;
+    }
 
     const sources = report.traffic_sources || {};
     const srcLabels = i18n.trafficSources || {};
@@ -629,11 +730,12 @@
 
   // ---- AJAX ----
 
-  async function fetchReport(rangeKey) {
+  async function fetchReport(rangeKey, contextId, signal) {
     const body = new URLSearchParams();
-    body.set('action', 'cliredas_get_report');
+    body.set('action', contextId ? 'cliredas_report_status' : 'cliredas_get_report');
     body.set('cliredas_nonce', cfg.cliredasNonce || '');
     body.set('cliredas_range', rangeKey);
+    if (contextId) body.set('cliredas_context', contextId);
 
     const res = await fetch(cfg.ajaxUrl, {
       method: 'POST',
@@ -642,6 +744,7 @@
       },
       body: body.toString(),
       credentials: 'same-origin',
+      signal,
     });
 
     const json = await res.json();
@@ -650,13 +753,16 @@
         (json && json.data && json.data.message) ||
         i18n.failedToLoadReport ||
         'Failed to load report.';
-      throw new Error(msg);
+      const error = new Error(msg);
+      error.status = res.status;
+      throw error;
     }
 
     return json.data.report;
   }
 
   function renderAll(report) {
+    renderFreshness(report);
     setGa4Warning(report && report.error_message ? report.error_message : '');
     renderKPIs(report);
     renderTrafficSources(report);
@@ -701,9 +807,12 @@
     clearError();
     if (cfg.initialReport) {
       renderAll(cfg.initialReport);
+      watchReport(cfg.initialReport, rangeSelect.value);
     }
 
     rangeSelect.addEventListener('change', async function () {
+      stopPolling();
+      const epoch = reportEpoch;
       const range = rangeSelect.value;
 
       clearError();
@@ -711,13 +820,18 @@
 
       try {
         const report = await fetchReport(range);
+        if (epoch !== reportEpoch) return;
         // Keep the last loaded report so chart metric toggles don't require refetch.
         if (cfg) cfg.initialReport = report;
         renderAll(report);
         if (exportRange) exportRange.value = range;
+        cfg.selectedRange = range;
         setLoading(false);
+        watchReport(report, range);
       } catch (e) {
+        if (epoch !== reportEpoch) return;
         setLoading(false);
+        rangeSelect.value = cfg.selectedRange;
         showError(
           e && e.message ? e.message : i18n.errorLoadingReport || 'Error loading report.'
         );

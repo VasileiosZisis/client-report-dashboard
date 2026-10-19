@@ -28,8 +28,8 @@ operations. Pro is one separate add-on; no additional premium packs are planned.
 ## Feature placement
 
 The Free boundary includes both shipped functionality and the planned additions
-in the Free roadmap. The current implemented baseline is **1.7.0**; all Pro
-functionality remains planned.
+in the Free roadmap. The current implementation baseline is **1.8.0**, including FREE-04 reliable
+caching. All Pro functionality remains planned.
 
 | Capability | Placement | Reason |
 |---|---|---|

@@ -29,6 +29,13 @@ final class CLIREDAS_Dashboard_Page
     private $provider;
 
     /**
+     * Request-local initial snapshots, keyed by selected range.
+     *
+     * @var array
+     */
+    private $initial_reports = array();
+
+    /**
      * Set up the dashboard page controller.
      *
      * @param CLIREDAS_Settings $settings Settings service.
@@ -46,6 +53,7 @@ final class CLIREDAS_Dashboard_Page
 
         add_action('admin_enqueue_scripts', array($this, 'enqueue_assets'));
         add_action('wp_ajax_cliredas_get_report', array($this, 'ajax_get_report'));
+        add_action('wp_ajax_cliredas_report_status', array($this, 'ajax_report_status'));
         add_action('admin_post_cliredas_export_csv', array($this, 'handle_csv_export'));
     }
 
@@ -64,8 +72,7 @@ final class CLIREDAS_Dashboard_Page
         }
 
         $selected_range = $this->get_current_range_key();
-        $initial_report = $this->provider->get_report($selected_range);
-        $initial_report = $this->sanitize_report_for_current_user($initial_report);
+        $initial_report = $this->initial_report($selected_range);
 
         CLIREDAS_Assets::enqueue_dashboard_assets(
             array(
@@ -111,6 +118,38 @@ final class CLIREDAS_Dashboard_Page
                 'report' => $report,
             )
         );
+    }
+
+    /** Read cached refresh results without triggering upstream work. */
+    public function ajax_report_status()
+    {
+        check_ajax_referer('cliredas_dashboard', 'cliredas_nonce');
+        if (! current_user_can($this->settings->get_required_capability('dashboard'))) {
+            wp_send_json_error(array('message' => __('Permission denied.', 'cliredas-analytics-dashboard')), 403);
+        }
+        $range = isset($_POST['cliredas_range']) && is_string($_POST['cliredas_range']) ? sanitize_key(wp_unslash($_POST['cliredas_range'])) : '';
+        $id = isset($_POST['cliredas_context']) && is_string($_POST['cliredas_context']) ? sanitize_text_field(wp_unslash($_POST['cliredas_context'])) : '';
+        if (! array_key_exists($range, $this->get_date_ranges()) || ! preg_match('/^[a-f0-9]{64}$/', $id)) {
+            wp_send_json_error(array('message' => __('Invalid report context.', 'cliredas-analytics-dashboard')), 400);
+        }
+        // Background caching belongs to the built-in GA4 provider only.
+        if (! $this->provider instanceof CLIREDAS_GA4_Data_Provider) {
+            wp_send_json_error(array('message' => __('The report context changed. Reload the dashboard.', 'cliredas-analytics-dashboard')), 409);
+        }
+        $context = $this->provider->report_context($range, false);
+        if (! hash_equals($context['id'], $id)) {
+            wp_send_json_error(array('message' => __('The report context changed. Reload the dashboard.', 'cliredas-analytics-dashboard')), 409);
+        }
+        wp_send_json_success(array('report' => $this->sanitize_report_for_current_user($this->provider->cached_response($context))));
+    }
+
+    /** Reuse one initial snapshot for localization and server-side rendering. */
+    private function initial_report($range)
+    {
+        if (! isset($this->initial_reports[$range])) {
+            $this->initial_reports[$range] = $this->sanitize_report_for_current_user($this->provider->get_report($range));
+        }
+        return $this->initial_reports[$range];
     }
 
     /**
@@ -209,8 +248,7 @@ final class CLIREDAS_Dashboard_Page
         $selected_key = $this->get_current_range_key();
 
         // Initial server-rendered report (so the page is usable without JS).
-        $report = $this->provider->get_report($selected_key);
-        $report = $this->sanitize_report_for_current_user($report);
+        $report = $this->initial_report($selected_key);
 
         $kpis = apply_filters(
             'cliredas_kpis',
@@ -236,6 +274,12 @@ final class CLIREDAS_Dashboard_Page
             $selected_key
         );
 
+        if (isset($report['source']) && 'unavailable' === $report['source']) {
+            foreach ($kpis as &$kpi) {
+                $kpi['value'] = '—';
+            }
+            unset($kpi);
+        }
 ?>
         <div class="wrap cliredas-wrap">
             <div class="cliredas-header">
@@ -303,6 +347,7 @@ final class CLIREDAS_Dashboard_Page
             <?php
             $ga4_warning_message = ! empty($report['error_message']) ? trim((string) $report['error_message']) : '';
             ?>
+            <p id="cliredas-freshness" class="cliredas-freshness" role="status" aria-live="polite" aria-atomic="true"><?php echo esc_html($this->freshness_text($report)); ?></p>
             <div id="cliredas-ga4-warning" class="notice notice-warning is-dismissible" <?php echo ('' === $ga4_warning_message) ? 'style="display:none;"' : ''; ?>>
                 <p>
                     <span class="cliredas-ga4-warning-text"><?php echo esc_html($ga4_warning_message); ?></span>
@@ -439,6 +484,9 @@ final class CLIREDAS_Dashboard_Page
                             </tr>
                         </thead>
                         <tbody>
+                            <?php if (isset($report['source']) && 'unavailable' === $report['source']) : ?>
+                                <tr><td colspan="2"><?php echo esc_html__('Unavailable', 'cliredas-analytics-dashboard'); ?></td></tr>
+                            <?php endif; ?>
                             <?php foreach ((array) $report['devices'] as $device => $count) : ?>
                                 <tr>
                                     <td><?php echo esc_html(ucfirst((string) $device)); ?></td>
@@ -473,6 +521,11 @@ final class CLIREDAS_Dashboard_Page
                                 'social'         => __('Social', 'cliredas-analytics-dashboard'),
                                 'other'          => __('Other', 'cliredas-analytics-dashboard'),
                             );
+                            if (! empty($report['traffic_sources_unavailable']) || (isset($report['source']) && 'unavailable' === $report['source'])) :
+                            ?>
+                                <tr><td colspan="2"><?php echo esc_html__('Unavailable', 'cliredas-analytics-dashboard'); ?></td></tr>
+                            <?php
+                            else :
                             foreach ($labels as $key => $label) :
                                 $count = isset($sources[$key]) ? (int) $sources[$key] : 0;
                             ?>
@@ -481,6 +534,7 @@ final class CLIREDAS_Dashboard_Page
                                     <td><?php echo esc_html(number_format_i18n($count)); ?></td>
                                 </tr>
                             <?php endforeach; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -506,12 +560,29 @@ final class CLIREDAS_Dashboard_Page
 
         if (! empty($report['error_message'])) {
             $report['error_message'] = __(
-                'GA4 data is temporarily unavailable. Please ask an administrator to reconnect Google Analytics.',
+                'GA4 data could not be refreshed. Please ask an administrator to check the connection and reporting status.',
                 'cliredas-analytics-dashboard'
             );
         }
 
         return $report;
+    }
+
+    /** Accessible text shared by server rendering and exported metadata. */
+    private function freshness_text(array $report)
+    {
+        if (isset($report['source']) && 'mock' === $report['source']) {
+            return __('Sample data — not Google Analytics results.', 'cliredas-analytics-dashboard');
+        }
+        $freshness = isset($report['freshness']) ? $report['freshness'] : array();
+        $text = isset($freshness['label']) ? $freshness['label'] : '';
+        if (! empty($freshness['last_success_label'])) {
+            $text .= ' · ' . sprintf(
+                /* translators: %s: last successful refresh time in the site timezone. */
+                __('Last successful refresh: %s', 'cliredas-analytics-dashboard'), $freshness['last_success_label']
+            );
+        }
+        return $text;
     }
 
     /**
@@ -579,9 +650,9 @@ final class CLIREDAS_Dashboard_Page
     {
         $source = isset($report['source']) ? sanitize_key((string) $report['source']) : '';
         $is_sample = 'mock' === $source || ! $this->settings->is_ga4_connected();
-        $source_label = $is_sample
+        $source_label = isset($report['source']) && 'unavailable' === $report['source'] ? __('Unavailable', 'cliredas-analytics-dashboard') : ($is_sample
             ? __('Sample data', 'cliredas-analytics-dashboard')
-            : __('Google Analytics 4', 'cliredas-analytics-dashboard');
+            : __('Google Analytics 4', 'cliredas-analytics-dashboard'));
 
         $this->write_csv_row($output, array(__('Metadata', 'cliredas-analytics-dashboard')));
         $this->write_csv_row(
@@ -599,6 +670,10 @@ final class CLIREDAS_Dashboard_Page
             $output,
             array(__('Data source', 'cliredas-analytics-dashboard'), $source_label)
         );
+        $this->write_csv_row($output, array(__('Data freshness', 'cliredas-analytics-dashboard'), $this->freshness_text($report)));
+        if (isset($report['range']['startDate'], $report['range']['endDate'])) {
+            $this->write_csv_row($output, array(__('Resolved dates', 'cliredas-analytics-dashboard'), $report['range']['startDate'] . ' / ' . $report['range']['endDate']));
+        }
         $this->write_csv_row(
             $output,
             array(__('Exported at', 'cliredas-analytics-dashboard'), wp_date('Y-m-d H:i:s T'))
@@ -623,6 +698,9 @@ final class CLIREDAS_Dashboard_Page
         }
 
         $this->write_csv_row($output, array());
+        if (isset($report['source']) && 'unavailable' === $report['source']) {
+            return;
+        }
         $this->write_csv_kpis($output, $report);
         $this->write_csv_row($output, array());
         $this->write_csv_timeseries($output, $report);
@@ -803,6 +881,10 @@ final class CLIREDAS_Dashboard_Page
      */
     private function write_csv_traffic_sources($output, array $report)
     {
+        if (! empty($report['traffic_sources_unavailable'])) {
+            $this->write_csv_row($output, array(__('Traffic sources', 'cliredas-analytics-dashboard'), __('Unavailable', 'cliredas-analytics-dashboard')));
+            return;
+        }
         $labels = array(
             'organic_search' => __('Organic Search', 'cliredas-analytics-dashboard'),
             'direct' => __('Direct', 'cliredas-analytics-dashboard'),
@@ -944,6 +1026,9 @@ final class CLIREDAS_Dashboard_Page
      */
     private function get_kpi_delta(array $report, $kpi_key)
     {
+        if (isset($report['source']) && 'unavailable' === $report['source']) {
+            return array('visible' => false, 'text' => '', 'class' => 'is-neutral');
+        }
         $metric_keys = array(
             'sessions'        => 'sessions',
             'users'           => 'users',

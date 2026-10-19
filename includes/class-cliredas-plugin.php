@@ -107,7 +107,9 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-credential-store.php';
         require_once __DIR__ . '/class-cliredas-audit-log.php';
         require_once __DIR__ . '/class-cliredas-release-notices.php';
+        require_once __DIR__ . '/class-cliredas-report-cache.php';
         CLIREDAS_Credential_Store::instance();
+        CLIREDAS_Report_Cache::register();
 
         add_action('plugins_loaded', array($this, 'on_plugins_loaded'), 10);
         add_action('init', array($this, 'on_init'), 10);
@@ -185,7 +187,7 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-cache-manager.php';
         require_once __DIR__ . '/class-cliredas-ga4-auth.php';
 
-        $this->settings = new CLIREDAS_Settings();
+        $this->settings = $this->reporting_settings();
         new CLIREDAS_Release_Notices();
 
         new CLIREDAS_GA4_Auth($this->settings);
@@ -215,6 +217,35 @@ final class CLIREDAS_Plugin
          * Add-ons can register settings, admin notices, etc.
          */
         do_action('cliredas_admin_init');
+    }
+
+    /** Load reporting services on demand, including from a cron-only request. */
+    public function reporting_settings()
+    {
+        if (null === $this->settings) {
+            require_once __DIR__ . '/class-cliredas-ga4-client.php';
+            require_once __DIR__ . '/class-cliredas-setup-diagnostics.php';
+            require_once __DIR__ . '/class-cliredas-settings.php';
+            require_once __DIR__ . '/class-cliredas-data-provider.php';
+            require_once __DIR__ . '/class-cliredas-ga4-data-provider.php';
+            require_once __DIR__ . '/class-cliredas-provider-factory.php';
+            $this->settings = new CLIREDAS_Settings();
+        }
+        return $this->settings;
+    }
+
+    /** Stop all owned background work and invalidate in-flight refreshes. */
+    public static function deactivate($network_wide = false)
+    {
+        if ($network_wide && is_multisite()) {
+            foreach (get_sites(array('fields' => 'ids', 'number' => 0)) as $site_id) {
+                switch_to_blog((int) $site_id);
+                CLIREDAS_Report_Cache::clear();
+                restore_current_blog();
+            }
+            return;
+        }
+        CLIREDAS_Report_Cache::clear();
     }
 
     /**

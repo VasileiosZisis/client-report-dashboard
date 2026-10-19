@@ -6,7 +6,7 @@ dependencies without promising release dates, future versions, prices, or
 effort estimates.
 
 [Product scope](product-scope.md) owns feature placement. The
-[Free roadmap](free-roadmap.md) records the implemented **1.7.0** baseline and
+[Free roadmap](free-roadmap.md) records the implemented **1.8.0** baseline and
 upcoming Free additions. Pro is one separate paid add-on; no additional premium
 packs are planned.
 

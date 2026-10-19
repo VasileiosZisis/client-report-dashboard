@@ -29,6 +29,12 @@ final class CLIREDAS_Assets
             'failedToLoadReport'     => __('Failed to load report.', 'cliredas-analytics-dashboard'),
             'errorLoadingReport'     => __('Error loading report.', 'cliredas-analytics-dashboard'),
             'noData'                 => __('No data.', 'cliredas-analytics-dashboard'),
+            'sampleData'             => __('Sample data — not Google Analytics results.', 'cliredas-analytics-dashboard'),
+            /* translators: %s: last successful refresh time in the site timezone. */
+            'lastSuccess'            => __('Last successful refresh: %s', 'cliredas-analytics-dashboard'),
+            'refreshWaiting'         => __('The refresh is taking longer than expected. Reload the dashboard to check again. Background work depends on WP-Cron.', 'cliredas-analytics-dashboard'),
+            'reportExpired'          => __('This report has reached its 24-hour retention limit. Reload the dashboard to request current data.', 'cliredas-analytics-dashboard'),
+            'blockUnavailable'       => __('Unavailable', 'cliredas-analytics-dashboard'),
             'sessions'               => __('Sessions', 'cliredas-analytics-dashboard'),
             'totalUsers'             => __('Total users', 'cliredas-analytics-dashboard'),
             /* translators: %s: signed percentage change, for example +12.4% */

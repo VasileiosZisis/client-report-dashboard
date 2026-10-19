@@ -253,6 +253,9 @@ final class CLIREDAS_GA4_Auth
             $this->safe_redirect_with_flag(array('cliredas_ga4_error' => $saved->get_error_code()));
         }
 
+        // Reauthorization can change property access even with identical tokens.
+        CLIREDAS_Report_Cache::clear();
+
         $this->safe_redirect_with_flag(array('cliredas_ga4_notice' => 'connected'));
     }
 

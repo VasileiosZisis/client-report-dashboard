@@ -35,7 +35,10 @@ final class CLIREDAS_Release_Fixture_DB
      *
      * @var array
      */
-    public $state = array('cliredas_release_state' => false, 'cliredas_settings' => array());
+    public $state = array('cliredas_release_state' => false, 'cliredas_settings' => array(),
+        'cliredas_report_cache' => array('generation' => 'fixture', 'entries' => array()),
+        'cron' => array('version' => 2),
+    );
     /**
      * Simulated persistence failure.
      *
@@ -133,6 +136,8 @@ final class CLIREDAS_Release_Tests
         global $wpdb, $current_screen, $blog_id;
 
         CLIREDAS_Plugin::instance()->bootstrap_admin();
+        wp_salt('nonce');
+        wp_salt('logged_in');
         require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
         wp_salt('auth');
         $original_db = $wpdb;
@@ -152,6 +157,11 @@ final class CLIREDAS_Release_Tests
         $db = new CLIREDAS_Release_Fixture_DB();
         $db->prefix = $original_db->get_blog_prefix();
         $actor_caps = wp_get_current_user()->caps;
+        // Prime the fictional second actor so newer core never queries it through the option adapter.
+        $second_actor = clone wp_get_current_user()->data;
+        $second_actor->ID = $user + 100;
+        $original_actor_cache = wp_cache_get($second_actor->ID, 'users');
+        wp_cache_set($second_actor->ID, $second_actor, 'users');
         $records = array();
         $fail_meta = false;
         $meta_conflict = null;
@@ -221,12 +231,14 @@ final class CLIREDAS_Release_Tests
 
         try {
             $tracked = array('installed_version' => '1.5.0', 'pending_release' => '1.5.0');
-            self::check('' === CLIREDAS_Release_Notices::next_state(false, false, '1.7.0', true)['pending_release'], 'Fresh install stays quiet');
-            self::check('1.7.0' === CLIREDAS_Release_Notices::next_state(false, true, '1.7.0', true)['pending_release'], 'Legacy upgrade announces current release');
-            self::check('1.7.0' === CLIREDAS_Release_Notices::next_state($tracked, true, '1.7.0', true)['pending_release'], 'Skipped versions announce only current release');
+            self::check('' === CLIREDAS_Release_Notices::next_state(false, false, '1.8.0', true)['pending_release'], 'Fresh install stays quiet');
+            self::check('1.8.0' === CLIREDAS_Release_Notices::next_state(false, true, '1.8.0', true)['pending_release'], 'Legacy upgrade announces current release');
+            self::check('1.8.0' === CLIREDAS_Release_Notices::next_state($tracked, true, '1.8.0', true)['pending_release'], 'Skipped versions announce only current release');
+            $previous_release = array('installed_version' => '1.7.0', 'pending_release' => '1.7.0');
+            self::check('1.8.0' === CLIREDAS_Release_Notices::next_state($previous_release, true, '1.8.0', true)['pending_release'], 'Upgrade from 1.7.0 announces 1.8.0');
             self::check(CLIREDAS_Release_Notices::next_state($tracked, true, '1.4.0', true) === $tracked, 'Downgrades preserve tracking');
             self::check(CLIREDAS_Release_Notices::next_state($tracked, true, '1.5.0', true) === $tracked, 'Repeated initialization preserves state');
-            self::check('' === CLIREDAS_Release_Notices::next_state($tracked, true, '1.8.0', false)['pending_release'], 'Uncurated release has no stale highlights');
+            self::check('' === CLIREDAS_Release_Notices::next_state($tracked, true, '1.9.0', false)['pending_release'], 'Uncurated release has no stale highlights');
             CLIREDAS_Release_Notices::initialize_install(true);
             self::check(! $controller->should_show(), 'Fresh activation has no announcement');
             self::check(in_array($db->autoload, array('no', 'off'), true), 'Release state is non-autoloaded');
@@ -235,6 +247,11 @@ final class CLIREDAS_Release_Tests
             self::check($tracked === $db->state[CLIREDAS_Release_Notices::OPTION_KEY], 'Reactivation preserves release state');
             $controller->track_release();
             self::check($controller->should_show(), 'Tracked upgrade announces release');
+            $records[$user] = array(array($original_blog => '1.7.0'));
+            self::check($controller->should_show(), 'Dismissal of 1.7.0 does not hide the 1.8.0 announcement');
+            $prior_dismissal = $records;
+            self::check(is_wp_error($controller->dismiss('1.7.0')) && $records === $prior_dismissal, 'Old release submissions cannot dismiss 1.8.0');
+            $records = array();
             $current = $db->state[CLIREDAS_Release_Notices::OPTION_KEY];
             $db->state[CLIREDAS_Release_Notices::OPTION_KEY] = false;
             CLIREDAS_Local_Store::invalidate(CLIREDAS_Release_Notices::OPTION_KEY);
@@ -266,16 +283,16 @@ final class CLIREDAS_Release_Tests
             self::check('' === ob_get_clean(), 'Unrelated admin pages have no release notice');
             self::check(is_wp_error($controller->dismiss('1.6.0')) && empty($records), 'Invalid release does not write metadata');
             $fail_meta = true;
-            self::check(is_wp_error($controller->dismiss('1.7.0')) && $controller->should_show(), 'Persistence failure keeps notice visible');
+            self::check(is_wp_error($controller->dismiss('1.8.0')) && $controller->should_show(), 'Persistence failure keeps notice visible');
             $fail_meta = false;
-            $dismissed = $controller->dismiss('1.7.0');
+            $dismissed = $controller->dismiss('1.8.0');
             self::check(true === $dismissed && ! $controller->should_show(), 'Dismissal persists for administrator');
-            self::check(true === $controller->dismiss('1.7.0'), 'Repeated dismissal is idempotent');
+            self::check(true === $controller->dismiss('1.8.0'), 'Repeated dismissal is idempotent');
             $actor = wp_get_current_user();
             $actor->ID = $user + 100;
             try {
                 self::check($controller->should_show(), 'Another administrator remains undismissed');
-                self::check(true === $controller->dismiss('1.7.0'), 'Another administrator can dismiss independently');
+                self::check(true === $controller->dismiss('1.8.0'), 'Another administrator can dismiss independently');
                 self::check(isset($records[$user], $records[$user + 100]), 'Administrator dismissal records remain independent');
             } finally {
                 $actor->ID = $user;
@@ -285,20 +302,20 @@ final class CLIREDAS_Release_Tests
             // phpcs:enable WordPress.WP.GlobalVariablesOverride
             self::check($controller->should_show(), 'Another site remains undismissed');
             $meta_conflict = static function () use (&$records, $user) {
-                $records[$user][0][222] = '1.8.0';
+                $records[$user][0][222] = '1.9.0';
             };
-            self::check(true === $controller->dismiss('1.7.0'), 'Concurrent dismissal retries successfully');
+            self::check(true === $controller->dismiss('1.8.0'), 'Concurrent dismissal retries successfully');
             $map = CLIREDAS_Release_Notices::merge_dismissals($records[$user]);
             self::check(isset($map[$original_blog], $map[$blog_id], $map[222]), 'Concurrent updates preserve other sites');
             $records[$user] = array();
             $meta_conflict = static function () use (&$records, $user) {
-                $records[$user] = array(array(222 => '1.7.0'));
+                $records[$user] = array(array(222 => '1.8.0'));
             };
-            self::check(true === $controller->dismiss('1.7.0') && isset($records[$user][0][222]), 'Concurrent initial dismissal preserves other sites');
-            $merged = CLIREDAS_Release_Notices::merge_dismissals(array(array(1 => '1.6.0', 2 => '1.7.0'), array(1 => '1.8.0'), 'invalid', array(0 => '1.7.0', 'bad' => '1.7.0', 3 => array())));
-            self::check(array(1 => '1.8.0', 2 => '1.7.0') === $merged, 'Duplicate records retain latest valid versions');
+            self::check(true === $controller->dismiss('1.8.0') && isset($records[$user][0][222]), 'Concurrent initial dismissal preserves other sites');
+            $merged = CLIREDAS_Release_Notices::merge_dismissals(array(array(1 => '1.6.0', 2 => '1.8.0'), array(1 => '1.9.0'), 'invalid', array(0 => '1.8.0', 'bad' => '1.8.0', 3 => array())));
+            self::check(array(1 => '1.9.0', 2 => '1.8.0') === $merged, 'Duplicate records retain latest valid versions');
             $records[$user] = array(array());
-            self::check(is_wp_error($controller->dismiss('1.7.0')), 'Malformed metadata never invokes an unguarded update');
+            self::check(is_wp_error($controller->dismiss('1.8.0')), 'Malformed metadata never invokes an unguarded update');
             $records[$user] = array();
             self::handlers($controller, $records, $fail_meta);
             ob_start();
@@ -306,6 +323,11 @@ final class CLIREDAS_Release_Tests
             self::check(false !== strpos(ob_get_clean(), '<details id="cliredas-changelog"'), 'Permanent changelog remains after dismissal');
             WP_CLI::success(self::$assertions . ' release-notice assertions passed; all writes and HTTP requests isolated.');
         } finally {
+            if (false === $original_actor_cache) {
+                wp_cache_delete($second_actor->ID, 'users');
+            } else {
+                wp_cache_set($second_actor->ID, $original_actor_cache, 'users');
+            }
             // phpcs:disable WordPress.WP.GlobalVariablesOverride -- Restore original fixture globals.
             $wpdb = $original_db;
             $current_screen = $original_screen;
@@ -373,7 +395,7 @@ final class CLIREDAS_Release_Tests
                 foreach (array('invalid', '') as $nonce) {
                     // phpcs:disable WordPress.Security.NonceVerification -- Fixture inputs to nonce-protected handlers.
                     $_REQUEST = array('_wpnonce' => $nonce);
-                    $_POST = array('cliredas_release' => '1.7.0');
+                    $_POST = array('cliredas_release' => '1.8.0');
                     // phpcs:enable WordPress.Security.NonceVerification
                     $nonce_checked = false;
                     $cap_checked = false;
@@ -393,7 +415,7 @@ final class CLIREDAS_Release_Tests
                     $nonce = wp_create_nonce(CLIREDAS_Release_Notices::ACTION);
                     // phpcs:disable WordPress.Security.NonceVerification -- Fixture inputs to nonce-protected handlers.
                     $_REQUEST = array('_wpnonce' => $nonce);
-                    $_POST = array('cliredas_release' => 'invalid' === $case ? '1.6.0' : '1.7.0', 'cliredas_return_page' => 'dashboard');
+                    $_POST = array('cliredas_release' => 'invalid' === $case ? '1.6.0' : '1.8.0', 'cliredas_return_page' => 'dashboard');
                     // phpcs:enable WordPress.Security.NonceVerification
                     $records = array();
                     $deny = 'denied' === $case;

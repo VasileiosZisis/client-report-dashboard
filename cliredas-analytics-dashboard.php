@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Cliredas - Client Dashboard for Google Analytics (GA4)
  * Description: Client-friendly Google Analytics 4 (GA4) dashboard inside wp-admin.
- * Version:     1.7.0
+ * Version:     1.8.0
  * Author:      Vasileios Zisis
  * Author URI:  https://profiles.wordpress.org/vzisis/
  * Text Domain: cliredas-analytics-dashboard
@@ -18,7 +18,7 @@
 
 defined('ABSPATH') || exit;
 
-define('CLIREDAS_VERSION', '1.7.0');
+define('CLIREDAS_VERSION', '1.8.0');
 define('CLIREDAS_PLUGIN_FILE', __FILE__);
 define('CLIREDAS_PLUGIN_BASENAME', plugin_basename(__FILE__));
 define('CLIREDAS_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -39,6 +39,7 @@ function cliredas_pro_version()
 }
 
 register_activation_hook(__FILE__, array('CLIREDAS_Plugin', 'activate'));
+register_deactivation_hook(__FILE__, array('CLIREDAS_Plugin', 'deactivate'));
 
 /**
  * Boot the plugin.

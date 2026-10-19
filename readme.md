@@ -18,14 +18,15 @@ This repository is the Free version intended for WordPress.org distribution. A s
 - Device breakdown (desktop / mobile / tablet)
 - Traffic sources breakdown (Organic Search / Direct / Referral / Social / Other)
 - CSV export for the current dashboard range, including all built-in report blocks
-- Built-in caching (default 15 minutes) for faster dashboards and fewer API calls
+- Report caching with 15-minute freshness, up to 24-hour last-good recovery, and background refresh
+- Freshness status, automatic updates after pending refreshes, and freshness/date metadata in CSV exports
 - Clear cache button (forces a fresh fetch on the next load)
 - Optional access control: allow Editors to view the dashboard
 
 ## Documentation and Roadmaps
 
 - [Product scope](docs/product-scope.md): authoritative Free/Pro feature placement and product boundaries
-- [Free roadmap](docs/free-roadmap.md): implemented `1.7.0` baseline, completed milestones, and planned Free work
+- [Free roadmap](docs/free-roadmap.md): implemented `1.8.0` baseline, completed milestones, and planned Free work
 - [Pro roadmap](docs/pro-roadmap.md): planned separate add-on catalog and client-reporting delivery sequence
 
 Feature placement includes future work; it does not mean a feature has shipped. The Key Features list above describes current Free functionality. Custom dates, year-to-date, chart comparison overlays, weekly digests, settings transfer, and a basic Search Console overview remain planned. All Pro functionality is planned.
@@ -40,7 +41,7 @@ When enabled and connected, the plugin communicates with Google services:
 
 Data sent includes your OAuth client credentials (Client ID + Client Secret), authorization codes, refresh/access tokens, and API request parameters (selected property, date range, requested dimensions/metrics).
 
-Requests are made when an administrator connects GA4, explicitly runs connection diagnostics, or when the dashboard loads or refreshes GA4 data.
+Requests are made when an administrator connects GA4, explicitly runs connection diagnostics, or when the dashboard loads or refreshes GA4 data, including WP-Cron refreshes of previously requested reports.
 
 ## Installation (from this repo)
 
@@ -90,6 +91,13 @@ The non-autoloaded `cliredas_audit_log` option retains the latest 100 connection
 
 Release announcements appear only on the plugin Dashboard and Settings pages after upgrades, not fresh installs. Dismissal is remembered per administrator and site in `cliredas_dismissed_release_notices` user meta. The non-autoloaded `cliredas_release_state` option tracks installed and announced releases. Local release notes remain available in Settings; dismissing announcements never hides operational warnings. Both records are removed on uninstall.
 
+### 1.8.0
+
+- Added bounded last-good GA4 caching and background refresh with duplicate-request protection.
+- Added Fresh, Refreshing, and Stale status, site-timezone timestamps, and automatic dashboard updates.
+- Isolated reports by connection and exact reporting dates; invalidated retained data on access changes.
+- Added CSV freshness/date metadata and complete cache/background-work cleanup.
+
 ### 1.7.0
 
 - Added authenticated OAuth credential encryption and automatic legacy migration.
@@ -100,3 +108,28 @@ Release announcements appear only on the plugin Dashboard and Settings pages aft
 ## License
 
 GPLv2 or later.
+
+## Report freshness (1.8.0)
+
+Reports are fresh for 15 minutes
+by default. An expired report can display its last successful real data for up
+to 24 hours from retrieval, only for the same site, connection, property, timezone
+and resolved dates, while one WP-Cron refresh is queued. Freshness measures
+plugin retrieval time, not Google's processing completeness. A date rollover
+requires a different report; yesterday's range is never relabeled as today's.
+
+The dashboard shows Fresh, Refreshing or Stale and the last successful refresh
+in the WordPress site timezone. While pending, it checks cached status every
+five seconds for up to three minutes, pausing while hidden. Refresh execution
+depends on WP-Cron; if it is disabled, configure a system cron runner or use
+Clear Cache for a new synchronous load. Refresh failures retain eligible data
+and impose a five-minute retry cooldown. Authorization loss hides old data.
+
+The non-autoloaded `cliredas_report_cache` option stores at most 20 contexts,
+with successful payloads/timestamps separate from attempt state and owner leases
+inside one atomically updated record. Expired data is never served; daily and
+on-demand cleanup remove inactive records. Clear Cache removes retained and
+legacy reports and pending work. Connection/access changes and deactivation
+invalidate reports; uninstall deletes owned storage and events per site.
+CSV exports include freshness and resolved-date metadata; partial source
+failures are labeled unavailable, and sample data remains explicitly labeled.

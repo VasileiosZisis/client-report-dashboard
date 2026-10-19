@@ -24,7 +24,7 @@ final class CLIREDAS_Local_Store
     {
         global $wpdb;
 
-        if (! in_array($key, array('cliredas_settings', 'cliredas_audit_log', 'cliredas_release_state'), true)) {
+        if (! in_array($key, array('cliredas_settings', 'cliredas_audit_log', 'cliredas_release_state', 'cliredas_report_cache'), true)) {
             return false;
         }
         if ($replacement === $old) {
@@ -32,7 +32,7 @@ final class CLIREDAS_Local_Store
         }
 
         // The byte comparison also guards against case-insensitive database collations.
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Options API has no conditional update primitive.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Options API has no conditional update primitive; invalidate option caches immediately below.
         $changed = $wpdb->query(
             $wpdb->prepare(
                 "UPDATE $wpdb->options SET option_value = %s WHERE option_name = %s AND BINARY option_value = BINARY %s",
@@ -46,7 +46,9 @@ final class CLIREDAS_Local_Store
             return false;
         }
 
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Preserve the WordPress Options API lifecycle for conditional writes.
         do_action("update_option_{$key}", $old, $replacement, $key);
+        // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- This is the core Options API hook, not a plugin-defined hook.
         do_action('updated_option', $key, $old, $replacement);
         return true;
     }

@@ -15,11 +15,6 @@ final class CLIREDAS_GA4_Data_Provider
 {
 
     /**
-     * Report cache schema version.
-     */
-    private const CACHE_SCHEMA_VERSION = 2;
-
-    /**
      * Settings service.
      *
      * @var CLIREDAS_Settings
@@ -52,238 +47,254 @@ final class CLIREDAS_GA4_Data_Provider
      */
     public function get_report($range_key)
     {
-        $range_key = sanitize_key($range_key);
-
-        $settings = $this->settings->get_settings();
-        $property_id = isset($settings['ga4_property_id']) ? trim((string) $settings['ga4_property_id']) : '';
-
-        if ('' === $property_id) {
-            $fallback = new CLIREDAS_Data_Provider();
-            $report = $fallback->get_report($range_key);
-            $report['error_message'] = __('GA4 is connected but no property is selected yet. Select a GA4 Property in Settings.', 'cliredas-analytics-dashboard');
-            $report['source'] = 'mock';
-            return $report;
+        $context = $this->report_context($range_key);
+        $range_key = $context['range'];
+        if (! $this->settings->is_ga4_connected() || '' === $context['property']) {
+            return $this->fallback_with_error($range_key, new WP_Error('missing_property', __('Connect Google Analytics and select a property in Settings.', 'cliredas-analytics-dashboard')));
         }
-
-        // GA4 provider caching (enabled by default).
-        $cache_enabled = (bool) apply_filters('cliredas_enable_cache', true, $range_key);
-        $cache_key = $this->get_cache_key($range_key, $property_id);
-
-        // After "Clear cache", force a fresh fetch for the next request (even if an object cache is in play).
-        $cache_cleared_nonce = filter_input(INPUT_GET, 'cliredas_cache_cleared_nonce', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $force_refresh = is_string($cache_cleared_nonce) && wp_verify_nonce(sanitize_text_field($cache_cleared_nonce), 'cliredas_cache_cleared');
-
-        if ($cache_enabled && ! $force_refresh) {
-            $cached = get_transient($cache_key);
-            if (
-                is_array($cached)
-                && isset($cached['comparison']['totals'])
-                && is_array($cached['comparison']['totals'])
-            ) {
-                // If this report was cached before we tracked keys, backfill the cache index on read.
-                $this->record_cache_key($cache_key);
-                $cached['source'] = 'ga4_cache';
-                return apply_filters('cliredas_report', $cached, $range_key);
+        $readable = CLIREDAS_Credential_Store::instance()->check_readable();
+        if (is_wp_error($readable)) {
+            CLIREDAS_Report_Cache::clear();
+            return $this->fallback_with_error($range_key, $readable);
+        }
+        if (! $this->cache_enabled($range_key)) {
+            $report = $this->fetch_report($context);
+            return is_wp_error($report) ? $this->fallback_with_error($range_key, $report)
+                : apply_filters('cliredas_report', $report, $range_key);
+        }
+        $entry = CLIREDAS_Report_Cache::entry($context);
+        if ($this->usable($entry)) {
+            if ($entry['good']['fresh_until'] <= time()) {
+                CLIREDAS_Report_Cache::schedule($context);
             }
+            return $this->cached_response($context);
         }
-
-        $dates            = $this->get_date_range($range_key);
-        $comparison_dates = $this->get_previous_date_range($range_key);
-
-        $period_totals = $this->fetch_totals($property_id, $dates, $comparison_dates);
-        if (is_wp_error($period_totals)) {
-            return $this->fallback_with_error($range_key, $period_totals);
+        if (! CLIREDAS_Report_Cache::ensure($context)) {
+            return $this->unavailable($context, 'storage_failed');
         }
-
-        $totals          = $period_totals['current'];
-        $previous_totals = $period_totals['previous'];
-
-        $timeseries = $this->fetch_timeseries($property_id, $dates);
-        if (is_wp_error($timeseries)) {
-            return $this->fallback_with_error($range_key, $timeseries);
-        }
-
-        $top_pages = $this->fetch_top_pages($property_id, $dates);
-        if (is_wp_error($top_pages)) {
-            return $this->fallback_with_error($range_key, $top_pages);
-        }
-
-        $devices = $this->fetch_devices($property_id, $dates);
-        if (is_wp_error($devices)) {
-            return $this->fallback_with_error($range_key, $devices);
-        }
-
-        $traffic_sources_error = '';
-        $traffic_sources = $this->fetch_traffic_sources($property_id, $dates);
-        if (is_wp_error($traffic_sources)) {
-            // Non-fatal: keep the report usable, but surface a warning.
-            $traffic_sources_error = trim((string) $traffic_sources->get_error_message());
-            $traffic_sources = $this->empty_traffic_sources();
-        }
-
-        $report = array(
-            'range' => array(
-                'key' => $range_key,
-                'startDate' => $dates['startDate'],
-                'endDate' => $dates['endDate'],
-            ),
-            'totals' => $totals,
-            'comparison' => array(
-                'range'  => $comparison_dates,
-                'totals' => $previous_totals,
-            ),
-            'timeseries' => $timeseries,
-            'top_pages' => $top_pages,
-            'devices' => $devices,
-            'traffic_sources' => is_array($traffic_sources) ? $traffic_sources : $this->empty_traffic_sources(),
-            'generated_at' => time(),
-            'source' => 'ga4',
-        );
-
-        if ('' !== $traffic_sources_error && empty($report['error_message'])) {
-            $report['error_message'] = sprintf(
-                /* translators: %s: error message */
-                __('Traffic sources unavailable. %s', 'cliredas-analytics-dashboard'),
-                $traffic_sources_error
-            );
-        }
-
-        if ($cache_enabled) {
-            set_transient($cache_key, $report, $this->get_cache_ttl($range_key, $property_id));
-            $this->record_cache_key($cache_key);
-        }
-
-        /**
-         * Filter the generated report.
-         *
-         * @param array  $report    Report data.
-         * @param string $range_key Range key.
-         */
-        return apply_filters('cliredas_report', $report, $range_key);
+        return $this->refresh_context($context);
     }
 
-    /**
-     * Clear all known cached reports tracked in the cache index.
-     *
-     * @return int Number of keys cleared.
-     */
+    /** Resolve both periods once; cache and Google requests use identical dates. */
+    public function report_context($range_key, $create = true)
+    {
+        $range_key = sanitize_key($range_key);
+        if (! in_array($range_key, array('last_7_days', 'last_30_days', 'last_90_days', 'this_month', 'last_month'), true)) {
+            $range_key = 'last_7_days';
+        }
+        $today = new DateTimeImmutable('today', wp_timezone());
+        $dates = $this->get_date_range($range_key, $today);
+        $comparison = $this->get_previous_date_range($range_key, $today);
+        foreach (array('startDate', 'endDate') as $key) {
+            $dates[$key] = $this->absolute_date($dates[$key], $today);
+            $comparison[$key] = $this->absolute_date($comparison[$key], $today);
+        }
+        $settings = $this->settings->get_settings();
+        $property = isset($settings['ga4_property_id']) ? trim((string) $settings['ga4_property_id']) : '';
+        return CLIREDAS_Report_Cache::context($range_key, $property, $dates, $comparison,
+            CLIREDAS_Report_Cache::connection_identity($settings), $create && $this->cache_enabled($range_key));
+    }
+
+    /** Cache configuration remains compatible with existing integrations. */
+    private function cache_enabled($range_key)
+    {
+        return (bool) apply_filters('cliredas_enable_cache', true, $range_key);
+    }
+
+    /** Resolve GA4 relative dates in the site's calendar, including DST changes. */
+    private function absolute_date($date, DateTimeImmutable $today)
+    {
+        if ('today' === $date) {
+            return $today->format('Y-m-d');
+        }
+        if (preg_match('/^(\d+)daysAgo$/', $date, $matches)) {
+            return $today->modify('-' . $matches[1] . ' days')->format('Y-m-d');
+        }
+        return $date;
+    }
+
+    /** A last-good report is never eligible after its retention deadline. */
+    private function usable($entry)
+    {
+        return is_array($entry) && ! $entry['blocked'] && is_array($entry['good']) && $entry['good']['retained_until'] > time();
+    }
+
+    /** Read-only status for polling: no fetching, scheduling or option creation. */
+    public function cached_response($context, $source = 'ga4_cache')
+    {
+        $current = $this->report_context($context['range'], false);
+        if ($current['id'] !== $context['id'] || ! $this->settings->is_ga4_connected()) {
+            return $this->unavailable($context, 'context_changed');
+        }
+        $readable = CLIREDAS_Credential_Store::instance()->check_readable();
+        if (is_wp_error($readable)) {
+            return $this->unavailable($context, 'credential_decryption_failed');
+        }
+        $entry = CLIREDAS_Report_Cache::entry($context);
+        if (! $this->usable($entry)) {
+            return $this->unavailable($context, $entry ? $entry['error'] : 'unavailable');
+        }
+        $report = $entry['good']['report'];
+        $report['source'] = $source;
+        $report['freshness'] = $this->freshness($context, $entry);
+        if ('' !== $entry['error']) {
+            $report['error_message'] = $this->safe_refresh_message($entry['error']);
+        }
+        return apply_filters('cliredas_report', $report, $context['range']);
+    }
+
+    /** Refresh only the current connection and exact saved reporting period. */
+    public function refresh_context($context)
+    {
+        $current = $this->report_context($context['range'], false);
+        if ($current['id'] !== $context['id'] || ! $this->settings->is_ga4_connected() || ! $this->cache_enabled($context['range'])) {
+            return $this->unavailable($context, 'context_changed');
+        }
+        $entry = CLIREDAS_Report_Cache::entry($context);
+        if ($this->usable($entry) && $entry['good']['fresh_until'] > time()) {
+            return $this->cached_response($context);
+        }
+        $owner = CLIREDAS_Report_Cache::lock($context);
+        if (! $owner) {
+            return $this->cached_response($context);
+        }
+        try {
+            $report = $this->fetch_report($context, $owner);
+            $current = $this->report_context($context['range'], false);
+            if ($current['id'] !== $context['id']) {
+                return $this->unavailable($context, 'context_changed');
+            }
+            $error = is_wp_error($report) ? $report->get_error_code() : (! empty($report['traffic_sources_unavailable']) ? 'traffic_sources_unavailable' : '');
+            $blocked = in_array($error, array(
+                'ga4_permission_denied', 'ga4_not_found', 'token_revoked', 'token_credentials_invalid',
+                'credential_decryption_failed', 'credential_backend_unavailable', 'missing_client_secret', 'missing_client_id', 'missing_refresh_token',
+            ), true);
+            $ttl = max(60, (int) apply_filters('cliredas_cache_ttl', 15 * MINUTE_IN_SECONDS, $context['range'],
+                array('provider' => 'ga4', 'property_id' => $context['property'])));
+            $saved = CLIREDAS_Report_Cache::finish($context, $owner, '' === $error ? $report : null, $ttl, $error, $blocked);
+            if (! $saved) {
+                if ($blocked) {
+                    return $this->fallback_with_error($context['range'], new WP_Error($error, $this->safe_refresh_message($error)));
+                }
+                $previous = $this->cached_response($context);
+                $previous['error_message'] = $this->safe_refresh_message('storage_failed');
+                $previous['freshness']['error_code'] = 'storage_failed';
+                return $previous;
+            }
+            if ('' === $error) {
+                // Recheck identity and generation after publication, before returning data.
+                return $this->cached_response($context, 'ga4');
+            }
+            if ($this->usable(CLIREDAS_Report_Cache::entry($context))) {
+                return $this->cached_response($context);
+            }
+            if (is_array($report) && ! $blocked) {
+                $report['freshness'] = $this->freshness($context, CLIREDAS_Report_Cache::entry($context));
+                return apply_filters('cliredas_report', $report, $context['range']);
+            }
+            return $this->fallback_with_error($context['range'], new WP_Error($error, $this->safe_refresh_message($error)));
+        } catch (Throwable $exception) {
+            CLIREDAS_Report_Cache::finish($context, $owner, null, 900, 'refresh_interrupted');
+            return $this->cached_response($context);
+        } finally {
+            // Release only our own lease, including exceptions and failed publication.
+            CLIREDAS_Report_Cache::finish($context, $owner, null, 900, 'refresh_interrupted');
+        }
+    }
+
+    /** Safe operational guidance contains no raw upstream payload. */
+    private function safe_refresh_message($code)
+    {
+        if ('context_changed' === $code) {
+            return __('The report context changed. Reload the dashboard to request the current reporting period.', 'cliredas-analytics-dashboard');
+        }
+        if ('storage_failed' === $code) {
+            return __('The report cache could not be saved. Check database access and reload the dashboard. Eligible last-good data has been preserved.', 'cliredas-analytics-dashboard');
+        }
+        if ('schedule_failed' === $code) {
+            return __('The background refresh could not be scheduled. Ask an administrator to check WP-Cron, then reload after five minutes.', 'cliredas-analytics-dashboard');
+        }
+        if (in_array($code, array('ga4_permission_denied', 'ga4_not_found', 'token_revoked', 'token_credentials_invalid', 'credential_decryption_failed', 'credential_backend_unavailable'), true)) {
+            return __('Google Analytics access is unavailable. Review credentials and property access in Settings, then reconnect.', 'cliredas-analytics-dashboard');
+        }
+        return __('The report could not be refreshed. Last-good data is shown only while eligible. Check the connection in Settings and try again after five minutes.', 'cliredas-analytics-dashboard');
+    }
+
+    /** Metadata is additive; timestamps are UTC epochs with a site-time label. */
+    private function freshness($context, $entry)
+    {
+        $good = $entry && $this->usable($entry) ? $entry['good'] : null;
+        $pending = $entry && ! $entry['blocked'] && ($entry['lease_until'] > time() || $entry['pending_at'] > 0);
+        $fresh = $good && $good['fresh_until'] > time();
+        $state = $fresh ? 'fresh' : ($pending ? 'refreshing' : ($good ? 'stale' : 'unavailable'));
+        $labels = array(
+            'fresh' => __('Fresh', 'cliredas-analytics-dashboard'), 'refreshing' => __('Refreshing', 'cliredas-analytics-dashboard'),
+            'stale' => __('Stale', 'cliredas-analytics-dashboard'), 'unavailable' => __('Unavailable', 'cliredas-analytics-dashboard'),
+        );
+        return array(
+            'state' => $state, 'label' => $labels[$state], 'context_id' => $context['id'], 'pending' => (bool) $pending,
+            'last_success_at' => $good ? $good['successful_at'] : 0,
+            'last_success_label' => $good ? wp_date('Y-m-d H:i:s T', $good['successful_at']) : '',
+            'fresh_until' => $good ? $good['fresh_until'] : 0, 'retained_until' => $good ? $good['retained_until'] : 0,
+            'error_code' => $entry ? $entry['error'] : '',
+        );
+    }
+
+    /** Empty real-data result for concurrent cold loads; never invented success. */
+    private function unavailable($context, $error)
+    {
+        $report = array(
+            'source' => 'unavailable', 'range' => array_merge(array('key' => $context['range']), $context['dates']),
+            'totals' => $this->empty_totals(), 'comparison' => array('range' => $context['comparison'], 'totals' => $this->empty_totals()),
+            'timeseries' => array(), 'top_pages' => array(), 'devices' => array(), 'traffic_sources' => array(), 'generated_at' => 0,
+        );
+        $report['freshness'] = $this->freshness($context, CLIREDAS_Report_Cache::entry($context));
+        $report['freshness']['error_code'] = $error;
+        $report['error_message'] = $report['freshness']['pending']
+            ? __('A real report is being refreshed. Analytics values are unavailable until it completes.', 'cliredas-analytics-dashboard')
+            : $this->safe_refresh_message($error);
+        return $report;
+    }
+
+    /** Fetch real data without fallback or cache writes; renew before each call. */
+    private function fetch_report($context, $owner = '')
+    {
+        $results = array();
+        foreach (array('totals', 'timeseries', 'top_pages', 'devices', 'traffic_sources') as $part) {
+            if ('' !== $owner && ! CLIREDAS_Report_Cache::lock($context, $owner)) {
+                return new WP_Error('context_changed');
+            }
+            $method = 'fetch_' . $part;
+            $results[$part] = 'totals' === $part
+                ? $this->$method($context['property'], $context['dates'], $context['comparison'])
+                : $this->$method($context['property'], $context['dates']);
+            if (is_wp_error($results[$part]) && 'traffic_sources' !== $part) {
+                return $results[$part];
+            }
+        }
+        $report = array(
+            'range' => array_merge(array('key' => $context['range']), $context['dates']),
+            'totals' => $results['totals']['current'],
+            'comparison' => array('range' => $context['comparison'], 'totals' => $results['totals']['previous']),
+            'timeseries' => $results['timeseries'], 'top_pages' => $results['top_pages'], 'devices' => $results['devices'],
+            'traffic_sources' => is_wp_error($results['traffic_sources']) ? array() : $results['traffic_sources'],
+            'generated_at' => time(), 'source' => 'ga4',
+        );
+        if (is_wp_error($results['traffic_sources'])) {
+            // Authorization loss is fatal even if only the last block detected it.
+            if (in_array($results['traffic_sources']->get_error_code(), array('ga4_permission_denied', 'ga4_not_found', 'token_revoked', 'token_credentials_invalid'), true)) {
+                return $results['traffic_sources'];
+            }
+            $report['traffic_sources_unavailable'] = true;
+            $report['error_message'] = __('Traffic sources are unavailable. Other report blocks contain real GA4 data.', 'cliredas-analytics-dashboard');
+        }
+        return $report;
+    }
+
+    /** Clear shared retained data and the legacy transient index. */
     public function clear_all_cache()
     {
-        if (! class_exists('CLIREDAS_Data_Provider')) {
-            return 0;
-        }
-
-        $keys = get_option(CLIREDAS_Data_Provider::CACHE_INDEX_OPTION, array());
-        if (! is_array($keys)) {
-            $keys = array();
-        }
-
-        $cleared = 0;
-
-        foreach ($keys as $key) {
-            $key = sanitize_key((string) $key);
-            if ('' === $key) {
-                continue;
-            }
-
-            delete_transient($key);
-            ++$cleared;
-        }
-
-        delete_option(CLIREDAS_Data_Provider::CACHE_INDEX_OPTION);
-
-        /**
-         * Fires after cache is cleared.
-         *
-         * @param int $cleared Count.
-         */
-        do_action('cliredas_cache_cleared', $cleared);
-
-        return $cleared;
-    }
-
-    /**
-     * Record a transient key in the cache index option.
-     *
-     * @param string $transient_key Transient key.
-     * @return void
-     */
-    private function record_cache_key($transient_key)
-    {
-        if (! class_exists('CLIREDAS_Data_Provider')) {
-            return;
-        }
-
-        $transient_key = sanitize_key((string) $transient_key);
-        if ('' === $transient_key) {
-            return;
-        }
-
-        $keys = get_option(CLIREDAS_Data_Provider::CACHE_INDEX_OPTION, array());
-        if (! is_array($keys)) {
-            $keys = array();
-        }
-
-        if (! in_array($transient_key, $keys, true)) {
-            $keys[] = $transient_key;
-            update_option(CLIREDAS_Data_Provider::CACHE_INDEX_OPTION, $keys, false);
-        }
-    }
-
-    /**
-     * Build a stable GA4 cache key.
-     *
-     * Format: cliredas_report_v{schemaVersion}_{blogId?}_{propertyId}_{rangeKey}
-     *
-     * @param string $range_key Range key.
-     * @param string $property_id GA4 property resource name (e.g. "properties/123").
-     * @return string
-     */
-    private function get_cache_key($range_key, $property_id)
-    {
-        $range_key = sanitize_key($range_key);
-        $property_id = strtolower(trim((string) $property_id));
-        $property_id = str_replace('/', '_', $property_id);
-        $property_id = sanitize_key($property_id);
-
-        $parts = array('cliredas_report', 'v' . self::CACHE_SCHEMA_VERSION);
-
-        // Include blog id for cache safety when a persistent object cache is shared (multisite or not).
-        if (function_exists('get_current_blog_id')) {
-            $parts[] = (string) (int) get_current_blog_id();
-        }
-
-        if ('' !== $property_id) {
-            $parts[] = $property_id;
-        }
-
-        $parts[] = $range_key ? $range_key : 'last_7_days';
-
-        return implode('_', $parts);
-    }
-
-    /**
-     * Cache TTL (seconds) for GA4 reports.
-     *
-     * Uses the existing `cliredas_cache_ttl` filter (default 15 minutes).
-     *
-     * @param string $range_key Range key.
-     * @param string $property_id GA4 property resource name.
-     * @return int
-     */
-    private function get_cache_ttl($range_key, $property_id)
-    {
-        $ttl = (int) apply_filters(
-            'cliredas_cache_ttl',
-            15 * MINUTE_IN_SECONDS,
-            sanitize_key($range_key),
-            array(
-                'provider'     => 'ga4',
-                'property_id'  => (string) $property_id,
-            )
-        );
-
-        return max(60, $ttl);
+        return (new CLIREDAS_Data_Provider())->clear_all_cache();
     }
 
     /**
@@ -312,9 +323,9 @@ final class CLIREDAS_GA4_Data_Provider
      * @param string $range_key Range key.
      * @return array{startDate:string,endDate:string}
      */
-    private function get_date_range($range_key)
+    private function get_date_range($range_key, DateTimeImmutable $today = null)
     {
-        $today = new DateTimeImmutable('today', wp_timezone());
+        $today = $today ? $today : new DateTimeImmutable('today', wp_timezone());
 
         switch ($range_key) {
             case 'last_90_days':

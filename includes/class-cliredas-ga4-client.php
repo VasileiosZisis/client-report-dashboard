@@ -61,6 +61,7 @@ final class CLIREDAS_GA4_Client
     {
         $readable = CLIREDAS_Credential_Store::instance()->check_readable();
         if (is_wp_error($readable)) {
+            do_action('cliredas_ga4_access_lost', $readable->get_error_code());
             return $readable;
         }
         $settings = $this->settings->get_settings();
@@ -84,6 +85,9 @@ final class CLIREDAS_GA4_Client
     {
         $attempted = false;
         $result = $this->perform_token_refresh($attempted);
+        if (is_wp_error($result)) {
+            do_action('cliredas_ga4_access_lost', $result->get_error_code());
+        }
         if ($attempted) {
             CLIREDAS_Audit_Log::record('refresh', is_wp_error($result) ? CLIREDAS_Audit_Log::outcome($result) : 'success');
         }
@@ -433,6 +437,7 @@ final class CLIREDAS_GA4_Client
         $status_text = isset($err['status']) ? strtoupper((string) $err['status']) : '';
 
         if (403 === $http_status || 'PERMISSION_DENIED' === $status_text) {
+            do_action('cliredas_ga4_access_lost', 'ga4_permission_denied');
             return new WP_Error(
                 'ga4_permission_denied',
                 __('Permission denied by Google Analytics API. Please reconnect and ensure your Google user has access to the selected property.', 'cliredas-analytics-dashboard')
@@ -440,6 +445,7 @@ final class CLIREDAS_GA4_Client
         }
 
         if (404 === $http_status || 'NOT_FOUND' === $status_text) {
+            do_action('cliredas_ga4_access_lost', 'ga4_not_found');
             return new WP_Error(
                 'ga4_not_found',
                 __('GA4 property not found. Select a valid property in Settings and try again.', 'cliredas-analytics-dashboard')
