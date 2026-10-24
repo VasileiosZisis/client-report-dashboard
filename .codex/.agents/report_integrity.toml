@@ -1,7 +1,7 @@
 name = "report_integrity"
 description = "Cliredas reporting auditor for GA4 metrics, date ranges, comparisons, aggregation, caching, and exports."
 
-model = "gpt-6.1-sol"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 
