@@ -215,3 +215,265 @@ D) WordPress “registration” names (strings stored/used globally)
 
 - Do NOT run submission detection / nonce checks / processing logic in global scope (file load).
 - Only process requests inside the appropriate hooked callbacks (admin page handlers, form handlers, AJAX actions, REST callbacks).
+
+## Subagent review policy
+
+Review subagents are available globally or under `.codex/agents/`.
+
+Use subagents selectively based on the domains affected by the current change. Do not spawn every subagent for every task.
+
+Unless the user explicitly requests otherwise, the parent agent should implement the requested change first and invoke the relevant subagents afterward for independent review.
+
+Review subagents must remain read-only and must not modify project files.
+
+All subagents must follow the existing root `AGENTS.md`, applicable nested instructions such as `includes/AGENTS.md`, and relevant project documentation.
+
+### `reviewer`
+
+Use `reviewer` for non-trivial changes where an independent general code review would provide meaningful value.
+
+Typical triggers:
+
+- Multi-file feature implementation
+- Non-trivial bug fixes
+- Refactors that could change behavior
+- WordPress hooks or request handlers
+- Shared PHP utilities or abstractions
+- API integration changes
+- Settings or persistence changes
+- Changes with meaningful regression risk
+
+The reviewer should focus on:
+
+- Correctness bugs
+- Behavioral regressions
+- Security issues
+- Error handling
+- Data integrity
+- WordPress compatibility
+- Backward compatibility
+- Meaningful missing validation
+
+Do not spawn `reviewer` for trivial comments, copy, formatting, styling-only changes, or documentation edits unless behavior also changes.
+
+### `oauth_security`
+
+Use `oauth_security` whenever changes affect authentication, authorization, Google API access, credential handling, or another security-sensitive boundary.
+
+Typical triggers:
+
+- Google OAuth authorization and callback handling
+- OAuth state and CSRF protection
+- OAuth scopes and trusted redirect destinations
+- Access-token or refresh-token management
+- Token expiration, refresh, or rotation
+- OAuth credential encryption and decryption
+- Legacy plaintext credential migration
+- WordPress salt or site-context key derivation
+- Connection, disconnection, or secret-clearing behavior
+- WordPress capabilities and nonce checks
+- Administrator-only settings or diagnostics
+- Optional Editor dashboard access
+- External HTTP requests
+- Security-sensitive error handling
+- Audit logs or diagnostic storage
+- Sensitive settings import/export
+- Credential or access changes affecting cached reports
+
+The agent must verify that:
+
+- Secrets and tokens are never exposed through HTML, URLs, logs, diagnostics, or user-facing errors.
+- OAuth callbacks preserve state validation and administrator identity.
+- Privileged actions require appropriate capability and nonce checks.
+- Editor dashboard access does not grant administrator privileges.
+- Token failures and encryption failures are handled safely.
+- Stored credentials are not accidentally lost or overwritten.
+- External requests use trusted destinations.
+- Sensitive information is not persisted in audit or diagnostic records.
+- Authentication or authorization loss cannot expose retained report data.
+
+Report only concrete, reachable security issues.
+
+### `report_integrity`
+
+Use `report_integrity` whenever changes affect analytics calculations, Google Analytics reporting, data interpretation, caching, or exported report contents.
+
+Typical triggers:
+
+- GA4 metrics or dimensions
+- API report request construction
+- Sessions, Total Users, Pageviews, or engagement metrics
+- Date presets or custom reporting periods
+- Previous-period comparisons
+- KPI percentage changes
+- Time-series charts
+- Top-page aggregation
+- Device breakdown
+- Traffic-source classification
+- CSV report exports
+- Report caching or cache-key generation
+- Cache invalidation and cleanup
+- Freshness timestamps and states
+- Last-good report recovery
+- Background WP-Cron refresh
+- Refresh locking, leases, or retry cooldowns
+- GA4 property switching
+- Report data or provider filters
+
+The agent must verify:
+
+**Reporting correctness**
+
+- GA4 metric and dimension mappings remain correct.
+- API response ordering matches parsing logic.
+- Dashboard totals and comparisons use the intended reporting periods.
+- Aggregations and percentage calculations handle edge cases correctly.
+- Top-page canonicalization does not incorrectly combine distinct pages.
+- CSV exports remain consistent with dashboard data.
+
+**Caching and freshness**
+
+- Cache contexts correctly isolate site, connection, property, timezone, and resolved date range.
+- Expired data is never presented as fresh.
+- Last-good recovery remains within documented age and context limits.
+- Date rollovers never reuse old data under a new date label.
+- Refresh scheduling avoids duplicate concurrent work.
+- Retry cooldowns and refresh failures preserve the intended behavior.
+- Connection or authorization changes invalidate access to old reports.
+- Cache clearing and uninstall remove the intended retained state and scheduled work.
+
+**Data presentation**
+
+- Fresh, Refreshing, Stale, Empty, Error, and Sample states remain distinguishable where applicable.
+- Partial API failures do not silently produce misleading metrics.
+- Background refresh updates do not misrepresent the data's actual retrieval time.
+- Exported freshness and date metadata match the source report.
+
+For each finding, provide a concrete reporting scenario demonstrating the incorrect result or behavior.
+
+### `test_auditor`
+
+If `test_auditor` is available, invoke it for non-trivial behavioral changes where important regression coverage may be missing.
+
+Typical triggers:
+
+- OAuth or credential-storage changes
+- Security-related bug fixes
+- Token refresh behavior
+- Date-range or comparison calculations
+- GA4 aggregation changes
+- Cache invalidation
+- Stale-data recovery
+- WP-Cron refresh scheduling
+- Refresh concurrency or locking
+- CSV export behavior
+- Authentication or capability changes
+- Backward-compatibility changes
+
+The auditor must inspect relevant existing tests before recommending new ones.
+
+Do not recommend tests merely to increase coverage.
+
+For each important test gap, identify:
+
+1. The behavior that needs protection
+2. The failure scenario
+3. The existing test file to extend, or an appropriate new test location
+4. A concise Arrange / Act / Assert outline
+
+Do not write or execute tests unless explicitly requested.
+
+### Choosing which subagents to use
+
+Use the smallest useful review set.
+
+Examples:
+
+- Styling, copy, or documentation-only change:
+
+  - Normally no subagents
+
+- Non-trivial general WordPress implementation:
+
+  - `reviewer`
+
+- Google OAuth callback or token refresh:
+
+  - `oauth_security`
+  - `reviewer`
+  - `test_auditor` when available and useful
+
+- Credential encryption or migration:
+
+  - `oauth_security`
+  - `reviewer`
+  - `test_auditor` when available
+
+- New KPI or reporting metric:
+
+  - `report_integrity`
+  - `reviewer`
+  - `test_auditor` when available
+
+- Date-range or comparison changes:
+
+  - `report_integrity`
+  - `reviewer`
+  - `test_auditor` when available
+
+- Cache, freshness, or background-refresh changes:
+
+  - `report_integrity`
+  - `reviewer`
+  - `test_auditor` when available
+  - Add `oauth_security` if authentication, authorization, or sensitive data is affected
+
+- GA4 property switching or connection-scoped report invalidation:
+
+  - `oauth_security`
+  - `report_integrity`
+  - `reviewer`
+
+- Large feature touching OAuth, reporting, and persistence:
+  - `reviewer`
+  - `oauth_security`
+  - `report_integrity`
+  - `test_auditor` when available
+
+### Review workflow
+
+For relevant non-trivial changes:
+
+1. The parent agent implements the requested change.
+2. Determine which review domains were actually affected.
+3. Spawn the relevant subagents in parallel when possible.
+4. Keep all review subagents read-only.
+5. Wait for all requested subagents to complete before considering the task finished.
+6. Independently evaluate every reported finding.
+7. Consolidate duplicate findings from different agents.
+8. Discard speculative, unsupported, style-only, unrelated, or incorrect findings.
+9. Prioritize confirmed issues by severity and user impact.
+10. Fix valid findings introduced by the current change when they are in scope.
+11. Request targeted re-review when a fix materially changes previously reviewed behavior.
+12. Complete appropriate validation according to existing repository instructions and user-requested command restrictions.
+
+Subagent findings are advisory. The parent agent remains responsible for evaluating findings and determining appropriate fixes.
+
+Do not modify correct code merely because a reviewer prefers a different implementation.
+
+Do not introduce unrelated refactors or expand product scope because a subagent identifies existing technical debt.
+
+Review agents must respect the Free/Pro boundaries defined in `docs/product-scope.md`. They must not recommend moving existing Free functionality behind paid restrictions.
+
+Do not repeat unchanged reviews unnecessarily. Prefer targeted re-review over spawning the complete review group again.
+
+### Review completion
+
+For tasks that invoked subagents, the final response should briefly state:
+
+- Which subagents were used
+- Whether actionable issues were found
+- Which confirmed issues were fixed
+- What verification was performed or remains to be done
+
+Do not report a successful test run unless the test was actually executed.

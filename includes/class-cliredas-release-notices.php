@@ -35,16 +35,16 @@ final class CLIREDAS_Release_Notices
      */
     public static function get_release_notes()
     {
-        if ('1.8.0' !== CLIREDAS_VERSION) {
+        if ('1.9.0' !== CLIREDAS_VERSION) {
             return array();
         }
         return array(
             'highlights' => array(
-                __('Last-good GA4 reports remain available for up to 24 hours while expired data refreshes in the background.', 'cliredas-analytics-dashboard'),
-                __('The dashboard shows Fresh, Refreshing or Stale status and updates automatically when a pending refresh completes.', 'cliredas-analytics-dashboard'),
-                __('CSV exports include freshness and resolved dates, and cache clearing also removes retained reports and pending refreshes.', 'cliredas-analytics-dashboard'),
+                __('An optional plain-text owner digest can summarize fresh GA4 results every Monday at 08:00 in the site timezone.', 'cliredas-analytics-dashboard'),
+                __('Weekly delivery is disabled by default and supports one saved recipient, a test-send action, and a direct disable control.', 'cliredas-analytics-dashboard'),
+                __('Settings shows the next run and safe weekly/test outcomes. Digest sends never use stale or sample data.', 'cliredas-analytics-dashboard'),
             ),
-            'detail' => __('Reports are fresh for 15 minutes by default. Last-good data is retained only for the same reporting dates and connection. Background refresh depends on WP-Cron. Existing report caches are rebuilt on first use; Clear Cache requests new data on the next dashboard load.', 'cliredas-analytics-dashboard'),
+            'detail' => __('Enable the weekly digest explicitly in Settings after choosing its recipient. It uses the existing Last 7 days period, including the current day. Missed Mondays are skipped. Scheduling depends on WP-Cron; successful mail handoff does not confirm inbox delivery.', 'cliredas-analytics-dashboard'),
         );
     }
 

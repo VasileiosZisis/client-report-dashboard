@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Cliredas - Client Dashboard for Google Analytics (GA4) 1.8.0\n"
+"Project-Id-Version: Cliredas - Client Dashboard for Google Analytics (GA4) 1.9.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/client-report-dashboard\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-19T16:33:32+00:00\n"
+"POT-Creation-Date: 2026-10-24T15:06:36+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: cliredas-analytics-dashboard\n"
@@ -96,8 +96,8 @@ msgstr ""
 #: includes/class-cliredas-dashboard-page.php:526
 #: includes/class-cliredas-dashboard-page.php:653
 #: includes/class-cliredas-dashboard-page.php:885
-#: includes/class-cliredas-ga4-data-provider.php:232
-#: includes/class-cliredas-settings.php:691
+#: includes/class-cliredas-ga4-data-provider.php:303
+#: includes/class-cliredas-settings.php:693
 msgid "Unavailable"
 msgstr ""
 
@@ -112,6 +112,7 @@ msgstr ""
 #: includes/class-cliredas-dashboard-page.php:817
 #: includes/class-cliredas-dashboard-page.php:859
 #: includes/class-cliredas-dashboard-page.php:904
+#: includes/class-cliredas-digest-message.php:48
 msgid "Sessions"
 msgstr ""
 
@@ -120,6 +121,7 @@ msgstr ""
 #: includes/class-cliredas-dashboard-page.php:412
 #: includes/class-cliredas-dashboard-page.php:726
 #: includes/class-cliredas-dashboard-page.php:778
+#: includes/class-cliredas-digest-message.php:48
 msgid "Total users"
 msgstr ""
 
@@ -156,30 +158,35 @@ msgstr ""
 #: includes/class-cliredas-assets.php:50
 #: includes/class-cliredas-dashboard-page.php:518
 #: includes/class-cliredas-dashboard-page.php:889
+#: includes/class-cliredas-digest-message.php:70
 msgid "Organic Search"
 msgstr ""
 
 #: includes/class-cliredas-assets.php:51
 #: includes/class-cliredas-dashboard-page.php:519
 #: includes/class-cliredas-dashboard-page.php:890
+#: includes/class-cliredas-digest-message.php:70
 msgid "Direct"
 msgstr ""
 
 #: includes/class-cliredas-assets.php:52
 #: includes/class-cliredas-dashboard-page.php:520
 #: includes/class-cliredas-dashboard-page.php:891
+#: includes/class-cliredas-digest-message.php:70
 msgid "Referral"
 msgstr ""
 
 #: includes/class-cliredas-assets.php:53
 #: includes/class-cliredas-dashboard-page.php:521
 #: includes/class-cliredas-dashboard-page.php:892
+#: includes/class-cliredas-digest-message.php:70
 msgid "Social"
 msgstr ""
 
 #: includes/class-cliredas-assets.php:54
 #: includes/class-cliredas-dashboard-page.php:522
 #: includes/class-cliredas-dashboard-page.php:893
+#: includes/class-cliredas-digest-message.php:70
 msgid "Other"
 msgstr ""
 
@@ -191,7 +198,7 @@ msgid "Google connection"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:128
-#: includes/class-cliredas-settings.php:907
+#: includes/class-cliredas-settings.php:909
 msgid "Disconnect"
 msgstr ""
 
@@ -211,48 +218,77 @@ msgstr ""
 msgid "CSV export"
 msgstr ""
 
-#: includes/class-cliredas-audit-log.php:146
-msgid "Successful"
+#: includes/class-cliredas-audit-log.php:133
+#: includes/class-cliredas-digest-admin.php:66
+msgid "Weekly owner digest"
 msgstr ""
 
-#: includes/class-cliredas-audit-log.php:147
-msgid "Sample data exported"
+#: includes/class-cliredas-audit-log.php:134
+msgid "Digest test send"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:148
-msgid "Configuration required"
+msgid "Successful"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:149
-msgid "Reconnect required"
+msgid "Sample data exported"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:150
-msgid "Access denied by Google"
+msgid "Configuration required"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:151
-msgid "Google quota exhausted"
+msgid "Reconnect required"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:152
-msgid "Network failure"
+msgid "Access denied by Google"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:153
-msgid "Google request failed"
+msgid "Google quota exhausted"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:154
-msgid "Credential storage requires attention"
+msgid "Network failure"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:155
-msgid "Invalid date range"
+msgid "Google request failed"
 msgstr ""
 
 #: includes/class-cliredas-audit-log.php:156
+msgid "Credential storage requires attention"
+msgstr ""
+
+#: includes/class-cliredas-audit-log.php:157
+msgid "Invalid date range"
+msgstr ""
+
+#: includes/class-cliredas-audit-log.php:158
 msgid "Download could not be created"
+msgstr ""
+
+#: includes/class-cliredas-audit-log.php:159
+msgid "Handed to mail transport; inbox delivery unconfirmed"
+msgstr ""
+
+#: includes/class-cliredas-audit-log.php:160
+msgid "Digest mail handoff failed"
+msgstr ""
+
+#: includes/class-cliredas-audit-log.php:161
+msgid "Digest mail handoff outcome unknown"
+msgstr ""
+
+#: includes/class-cliredas-audit-log.php:162
+msgid "Scheduled Monday missed"
+msgstr ""
+
+#: includes/class-cliredas-audit-log.php:163
+msgid "Digest skipped; review digest status"
 msgstr ""
 
 #: includes/class-cliredas-cache-manager.php:45
@@ -285,6 +321,8 @@ msgstr ""
 
 #: includes/class-cliredas-dashboard-page.php:100
 #: includes/class-cliredas-dashboard-page.php:128
+#: includes/class-cliredas-digest-admin.php:130
+#: includes/class-cliredas-digest-admin.php:141
 #: includes/class-cliredas-release-notices.php:316
 #: includes/class-cliredas-release-notices.php:335
 msgid "Permission denied."
@@ -321,6 +359,7 @@ msgstr ""
 
 #: includes/class-cliredas-dashboard-page.php:265
 #: includes/class-cliredas-dashboard-page.php:727
+#: includes/class-cliredas-digest-message.php:49
 msgid "Pageviews"
 msgstr ""
 
@@ -476,7 +515,7 @@ msgstr ""
 
 #: includes/class-cliredas-dashboard-page.php:686
 #: includes/class-cliredas-dashboard-page.php:694
-#: includes/class-cliredas-settings.php:575
+#: includes/class-cliredas-settings.php:577
 msgid "Warning"
 msgstr ""
 
@@ -518,6 +557,7 @@ msgid "Date"
 msgstr ""
 
 #: includes/class-cliredas-dashboard-page.php:934
+#: includes/class-cliredas-digest-message.php:55
 msgid "New"
 msgstr ""
 
@@ -533,6 +573,177 @@ msgstr[1] ""
 #: includes/class-cliredas-dashboard-page.php:1014
 #, php-format
 msgid "%1$dm %2$ds"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:49
+msgid "Digest settings could not be saved or changed in another request. Reload this page and try again."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:67
+msgid "Opt in to one unbranded plain-text summary every Monday at 08:00 in the site timezone. No email is sent when enabling this setting."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:68
+msgid "The recipient receives site analytics and a dashboard link. Only complete fresh GA4 data is emailed; current-day results may still be processing. Actual sending depends on WP-Cron and the site mail transport."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:73
+msgid "Enable weekly owner digest"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:74
+msgid "Recipient email"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:77
+msgid "Save recipient changes before sending a test. A test sends once to the saved address even when weekly delivery is disabled."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:78
+msgid "Save digest settings"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:80
+msgid "Next scheduled run:"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:80
+msgid "Disabled"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:82
+msgid "The digest event could not be scheduled. Check WP-Cron configuration and database access. Scheduling will be retried after five minutes on a site request."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:84
+msgid "Last weekly outcome:"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:84
+msgid "Last test outcome:"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:92
+msgid "A late run is allowed only on its scheduled Monday. Missed Mondays are skipped. Mail handoff is not confirmation of inbox delivery; uncertain attempts are not retried automatically."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:93
+msgid "Send test email"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:93
+msgid "Disable digest"
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:113
+msgid "Test email handed to mail transport. Inbox delivery is not confirmed."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:114
+msgid "Weekly digest disabled. Future digest events were removed."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:115
+msgid "A digest attempt is already running or was just requested. Check its outcome before trying again."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:116
+#: includes/class-cliredas-weekly-digest.php:424
+msgid "Mail handoff failed. Check the site mail transport and try a test send."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:118
+msgid "Digest state could not be saved. Check database access and try again."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:119
+msgid "Save one valid recipient and configure the GA4 connection before sending a test."
+msgstr ""
+
+#: includes/class-cliredas-digest-admin.php:121
+msgid "The digest was not sent. Review the last outcome and GA4 connection diagnostics."
+msgstr ""
+
+#. translators: %s: average engagement time in seconds.
+#: includes/class-cliredas-digest-message.php:24
+#, php-format
+msgid "%s seconds"
+msgstr ""
+
+#. translators: 1: site name, 2: inclusive report dates.
+#: includes/class-cliredas-digest-message.php:37
+#, php-format
+msgid "Weekly website summary: %1$s (%2$s)"
+msgstr ""
+
+#. translators: %s: weekly summary subject.
+#: includes/class-cliredas-digest-message.php:41
+#, php-format
+msgid "[Test] %s"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:43
+msgid "Reporting dates (inclusive, including the current day):"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:44
+msgid "Comparison dates:"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:45
+msgid "Last successful retrieval:"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:46
+msgid "Key metrics"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:49
+msgid "Average engagement time"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:59
+msgid "Top five pages"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:61
+msgid "No page activity for this period."
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:65
+msgid "Sessions:"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:66
+msgid "Views:"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:69
+msgid "Devices (sessions)"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:69
+msgid "Desktop"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:69
+msgid "Mobile"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:69
+msgid "Tablet"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:70
+msgid "Traffic sources (sessions)"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:80
+msgid "Open dashboard:"
+msgstr ""
+
+#: includes/class-cliredas-digest-message.php:81
+msgid "Retrieval freshness does not mean Google has finished processing the current day."
 msgstr ""
 
 #: includes/class-cliredas-ga4-auth.php:276
@@ -632,72 +843,72 @@ msgstr ""
 msgid "Connect Google Analytics and select a property in Settings."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:209
+#: includes/class-cliredas-ga4-data-provider.php:280
 msgid "The report context changed. Reload the dashboard to request the current reporting period."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:212
+#: includes/class-cliredas-ga4-data-provider.php:283
 msgid "The report cache could not be saved. Check database access and reload the dashboard. Eligible last-good data has been preserved."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:215
+#: includes/class-cliredas-ga4-data-provider.php:286
 msgid "The background refresh could not be scheduled. Ask an administrator to check WP-Cron, then reload after five minutes."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:218
+#: includes/class-cliredas-ga4-data-provider.php:289
 msgid "Google Analytics access is unavailable. Review credentials and property access in Settings, then reconnect."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:220
+#: includes/class-cliredas-ga4-data-provider.php:291
 msgid "The report could not be refreshed. Last-good data is shown only while eligible. Check the connection in Settings and try again after five minutes."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:231
+#: includes/class-cliredas-ga4-data-provider.php:302
 msgid "Fresh"
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:231
+#: includes/class-cliredas-ga4-data-provider.php:302
 msgid "Refreshing"
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:232
+#: includes/class-cliredas-ga4-data-provider.php:303
 msgid "Stale"
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:254
+#: includes/class-cliredas-ga4-data-provider.php:325
 msgid "A real report is being refreshed. Analytics values are unavailable until it completes."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:289
+#: includes/class-cliredas-ga4-data-provider.php:360
 msgid "Traffic sources are unavailable. Other report blocks contain real GA4 data."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:313
+#: includes/class-cliredas-ga4-data-provider.php:384
 msgid "GA4 report failed. Showing mock data."
 msgstr ""
 
-#: includes/class-cliredas-ga4-data-provider.php:694
+#: includes/class-cliredas-ga4-data-provider.php:765
 msgid "Landing Page"
 msgstr ""
 
-#: includes/class-cliredas-plugin.php:266
+#: includes/class-cliredas-plugin.php:273
 msgid "Unserializing is not allowed."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:43
-msgid "Last-good GA4 reports remain available for up to 24 hours while expired data refreshes in the background."
+msgid "An optional plain-text owner digest can summarize fresh GA4 results every Monday at 08:00 in the site timezone."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:44
-msgid "The dashboard shows Fresh, Refreshing or Stale status and updates automatically when a pending refresh completes."
+msgid "Weekly delivery is disabled by default and supports one saved recipient, a test-send action, and a direct disable control."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:45
-msgid "CSV exports include freshness and resolved dates, and cache clearing also removes retained reports and pending refreshes."
+msgid "Settings shows the next run and safe weekly/test outcomes. Digest sends never use stale or sample data."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:47
-msgid "Reports are fresh for 15 minutes by default. Last-good data is retained only for the same reporting dates and connection. Background refresh depends on WP-Cron. Existing report caches are rebuilt on first use; Clear Cache requests new data on the next dashboard load."
+msgid "Enable the weekly digest explicitly in Settings after choosing its recipient. It uses the existing Last 7 days period, including the current day. Missed Mondays are skipped. Scheduling depends on WP-Cron; successful mail handoff does not confirm inbox delivery."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:173
@@ -860,350 +1071,350 @@ msgstr ""
 msgid "Cached reports cleared (%d)."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:534
+#: includes/class-cliredas-settings.php:536
 msgid "Tools"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:538
+#: includes/class-cliredas-settings.php:540
 msgid "Clear cached reports"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:552
+#: includes/class-cliredas-settings.php:554
 msgid "Connect Google Analytics 4 to display real analytics data on the dashboard."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:574
+#: includes/class-cliredas-settings.php:576
 msgid "Passed"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:576
+#: includes/class-cliredas-settings.php:578
 msgid "Needs attention"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:577
+#: includes/class-cliredas-settings.php:579
 msgid "Blocked"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:578
+#: includes/class-cliredas-settings.php:580
 msgid "Not checked"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:590
+#: includes/class-cliredas-settings.php:592
 msgid "GA4 Setup Assistant"
 msgstr ""
 
 #. translators: 1: passed setup checks, 2: total setup checks.
-#: includes/class-cliredas-settings.php:596
+#: includes/class-cliredas-settings.php:598
 #, php-format
 msgid "%1$d of %2$d checks passed"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:606
+#: includes/class-cliredas-settings.php:608
 msgid "Review the connection steps below. Remote checks run only when you select Run diagnostics."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:610
+#: includes/class-cliredas-settings.php:612
 msgid "GA4 diagnostics completed."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:643
+#: includes/class-cliredas-settings.php:645
 msgid "Running diagnostics..."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:644
+#: includes/class-cliredas-settings.php:646
 msgid "Run diagnostics"
 msgstr ""
 
 #. translators: %s: date and time of the last diagnostic run.
-#: includes/class-cliredas-settings.php:654
+#: includes/class-cliredas-settings.php:656
 #, php-format
 msgid "Last remote check: %s"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:692
+#: includes/class-cliredas-settings.php:694
 msgid "No credentials saved"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:694
+#: includes/class-cliredas-settings.php:696
 msgid "Legacy plaintext storage"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:696
+#: includes/class-cliredas-settings.php:698
 msgid "Encrypted at rest"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:699
+#: includes/class-cliredas-settings.php:701
 msgid "Recovery required"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:705
+#: includes/class-cliredas-settings.php:707
 msgid "Local diagnostics"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:709
+#: includes/class-cliredas-settings.php:711
 msgid "Authenticated encryption is unavailable on this host. Legacy plaintext storage remains enabled. Ask your host to enable Sodium or OpenSSL AES-256-GCM; saved plaintext credentials will then migrate automatically."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:712
+#: includes/class-cliredas-settings.php:714
 msgid "Credential storage"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:713
+#: includes/class-cliredas-settings.php:715
 msgid "Encryption backend"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:714
+#: includes/class-cliredas-settings.php:716
 msgid "Access-token expiry"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:715
+#: includes/class-cliredas-settings.php:717
 msgid "Not available"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:717
+#: includes/class-cliredas-settings.php:719
 msgid "Refresh due"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:717
+#: includes/class-cliredas-settings.php:719
 msgid "Valid"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:720
+#: includes/class-cliredas-settings.php:722
 msgid "Refresh token"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:720
-#: includes/class-cliredas-settings.php:993
+#: includes/class-cliredas-settings.php:722
+#: includes/class-cliredas-settings.php:995
 msgid "Saved"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:720
+#: includes/class-cliredas-settings.php:722
 msgid "Missing"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:721
+#: includes/class-cliredas-settings.php:723
 msgid "Most recent token refresh"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:722
+#: includes/class-cliredas-settings.php:724
 msgid "No refresh recorded in retained history"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:725
-#: includes/class-cliredas-settings.php:729
+#: includes/class-cliredas-settings.php:727
+#: includes/class-cliredas-settings.php:731
 msgid "Local audit history"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:727
+#: includes/class-cliredas-settings.php:729
 msgid "No operations recorded yet."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:731
+#: includes/class-cliredas-settings.php:733
 msgid "Latest 100 operations, newest first"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:733
+#: includes/class-cliredas-settings.php:735
 msgid "Time"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:734
+#: includes/class-cliredas-settings.php:736
 msgid "Operation"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:735
+#: includes/class-cliredas-settings.php:737
 msgid "Actor"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:736
+#: includes/class-cliredas-settings.php:738
 msgid "Outcome"
 msgstr ""
 
 #. translators: %d: WordPress user ID.
-#: includes/class-cliredas-settings.php:746
+#: includes/class-cliredas-settings.php:748
 #, php-format
 msgid "User #%d"
 msgstr ""
 
 #. translators: %d: WordPress user ID.
-#: includes/class-cliredas-settings.php:746
+#: includes/class-cliredas-settings.php:748
 msgid "Background"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:773
+#: includes/class-cliredas-settings.php:775
 msgid "Review Public OAuth base URL"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:778
+#: includes/class-cliredas-settings.php:780
 msgid "Review OAuth credentials"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:783
+#: includes/class-cliredas-settings.php:785
 msgid "Connect or reconnect Google Analytics"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:788
+#: includes/class-cliredas-settings.php:790
 msgid "Review GA4 property"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:799
+#: includes/class-cliredas-settings.php:801
 msgid "Copied"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:800
+#: includes/class-cliredas-settings.php:802
 msgid "Copy URI"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:803
+#: includes/class-cliredas-settings.php:805
 msgid "Open Google Cloud credentials"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:820
+#: includes/class-cliredas-settings.php:822
 msgid "Configuration"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:821
+#: includes/class-cliredas-settings.php:823
 msgid "Authentication"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:822
+#: includes/class-cliredas-settings.php:824
 msgid "Permission"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:823
+#: includes/class-cliredas-settings.php:825
 msgid "Quota"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:824
+#: includes/class-cliredas-settings.php:826
 msgid "Property selection"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:825
+#: includes/class-cliredas-settings.php:827
 msgid "Network"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:826
+#: includes/class-cliredas-settings.php:828
 msgid "Google service"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:829
+#: includes/class-cliredas-settings.php:831
 msgid "Setup"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:846
+#: includes/class-cliredas-settings.php:848
 msgid "Connected"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:847
+#: includes/class-cliredas-settings.php:849
 msgid "Not connected"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:863
+#: includes/class-cliredas-settings.php:865
 msgid "Connected (reconnect required)"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:869
+#: includes/class-cliredas-settings.php:871
 msgid "Your saved connection is no longer valid. Please reconnect Google Analytics."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:876
+#: includes/class-cliredas-settings.php:878
 msgid "Connected (property not selected)"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:890
-#: includes/class-cliredas-settings.php:894
+#: includes/class-cliredas-settings.php:892
+#: includes/class-cliredas-settings.php:896
 msgid "Connect Google Analytics"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:897
+#: includes/class-cliredas-settings.php:899
 msgid "Save your Client ID first."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:903
-#: includes/class-cliredas-settings.php:1157
+#: includes/class-cliredas-settings.php:905
+#: includes/class-cliredas-settings.php:1159
 msgid "Reconnect Google Analytics"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:975
+#: includes/class-cliredas-settings.php:977
 msgid "1234-abc.apps.googleusercontent.com"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:977
+#: includes/class-cliredas-settings.php:979
 msgid "From Google Cloud Console → OAuth consent screen / Credentials."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:992
+#: includes/class-cliredas-settings.php:994
 msgid "Client secret:"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:993
+#: includes/class-cliredas-settings.php:995
 msgid "Not set"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1002
+#: includes/class-cliredas-settings.php:1004
 msgid "Enter to replace"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1002
+#: includes/class-cliredas-settings.php:1004
 msgid "Enter client secret"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1004
+#: includes/class-cliredas-settings.php:1006
 msgid "Leave blank to keep the currently saved secret."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1010
+#: includes/class-cliredas-settings.php:1012
 msgid "This will clear the saved client secret and disconnect GA4. Continue?"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1011
+#: includes/class-cliredas-settings.php:1013
 msgid "Clear secret"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1024
+#: includes/class-cliredas-settings.php:1026
 msgid "Add this exact URL as an Authorized redirect URI in your Google OAuth client."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1046
+#: includes/class-cliredas-settings.php:1048
 msgid "Optional. Use this when WordPress is behind a public tunnel or reverse proxy. Enter only the public site URL, such as an HTTPS ngrok URL, without a path."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1049
+#: includes/class-cliredas-settings.php:1051
 msgid "When this is set, open wp-admin through the same public URL before connecting so the OAuth callback uses the same login session."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1073
+#: includes/class-cliredas-settings.php:1075
 msgid "Public OAuth base URL must be a valid URL."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1086
+#: includes/class-cliredas-settings.php:1088
 msgid "Public OAuth base URL must include only a scheme and host, without a path query, fragment, or credentials."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1096
+#: includes/class-cliredas-settings.php:1098
 msgid "Public OAuth base URL must use HTTPS, except localhost URLs used for local testing."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1119
+#: includes/class-cliredas-settings.php:1121
 msgid "Connect Google Analytics first to load available properties."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1147
+#: includes/class-cliredas-settings.php:1149
 msgid "Unable to load GA4 properties right now."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1164
+#: includes/class-cliredas-settings.php:1166
 msgid "No GA4 properties were found for this Google account."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1170
+#: includes/class-cliredas-settings.php:1172
 msgid "Select a property"
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1178
+#: includes/class-cliredas-settings.php:1180
 msgid "This selects which GA4 property the dashboard will report on."
 msgstr ""
 
-#: includes/class-cliredas-settings.php:1182
+#: includes/class-cliredas-settings.php:1184
 msgid "No property selected yet. Choose one to enable GA4 reporting for the dashboard."
 msgstr ""
 
@@ -1528,7 +1739,7 @@ msgid "Scheduled email reports:"
 msgstr ""
 
 #: includes/class-cliredas-upgrade-page.php:81
-msgid "Weekly or monthly email summaries sent directly to clients."
+msgid "Branded weekly or monthly client emails with multiple recipients and custom messages."
 msgstr ""
 
 #: includes/class-cliredas-upgrade-page.php:82
@@ -1613,4 +1824,44 @@ msgstr ""
 
 #: includes/class-cliredas-upgrade-page.php:130
 msgid "Designed to work smoothly in WordPress multisite environments for agencies managing many client sites."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:76
+msgid "Enter one valid recipient email address. Existing digest settings were preserved."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:422
+msgid "Preparing a fresh report."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:423
+msgid "Handed to mail transport. Inbox delivery is not confirmed."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:425
+msgid "Mail handoff outcome is unknown. Check the mailbox before requesting another test."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:426
+msgid "Scheduled Monday was missed. The next future Monday is scheduled."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:427
+msgid "No complete fresh GA4 report was available. Check connection diagnostics; no email was sent."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:428
+msgid "Reporting context changed while preparing the digest. No email was sent."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:429
+msgid "Digest state could not be saved. Check database access; no mail handoff was started."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:430
+msgid "Preparation was interrupted. Check configuration and run a test."
+msgstr ""
+
+#: includes/class-cliredas-weekly-digest.php:432
+msgid "Not run yet."
 msgstr ""

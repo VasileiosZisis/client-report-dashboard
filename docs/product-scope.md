@@ -28,8 +28,8 @@ operations. Pro is one separate add-on; no additional premium packs are planned.
 ## Feature placement
 
 The Free boundary includes both shipped functionality and the planned additions
-in the Free roadmap. The current implementation baseline is **1.8.0**, including FREE-04 reliable
-caching. All Pro functionality remains planned.
+in the Free roadmap. The current implementation baseline is **1.9.0**, including FREE-04 reliable
+caching and the FREE-02 weekly owner digest. All Pro functionality remains planned.
 
 | Capability | Placement | Reason |
 |---|---|---|
@@ -38,7 +38,7 @@ caching. All Pro functionality remains planned.
 | Five existing date presets, custom start/end dates, and year-to-date | Free | Choosing the period is an ordinary dashboard control. |
 | Previous-period chart overlay | Free | Trend comparison complements the existing KPI comparisons. |
 | Built-in report CSV export and basic non-secret Free settings import/export | Free | Data access and ordinary manual settings reuse should remain available without Pro. |
-| One optional, unbranded weekly owner digest to one recipient | Free — high priority | Recurring value encourages continued use; deliver immediately after the reporting foundation. |
+| One optional, unbranded weekly owner digest to one recipient | Free (1.9.0) | Fresh-only owner reporting builds on the shared reporting and caching foundation. |
 | Data freshness, last-good report recovery, and connection diagnostics | Free foundation | Trustworthy reporting benefits every user. |
 | Basic Search Console overview: clicks, impressions, CTR, and average position for one selected property | Free — later | Search performance makes the everyday dashboard more useful. |
 | Caching, filtering, empty states, accessibility, and responsive layouts | Free | Reliability and everyday usability are baseline responsibilities. |

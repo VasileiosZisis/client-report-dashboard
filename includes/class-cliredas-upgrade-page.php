@@ -78,7 +78,7 @@ final class CLIREDAS_Upgrade_Page
 
                     <p><strong><?php echo esc_html__('Scheduled email reports:', 'cliredas-analytics-dashboard'); ?></strong></p>
                     <ul>
-                        <li><?php echo esc_html__('Weekly or monthly email summaries sent directly to clients.', 'cliredas-analytics-dashboard'); ?></li>
+                        <li><?php echo esc_html__('Branded weekly or monthly client emails with multiple recipients and custom messages.', 'cliredas-analytics-dashboard'); ?></li>
                         <li><?php echo esc_html__('Includes headline KPIs, key trends, top pages, traffic sources, and devices.', 'cliredas-analytics-dashboard'); ?></li>
                     </ul>
 

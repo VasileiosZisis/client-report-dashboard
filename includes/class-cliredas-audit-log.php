@@ -14,8 +14,8 @@ final class CLIREDAS_Audit_Log
 {
     const OPTION_KEY = 'cliredas_audit_log';
     const LIMIT = 100;
-    const EVENTS = array('connect', 'disconnect', 'secret_clear', 'refresh', 'cache_clear', 'csv_export');
-    const OUTCOMES = array('success', 'sample_data', 'configuration', 'authentication', 'permission', 'quota', 'network', 'google_service', 'storage_failed', 'invalid_range', 'output_failed');
+    const EVENTS = array('connect', 'disconnect', 'secret_clear', 'refresh', 'cache_clear', 'csv_export', 'digest_weekly', 'digest_test');
+    const OUTCOMES = array('success', 'sample_data', 'configuration', 'authentication', 'permission', 'quota', 'network', 'google_service', 'storage_failed', 'invalid_range', 'output_failed', 'digest_mail_handoff', 'digest_mail_failed', 'digest_mail_unknown', 'digest_missed', 'digest_skipped');
 
     /**
      * Convert errors to allow-listed outcome codes.
@@ -130,6 +130,8 @@ final class CLIREDAS_Audit_Log
             'refresh' => __('Token refresh', 'cliredas-analytics-dashboard'),
             'cache_clear' => __('Cache cleared', 'cliredas-analytics-dashboard'),
             'csv_export' => __('CSV export', 'cliredas-analytics-dashboard'),
+            'digest_weekly' => __('Weekly owner digest', 'cliredas-analytics-dashboard'),
+            'digest_test' => __('Digest test send', 'cliredas-analytics-dashboard'),
         );
         return isset($labels[$event]) ? $labels[$event] : '';
     }
@@ -154,6 +156,11 @@ final class CLIREDAS_Audit_Log
             'storage_failed' => __('Credential storage requires attention', 'cliredas-analytics-dashboard'),
             'invalid_range' => __('Invalid date range', 'cliredas-analytics-dashboard'),
             'output_failed' => __('Download could not be created', 'cliredas-analytics-dashboard'),
+            'digest_mail_handoff' => __('Handed to mail transport; inbox delivery unconfirmed', 'cliredas-analytics-dashboard'),
+            'digest_mail_failed' => __('Digest mail handoff failed', 'cliredas-analytics-dashboard'),
+            'digest_mail_unknown' => __('Digest mail handoff outcome unknown', 'cliredas-analytics-dashboard'),
+            'digest_missed' => __('Scheduled Monday missed', 'cliredas-analytics-dashboard'),
+            'digest_skipped' => __('Digest skipped; review digest status', 'cliredas-analytics-dashboard'),
         );
         return isset($labels[$outcome]) ? $labels[$outcome] : '';
     }

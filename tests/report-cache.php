@@ -7,118 +7,7 @@
 
 (defined('WP_CLI') && WP_CLI) || exit;
 
-/** In-memory options adapter. No fixture write can reach the site's database. */
-final class CLIREDAS_Cache_Fixture_DB
-{
-    /** Fictional options table.
-     *
-     * @var string
-     */
-    public $options = 'cliredas_fixture_options';
-    /** Original site prefix for the actor.
-     *
-     * @var string
-     */
-    public $prefix = '';
-    /** Isolated options.
-     *
-     * @var array
-     */
-    public $state = array();
-    /** Simulated storage failure.
-     *
-     * @var bool
-     */
-    public $fail = false;
-    /** One-shot concurrent writer.
-     *
-     * @var callable|null
-     */
-    public $conflict = null;
-
-    /** Capture SQL parameters without building executable SQL. */
-    public function prepare($sql, ...$args)
-    {
-        return array($sql, $args);
-    }
-
-    /** Preserve the preloaded fixture actor. */
-    public function get_blog_prefix()
-    {
-        return $this->prefix;
-    }
-
-    /** Read only our fictional options table.
-     *
-     * @throws RuntimeException On an unexpected read.
-     */
-    public function get_row($query)
-    {
-        $key = $query[1][0];
-        if (0 !== strpos($key, 'cliredas_') && 'cron' !== $key) {
-            throw new RuntimeException('Unexpected fixture read');
-        }
-        return isset($this->state[$key]) ? (object) array('option_value' => maybe_serialize($this->state[$key])) : null;
-    }
-
-    /** Simulate insertion and conditional publication, including concurrent writes. */
-    public function query($query)
-    {
-        if ($this->fail) {
-            return 0;
-        }
-        if (is_callable($this->conflict)) {
-            $callback = $this->conflict;
-            $this->conflict = null;
-            $callback($this);
-            return 0;
-        }
-        list($sql, $args) = $query;
-        if (0 === strpos($sql, 'INSERT')) {
-            list($key, $value) = $args;
-            if (isset($this->state[$key])) {
-                return 0;
-            }
-            $this->state[$key] = maybe_unserialize($value);
-            return 1;
-        }
-        list($value, $key, $expected) = $args;
-        if (! isset($this->state[$key]) || maybe_serialize($this->state[$key]) !== $expected) {
-            return 0;
-        }
-        $this->state[$key] = maybe_unserialize($value);
-        return 1;
-    }
-
-    /** Capture normal Options API updates, notably WP-Cron scheduling.
-     *
-     * @throws RuntimeException On an unexpected write.
-     */
-    public function update($table, $data, $where)
-    {
-        if ($table !== $this->options) {
-            throw new RuntimeException('Unexpected fixture write');
-        }
-        if ($this->fail) {
-            return 0;
-        }
-        $this->state[$where['option_name']] = maybe_unserialize($data['option_value']);
-        return 1;
-    }
-
-    /** Capture only option deletion.
-     *
-     * @throws RuntimeException On an unexpected deletion.
-     */
-    public function delete($table, $where)
-    {
-        if ($table !== $this->options) {
-            throw new RuntimeException('Unexpected fixture deletion');
-        }
-        unset($this->state[$where['option_name']]);
-        return 1;
-    }
-}
+require_once __DIR__ . '/fixtures/class-cliredas-options-fixture.php';
 
 // phpcs:disable Generic.Files.OneObjectStructurePerFile.MultipleFound -- Self-contained test runner and adapter.
 /** Exercise the real provider, Options API and WP-Cron API with isolated fixtures. */
@@ -222,6 +111,13 @@ final class CLIREDAS_Cache_Tests
             self::check('fresh' === $report['freshness']['state'], 'Cold success is fresh');
             self::check(array_intersect_key($report['range'], $context['dates']) === $context['dates'], 'Report uses resolved request dates');
             self::check('ga4_cache' === $provider->get_report('last_7_days')['source'] && 5 === $calls, 'Fresh hit makes no HTTP requests');
+            self::check(! is_wp_error($provider->get_fresh_report('last_7_days')) && 5 === $calls, 'Fresh-only consumers reuse complete fresh reports');
+            $obsolete = $report;
+            $obsolete['freshness']['context_id'] = 'obsolete-context';
+            self::check(! $provider->is_fresh_report($obsolete, 'last_7_days'), 'Fresh-only validation rejects an obsolete context');
+            $obsolete = $report;
+            $obsolete['range']['endDate'] = '2000-01-01';
+            self::check(! $provider->is_fresh_report($obsolete, 'last_7_days'), 'Fresh-only validation rejects dates from before a calendar rollover');
             $id = $context['id'];
             $db->state['cliredas_report_cache']['entries'][$id]['good']['fresh_until'] = time() - 1;
             $report = $provider->get_report('last_7_days');
@@ -246,6 +142,7 @@ final class CLIREDAS_Cache_Tests
             $provider->get_report('last_7_days');
             self::check($before === $calls && $db->state['cliredas_report_cache']['entries'][$id]['retry_at'] > time(), 'Failure cooldown prevents repeated Google requests');
             self::check(false === strpos($report['error_message'], 'fixture-sensitive'), 'Failure feedback never exposes upstream contents');
+            self::check(is_wp_error($provider->get_fresh_report('last_7_days')), 'Fresh-only consumers reject retained stale reports after refresh failure');
             $db->state['cliredas_report_cache']['entries'][$id]['retry_at'] = 0;
             $mode = 'quota';
             self::check('ga4_quota_exceeded' === $provider->refresh_context($context)['freshness']['error_code'], 'Quota failures retain last-good data');
@@ -314,6 +211,7 @@ final class CLIREDAS_Cache_Tests
             $report = $provider->get_report('last_7_days');
             self::check('ga4' === $report['source'] && ! empty($report['traffic_sources_unavailable']), 'Partial cold report labels missing traffic sources');
             self::check(null === CLIREDAS_Report_Cache::entry($provider->report_context('last_7_days'))['good'], 'Partial success is never last-good');
+            self::check(is_wp_error($provider->get_fresh_report('last_7_days')), 'Fresh-only consumers reject partial reports');
             $reset();
             $mode = 'zero';
             $report = $provider->get_report('last_7_days');
@@ -327,7 +225,7 @@ final class CLIREDAS_Cache_Tests
             $mode = 'success';
             $before = $calls;
             add_filter('cliredas_enable_cache', '__return_false');
-            $provider->get_report('last_7_days');
+            self::check(! is_wp_error($provider->get_fresh_report('last_7_days')), 'Fresh-only retrieval also supports cache-disabled real reports');
             remove_filter('cliredas_enable_cache', '__return_false');
             self::check(5 === $calls - $before && array() === CLIREDAS_Report_Cache::read()['entries'] && array('version' => 2) === $db->state['cron'], 'Cache-disabled mode has no retained reports or schedules');
 

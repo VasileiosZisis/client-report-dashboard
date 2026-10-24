@@ -75,6 +75,77 @@ final class CLIREDAS_GA4_Data_Provider
         return $this->refresh_context($context);
     }
 
+    /** Return only complete, fresh real data for background delivery consumers.
+     *
+     * @param string $range_key Reporting preset.
+     * @return array|WP_Error
+     */
+    public function get_fresh_report($range_key)
+    {
+        $context = $this->report_context($range_key);
+        if (! $this->settings->is_ga4_connected() || '' === $context['property']) {
+            return new WP_Error('cliredas_digest_configuration');
+        }
+        $readable = CLIREDAS_Credential_Store::instance()->check_readable();
+        if (is_wp_error($readable)) {
+            return new WP_Error('cliredas_digest_authentication');
+        }
+        if ($this->cache_enabled($context['range'])) {
+            if (! CLIREDAS_Report_Cache::ensure($context)) {
+                return new WP_Error('cliredas_digest_storage');
+            }
+            $report = $this->refresh_context($context);
+        } else {
+            $report = $this->fetch_report($context);
+            if (is_wp_error($report)) {
+                return new WP_Error('cliredas_digest_report_unavailable');
+            }
+            $ttl = max(60, (int) apply_filters('cliredas_cache_ttl', 15 * MINUTE_IN_SECONDS, $context['range'], array('provider' => 'ga4', 'property_id' => $context['property'])));
+            $report['freshness'] = array('state' => 'fresh', 'context_id' => $context['id'], 'last_success_at' => time(), 'fresh_until' => time() + min(DAY_IN_SECONDS, $ttl), 'pending' => false, 'error_code' => '');
+            $report = apply_filters('cliredas_report', $report, $context['range']);
+        }
+        return $this->is_fresh_report($report, $context['range']) ? $report : new WP_Error('cliredas_digest_report_unavailable');
+    }
+
+    /** Recheck provenance, completeness, dates and freshness immediately before use.
+     *
+     * @param mixed  $report Report candidate.
+     * @param string $range_key Reporting preset.
+     * @return bool
+     */
+    public function is_fresh_report($report, $range_key)
+    {
+        if (! is_array($report) || ! isset($report['source'], $report['freshness'], $report['totals'], $report['comparison']['totals'])
+            || ! in_array($report['source'], array('ga4', 'ga4_cache'), true) || ! empty($report['error_message']) || ! empty($report['traffic_sources_unavailable'])) {
+            return false;
+        }
+        $fresh = $report['freshness'];
+        if (! isset($fresh['state'], $fresh['fresh_until'], $fresh['last_success_at'], $fresh['context_id']) || 'fresh' !== $fresh['state']
+            || $fresh['fresh_until'] <= time() || $fresh['last_success_at'] > time() || $fresh['last_success_at'] <= 0 || ! empty($fresh['error_code'])) {
+            return false;
+        }
+        $context = $this->report_context($range_key, false);
+        if ($fresh['context_id'] !== $context['id'] || ! $this->settings->is_ga4_connected() || is_wp_error(CLIREDAS_Credential_Store::instance()->check_readable())
+            || ! isset($report['range']['startDate'], $report['range']['endDate'], $report['comparison']['range'])
+            || $report['range']['startDate'] !== $context['dates']['startDate'] || $report['range']['endDate'] !== $context['dates']['endDate']
+            || $report['comparison']['range'] !== $context['comparison']) {
+            return false;
+        }
+        foreach (array('sessions', 'users', 'pageviews', 'avg_engagement_seconds') as $key) {
+            foreach (array($report['totals'], $report['comparison']['totals']) as $totals) {
+                if (! isset($totals[$key]) || ! is_numeric($totals[$key]) || ! is_finite((float) $totals[$key]) || $totals[$key] < 0) {
+                    return false;
+                }
+            }
+        }
+        foreach (array('timeseries', 'top_pages', 'devices', 'traffic_sources') as $key) {
+            if (! isset($report[$key]) || ! is_array($report[$key])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** Resolve both periods once; cache and Google requests use identical dates. */
     public function report_context($range_key, $create = true)
     {

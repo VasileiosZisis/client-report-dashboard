@@ -4,10 +4,10 @@ This document tracks implementation status and delivery order for the Free
 plugin. [Product scope](product-scope.md) owns feature placement; the
 [Pro roadmap](pro-roadmap.md) covers the separate planned paid add-on.
 
-The current implementation baseline is **1.8.0**, including FREE-04
-stale-while-revalidate caching. Additional dashboard
+The current implementation baseline is **1.9.0**, including FREE-04
+stale-while-revalidate caching and the FREE-02 weekly owner digest. Additional dashboard
 polish, custom dates/year-to-date, chart comparison
-overlays, the weekly digest, settings portability, and a basic Search Console
+overlays, settings portability, and a basic Search Console
 overview are **planned, not shipped**.
 No future release numbers, dates, or effort estimates are assigned here.
 
@@ -28,6 +28,7 @@ milestones are recorded in Git history.
 | 1.6.0: Setup and diagnostics (FREE-03) | Rerunnable setup assistant; public URL, OAuth configuration, token-health, and property-access diagnostics; shared GA4 API client for settings requests. |
 | 1.7.0: Security and maintenance (FREE-05) | Authenticated OAuth secret/token encryption where supported, legacy migration and recovery guidance, local diagnostics, administrator-only audit history capped at 100 events, safe OAuth recovery messages, scoped dismissible upgrade announcements, and local release notes. |
 | 1.8.0: Report freshness and recovery (FREE-04) | Bounded last-good GA4 reports, background refresh with renewable locks and failure cooldowns, freshness status and automatic updates, exact-date/connection cache isolation, CSV freshness metadata, and lifecycle cleanup. |
+| 1.9.0: Weekly owner digest (FREE-02) | Administrator opt-in for one recipient; fresh-only plain-text summaries, protected test/disable controls, local Monday scheduling, duplicate prevention, safe outcomes/audit events and lifecycle cleanup. |
 
 Encryption uses Sodium secretbox or OpenSSL AES-256-GCM when available. Hosts
 without either retain plaintext compatibility with a warning. Security salt or
@@ -45,16 +46,15 @@ Background reporting must never treat that fallback as real analytics.
 Historical feature IDs are retained so earlier references remain understandable.
 The order below determines delivery, not the numeric ID.
 
-1. **FREE-02:** Optional weekly, unbranded owner digest (high priority).
-2. **FREE-06:** Dashboard filtering, empty states, and accessibility polish.
-3. **FREE-07:** Custom dates and year-to-date for existing dashboard metrics.
-4. **FREE-08:** Previous-period chart overlay.
-5. **FREE-09:** Basic non-secret settings import/export.
-6. **FREE-10:** Basic Search Console overview (later).
+1. **FREE-06:** Dashboard filtering, empty states, and accessibility polish.
+2. **FREE-07:** Custom dates and year-to-date for existing dashboard metrics.
+3. **FREE-08:** Previous-period chart overlay.
+4. **FREE-09:** Basic non-secret settings import/export.
+5. **FREE-10:** Basic Search Console overview (later).
 
 Trustworthy reporting is the Free foundation: connection diagnostics are already
 delivered in FREE-03/FREE-05; freshness status and last-good recovery are
-delivered in FREE-04 (1.8.0). The owner digest follows that work to create recurring
+delivered in FREE-04 (1.8.0). The owner digest builds on that work in 1.9.0 to create recurring
 value and encourage continued use; it does not depend on custom dates or chart
 overlays.
 
@@ -104,7 +104,15 @@ without relying on wp-admin bootstrap.
 
 ### FREE-02: Optional weekly, unbranded owner digest
 
-**Status:** Planned; high priority, next after the implemented FREE-04 foundation.
+**Status:** Implemented in 1.9.0.
+
+**Implemented policy:** Explicit administrator opt-in, one saved recipient,
+plain-text mail and fresh complete real GA4 reports only. Mondays at 08:00 use
+the site timezone, with DST-safe single-event scheduling. Late work may run
+only on the scheduled Monday; missed Mondays are skipped. Test sends do not
+enable or advance the schedule. Atomic claims/leases prevent duplicate attempts;
+unknown mail outcomes are not automatically retried. Settings distinguishes mail
+handoff from inbox delivery and exposes next-run plus weekly/test outcomes.
 
 **Purpose:** Create recurring value and encourage continued use through a simple
 owner summary, while leaving branded client-report composition and delivery
@@ -136,7 +144,7 @@ using Last 7 days and its preceding comparison period through `wp_mail()`.
 
 ### FREE-06: Dashboard filtering, empty states, and accessibility polish
 
-**Status:** Planned; follows FREE-02.
+**Status:** Planned; next after FREE-02 (1.9.0).
 
 **Purpose:** Make repeated dashboard use clear and accessible without expanding
 the built-in report into a general BI interface.

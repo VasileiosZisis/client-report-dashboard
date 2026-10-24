@@ -226,3 +226,7 @@
     margin-bottom: 10px;
   }
 }
+.cliredas-settings-wrap .cliredas-digest-action {
+  display: inline-block;
+  margin: 8px 12px 8px 0;
+}

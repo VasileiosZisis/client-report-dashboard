@@ -529,6 +529,8 @@ final class CLIREDAS_Settings
                 ?>
             </form>
 
+            <?php do_action('cliredas_after_settings_form'); ?>
+
             <hr />
 
             <h2><?php echo esc_html__('Tools', 'cliredas-analytics-dashboard'); ?></h2>

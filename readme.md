@@ -22,14 +22,15 @@ This repository is the Free version intended for WordPress.org distribution. A s
 - Freshness status, automatic updates after pending refreshes, and freshness/date metadata in CSV exports
 - Clear cache button (forces a fresh fetch on the next load)
 - Optional access control: allow Editors to view the dashboard
+- Optional unbranded plain-text owner digest, fresh real data only, Mondays at 08:00 in the site timezone
 
 ## Documentation and Roadmaps
 
 - [Product scope](docs/product-scope.md): authoritative Free/Pro feature placement and product boundaries
-- [Free roadmap](docs/free-roadmap.md): implemented `1.8.0` baseline, completed milestones, and planned Free work
+- [Free roadmap](docs/free-roadmap.md): implemented `1.9.0` baseline, completed milestones, and planned Free work
 - [Pro roadmap](docs/pro-roadmap.md): planned separate add-on catalog and client-reporting delivery sequence
 
-Feature placement includes future work; it does not mean a feature has shipped. The Key Features list above describes current Free functionality. Custom dates, year-to-date, chart comparison overlays, weekly digests, settings transfer, and a basic Search Console overview remain planned. All Pro functionality is planned.
+Feature placement includes future work; it does not mean a feature has shipped. The Key Features list above describes current Free functionality. Custom dates, year-to-date, chart comparison overlays, settings transfer, and a basic Search Console overview remain planned. All Pro functionality is planned.
 
 ## External Services (Google APIs)
 
@@ -41,7 +42,7 @@ When enabled and connected, the plugin communicates with Google services:
 
 Data sent includes your OAuth client credentials (Client ID + Client Secret), authorization codes, refresh/access tokens, and API request parameters (selected property, date range, requested dimensions/metrics).
 
-Requests are made when an administrator connects GA4, explicitly runs connection diagnostics, or when the dashboard loads or refreshes GA4 data, including WP-Cron refreshes of previously requested reports.
+Requests are made when an administrator connects GA4, explicitly runs connection diagnostics, or when the dashboard loads or refreshes GA4 data, including WP-Cron refreshes of previously requested reports and fresh retrieval for opt-in digests or explicit test sends.
 
 ## Installation (from this repo)
 
@@ -85,11 +86,18 @@ Encryption protects database values, not a compromised WordPress installation, r
 
 Local diagnostics show storage/backend state, token expiry, refresh-token presence, and the latest retained refresh outcome without contacting Google. The separate Run diagnostics action performs remote health checks.
 
-The non-autoloaded `cliredas_audit_log` option retains the latest 100 connection, disconnect, secret-clearing, actual refresh, cache-clearing, and CSV export outcomes. Entries contain only allow-listed event/outcome codes, Unix timestamps, and actor IDs. No URLs, reports, credentials, tokens, or raw errors are retained, and no audit telemetry leaves the site. Administrators can inspect the history on the settings page; uninstall removes it per site.
+The non-autoloaded `cliredas_audit_log` option retains the latest 100 connection, disconnect, secret-clearing, actual refresh, cache-clearing, CSV export, weekly digest, and digest test outcomes. Entries contain only allow-listed event/outcome codes, Unix timestamps, and actor IDs. No URLs, reports, recipients, credentials, tokens, or raw errors are retained, and no audit telemetry leaves the site. Administrators can inspect the history on the settings page; uninstall removes it per site.
 
 ## Changelog
 
 Release announcements appear only on the plugin Dashboard and Settings pages after upgrades, not fresh installs. Dismissal is remembered per administrator and site in `cliredas_dismissed_release_notices` user meta. The non-autoloaded `cliredas_release_state` option tracks installed and announced releases. Local release notes remain available in Settings; dismissing announcements never hides operational warnings. Both records are removed on uninstall.
+
+### 1.9.0
+
+- Added a disabled-by-default plain-text weekly owner digest to one saved recipient.
+- Added fresh-only reporting, Monday 08:00 scheduling, DST reconciliation and duplicate prevention.
+- Added protected test/disable actions, next-run/outcome status and safe audit events.
+- Added digest lifecycle cleanup and skipped missed Mondays without backlogs.
 
 ### 1.8.0
 
@@ -133,3 +141,32 @@ legacy reports and pending work. Connection/access changes and deactivation
 invalidate reports; uninstall deletes owned storage and events per site.
 CSV exports include freshness and resolved-date metadata; partial source
 failures are labeled unavailable, and sample data remains explicitly labeled.
+
+## Weekly owner digest (1.9.0)
+
+Administrators opt in under Client Report Settings. Upgrades leave delivery off.
+One recipient defaults initially to `admin_email` and is persisted when saved;
+later site-admin email changes do not redirect it. A one-off test works while
+weekly delivery is off and does not change the schedule. Save recipient changes
+before testing. No branding, attachments, custom message, or tracking is included.
+
+The email contains KPIs/deltas, top five pages, devices/sources, actual report
+and comparison dates, retrieval time and a dashboard link. The existing Last
+7 days period includes the current day; it is not a completed calendar week.
+Only complete fresh real GA4 data is eligible. Expired reports are refreshed
+synchronously; failed, stale, partial, mock or obsolete reports are skipped.
+
+One WP-Cron event targets Monday at 08:00 in the site timezone. DST and timezone
+changes are reconciled. Late runs are allowed only on that Monday; missed weeks
+are skipped without backlogs. An atomic lease and pre-mail claim prevent duplicate
+attempts. Unknown mail outcomes are not automatically retried. A successful
+`wp_mail()` result means mail handoff, not confirmed inbox delivery.
+
+Opt-in digest/test requests pass the summary and saved recipient through the
+site's configured mail transport; no separate Cliredas delivery service is used.
+`cliredas_digest_settings` stores consent/recipient; the non-autoloaded
+`cliredas_digest_state` holds bounded scheduling, lease and outcome metadata.
+Operational records exclude addresses, report/message bodies and raw errors.
+Audit outcomes share the existing 100-event limit. Disable removes future events
+and cancels preparing work; deactivation stops scheduling and uninstall removes
+owned per-site data. Already handed-off mail cannot be recalled.

@@ -108,8 +108,11 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-audit-log.php';
         require_once __DIR__ . '/class-cliredas-release-notices.php';
         require_once __DIR__ . '/class-cliredas-report-cache.php';
+        require_once __DIR__ . '/class-cliredas-digest-message.php';
+        require_once __DIR__ . '/class-cliredas-weekly-digest.php';
         CLIREDAS_Credential_Store::instance();
         CLIREDAS_Report_Cache::register();
+        CLIREDAS_Weekly_Digest::register();
 
         add_action('plugins_loaded', array($this, 'on_plugins_loaded'), 10);
         add_action('init', array($this, 'on_init'), 10);
@@ -186,9 +189,11 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-assets.php';
         require_once __DIR__ . '/class-cliredas-cache-manager.php';
         require_once __DIR__ . '/class-cliredas-ga4-auth.php';
+        require_once __DIR__ . '/class-cliredas-digest-admin.php';
 
         $this->settings = $this->reporting_settings();
         new CLIREDAS_Release_Notices();
+        new CLIREDAS_Digest_Admin();
 
         new CLIREDAS_GA4_Auth($this->settings);
         $data_provider  = CLIREDAS_Provider_Factory::get_provider($this->settings);
@@ -241,11 +246,13 @@ final class CLIREDAS_Plugin
             foreach (get_sites(array('fields' => 'ids', 'number' => 0)) as $site_id) {
                 switch_to_blog((int) $site_id);
                 CLIREDAS_Report_Cache::clear();
+                CLIREDAS_Weekly_Digest::deactivate();
                 restore_current_blog();
             }
             return;
         }
         CLIREDAS_Report_Cache::clear();
+        CLIREDAS_Weekly_Digest::deactivate();
     }
 
     /**

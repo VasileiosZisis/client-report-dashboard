@@ -24,7 +24,7 @@ final class CLIREDAS_Local_Store
     {
         global $wpdb;
 
-        if (! in_array($key, array('cliredas_settings', 'cliredas_audit_log', 'cliredas_release_state', 'cliredas_report_cache'), true)) {
+        if (! in_array($key, array('cliredas_settings', 'cliredas_audit_log', 'cliredas_release_state', 'cliredas_report_cache', 'cliredas_digest_settings', 'cliredas_digest_state'), true)) {
             return false;
         }
         if ($replacement === $old) {

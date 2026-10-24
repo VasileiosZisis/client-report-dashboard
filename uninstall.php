@@ -30,6 +30,9 @@ $cliredas_setup_diagnostics_meta_key = 'cliredas_setup_diagnostics';
 $cliredas_cleanup_site = static function () use ($cliredas_settings_option_key, $cliredas_cache_index_option_key) {
     wp_unschedule_hook('cliredas_refresh_report');
     wp_unschedule_hook('cliredas_cleanup_reports');
+    wp_unschedule_hook('cliredas_send_weekly_digest');
+    delete_option('cliredas_digest_settings');
+    delete_option('cliredas_digest_state');
     delete_option('cliredas_report_cache');
     // Delete cached transients tracked in the index (if any).
     $keys = get_option($cliredas_cache_index_option_key, array());
@@ -81,6 +84,8 @@ if (is_multisite() && function_exists('get_sites') && function_exists('switch_to
     delete_site_option('cliredas_audit_log');
     delete_site_option('cliredas_release_state');
     delete_site_option('cliredas_report_cache');
+    delete_site_option('cliredas_digest_settings');
+    delete_site_option('cliredas_digest_state');
 } else {
     $cliredas_cleanup_site();
 }

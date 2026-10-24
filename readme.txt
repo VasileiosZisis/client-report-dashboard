@@ -4,7 +4,7 @@ Tags: google analytics, google analytics dashboard, ga4, wordpress analytics, an
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.0
+Stable tag: 1.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,7 @@ The dashboard includes:
 * Device breakdown.
 * Traffic-source breakdown.
 * Report freshness status and last-good recovery during temporary outages.
+* An optional unbranded, plain-text weekly owner digest to one recipient.
 
 This makes Cliredas useful when users need to understand website performance without working through the full Google Analytics reporting interface.
 
@@ -239,7 +240,7 @@ Cliredas connects to an existing Google Analytics 4 property to retrieve reporti
 
 Cliredas connects to Google services in order to authorize access, list available Google Analytics properties, and retrieve GA4 reporting data.
 
-The plugin does not send analytics data anywhere except Google APIs and your WordPress site.
+Dashboard reporting communicates with Google APIs and your WordPress site. If an administrator opts into the weekly digest or explicitly requests a test, the summary and saved recipient are also passed to the site's configured mail transport for delivery to that recipient. No separate Cliredas mail service is used.
 
 When enabled and connected, the plugin sends requests to the following Google services:
 
@@ -262,7 +263,7 @@ Data sent to Google can include:
 * Requested date ranges.
 * Requested dimensions and metrics.
 
-These requests are made when an authorized WordPress administrator connects Google Analytics, explicitly runs connection diagnostics, or when the dashboard needs to load or refresh analytics data, including WP-Cron background refreshes for reports previously requested on the dashboard.
+These requests are made when an authorized WordPress administrator connects Google Analytics, explicitly runs connection diagnostics, or when the dashboard needs to load or refresh analytics data, including WP-Cron background refreshes for reports previously requested on the dashboard and fresh report retrieval for opt-in digests or explicit test sends.
 
 Google Privacy Policy:
 https://policies.google.com/privacy
@@ -289,6 +290,20 @@ https://policies.google.com/privacy
 11. Open Client Report to view your Google Analytics dashboard.
 
 == Frequently Asked Questions ==
+
+= Can I receive a weekly owner summary? =
+
+Yes. Under Settings > Client Report, save one recipient and explicitly enable Weekly owner digest. It is disabled by default, including after upgrades. The initial recipient defaults to the site admin email; later admin-email changes do not silently redirect an enabled digest.
+
+The unbranded plain-text email includes the four KPIs and comparisons, top five pages, device/source summaries, retrieval time, actual reporting/comparison dates, and a dashboard link. Last 7 days includes the current day, which Google may still be processing. No logo, attachments, tracking, or external email integration is added.
+
+The schedule is Monday at 08:00 in the WordPress site timezone. Late execution is allowed only during that Monday; missed Mondays are skipped without a backlog. WP-Cron needs site requests or a configured cron runner.
+
+Only complete real reports within the configured freshness window are sent. An expired report is refreshed synchronously; failed, stale, partial, mock, and obsolete reports are skipped. Settings shows the next run and the last weekly/test outcomes. A successful outcome means handoff to the configured mail transport, not confirmed inbox delivery. Uncertain interrupted mail attempts are not retried automatically.
+
+Send test email sends once to the saved recipient even with weekly delivery disabled. It does not enable or advance the weekly schedule. Save address changes first. Disable digest removes future events and invalidates work still preparing. Mail already handed to a transport cannot be recalled.
+
+The non-autoloaded cliredas_digest_settings option stores consent and recipient; cliredas_digest_state stores bounded timestamps, scheduling/lease metadata, opaque identifiers, and allow-listed outcomes. No message bodies, report payloads, recipient addresses, or raw transport errors are copied into operational history. Digest audit events share the existing 100-entry limit. Deactivation stops digest work; uninstall removes owned options and events for each site.
 
 = What does Cliredas do? =
 
@@ -461,7 +476,7 @@ It does not contain credentials, tokens, or raw Google API responses.
 
 Local diagnostics show credential-storage status, the available backend, access-token expiry, refresh-token presence, and the latest retained refresh outcome without making Google requests. Use Run diagnostics separately for remote health validation.
 
-The non-autoloaded `cliredas_audit_log` option retains the latest 100 connection, disconnect, secret-clearing, actual token-refresh, cache-clearing, and CSV export outcomes. It stores only allow-listed event/outcome codes, Unix timestamps, and actor IDs. It never stores URLs, report contents, credentials, tokens, or raw error messages and sends no external telemetry.
+The non-autoloaded `cliredas_audit_log` option retains the latest 100 connection, disconnect, secret-clearing, actual token-refresh, cache-clearing, CSV export, weekly digest, and digest test outcomes. It stores only allow-listed event/outcome codes, Unix timestamps, and actor IDs. It never stores URLs, report contents, recipients, credentials, tokens, or raw error messages and sends no external telemetry.
 
 Only administrators can view this history on the settings page. Uninstall removes audit storage for each site.
 
@@ -473,11 +488,20 @@ Dismissal is remembered per administrator, site, and release in `cliredas_dismis
 
 = Does Cliredas send my analytics data to another service? =
 
-Cliredas communicates with Google APIs and your WordPress site as described in the External Services section.
+Cliredas communicates with Google APIs and your WordPress site as described in the External Services section. Administrator opt-in digest delivery and explicit test sends also pass the saved recipient and summary to the site's configured mail transport.
 
 It does not send analytics reporting data to a separate Cliredas analytics service.
 
 == Changelog ==
+
+= 1.9.0 =
+
+* Added an administrator opt-in weekly owner digest, disabled by default, for one saved recipient.
+* Added an unbranded plain-text summary with KPIs/comparisons, the top five pages, devices, sources, and a dashboard link.
+* Added fresh-only GA4 retrieval: incomplete, stale, sample, unavailable, and obsolete reports are never emailed.
+* Added local Monday 08:00 scheduling with DST/timezone reconciliation, duplicate prevention, and missed-Monday handling.
+* Added protected test-send/disable actions, next-run and outcome status, and bounded non-sensitive audit events.
+* Added digest deactivation and per-site uninstall cleanup.
 
 = 1.8.0 =
 
@@ -513,6 +537,10 @@ It does not send analytics reporting data to a separate Cliredas analytics servi
 * CSV exports identify sample or fallback data and protect against spreadsheet formula injection.
 
 == Upgrade Notice ==
+
+= 1.9.0 =
+
+The new weekly owner digest remains disabled after upgrade. Choose and save one recipient before enabling it. Sending depends on WP-Cron and the site mail transport; mail handoff does not confirm inbox delivery. Missed Mondays are skipped, and no stale/sample data is emailed.
 
 = 1.8.0 =
 
