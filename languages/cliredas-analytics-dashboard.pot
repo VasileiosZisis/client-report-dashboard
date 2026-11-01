@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Cliredas - Client Dashboard for Google Analytics (GA4) 1.9.0\n"
+"Project-Id-Version: Cliredas - Client Dashboard for Google Analytics (GA4) 1.10.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/client-report-dashboard\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-24T15:06:36+00:00\n"
+"POT-Creation-Date: 2026-11-01T12:10:18+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: cliredas-analytics-dashboard\n"
@@ -36,7 +36,7 @@ msgstr ""
 
 #: includes/class-cliredas-admin-menu.php:59
 #: includes/class-cliredas-admin-menu.php:68
-#: includes/class-cliredas-dashboard-page.php:286
+#: includes/class-cliredas-dashboard-page.php:297
 #: includes/class-cliredas-settings.php:199
 msgid "Client Report"
 msgstr ""
@@ -72,13 +72,13 @@ msgid "No data."
 msgstr ""
 
 #: includes/class-cliredas-assets.php:32
-#: includes/class-cliredas-dashboard-page.php:575
+#: includes/class-cliredas-dashboard-page.php:632
 msgid "Sample data — not Google Analytics results."
 msgstr ""
 
 #. translators: %s: last successful refresh time in the site timezone.
 #: includes/class-cliredas-assets.php:34
-#: includes/class-cliredas-dashboard-page.php:582
+#: includes/class-cliredas-dashboard-page.php:639
 #, php-format
 msgid "Last successful refresh: %s"
 msgstr ""
@@ -92,100 +92,160 @@ msgid "This report has reached its 24-hour retention limit. Reload the dashboard
 msgstr ""
 
 #: includes/class-cliredas-assets.php:37
-#: includes/class-cliredas-dashboard-page.php:488
-#: includes/class-cliredas-dashboard-page.php:526
-#: includes/class-cliredas-dashboard-page.php:653
-#: includes/class-cliredas-dashboard-page.php:885
+#: includes/class-cliredas-dashboard-page.php:710
+#: includes/class-cliredas-dashboard-page.php:942
 #: includes/class-cliredas-ga4-data-provider.php:303
 #: includes/class-cliredas-settings.php:693
 msgid "Unavailable"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:38
-#: includes/class-cliredas-dashboard-page.php:257
-#: includes/class-cliredas-dashboard-page.php:411
-#: includes/class-cliredas-dashboard-page.php:443
-#: includes/class-cliredas-dashboard-page.php:483
-#: includes/class-cliredas-dashboard-page.php:511
-#: includes/class-cliredas-dashboard-page.php:725
-#: includes/class-cliredas-dashboard-page.php:777
-#: includes/class-cliredas-dashboard-page.php:817
-#: includes/class-cliredas-dashboard-page.php:859
-#: includes/class-cliredas-dashboard-page.php:904
+#: includes/class-cliredas-assets.php:46
+msgid "No pages match this filter."
+msgstr ""
+
+#. translators: 1: matching rows, 2: loaded rows.
+#: includes/class-cliredas-assets.php:48
+#, php-format
+msgid "Showing %1$s of %2$s loaded pages."
+msgstr ""
+
+#. translators: %s: sorted column label.
+#: includes/class-cliredas-assets.php:50
+#, php-format
+msgid "Sorted %s ascending."
+msgstr ""
+
+#. translators: %s: sorted column label.
+#: includes/class-cliredas-assets.php:52
+#, php-format
+msgid "Sorted %s descending."
+msgstr ""
+
+#: includes/class-cliredas-assets.php:53
+msgid "Loading the selected range. Visible values still belong to the previous report."
+msgstr ""
+
+#: includes/class-cliredas-assets.php:54
+msgid "Report updated."
+msgstr ""
+
+#: includes/class-cliredas-assets.php:55
+msgid "The report could not be loaded. The previous range has been restored. Check connectivity and try again."
+msgstr ""
+
+#: includes/class-cliredas-assets.php:56
+msgid "Access or reporting context changed. Reload the dashboard; ask an administrator to check access if needed."
+msgstr ""
+
+#: includes/class-cliredas-assets.php:57
+msgid "The chart could not be displayed. Exact values remain available in the data table."
+msgstr ""
+
+#: includes/class-cliredas-assets.php:58
+#: includes/class-cliredas-dashboard-page.php:545
+#: includes/class-cliredas-digest-message.php:69
+msgid "Desktop"
+msgstr ""
+
+#: includes/class-cliredas-assets.php:58
+#: includes/class-cliredas-dashboard-page.php:545
+#: includes/class-cliredas-digest-message.php:69
+msgid "Mobile"
+msgstr ""
+
+#: includes/class-cliredas-assets.php:58
+#: includes/class-cliredas-dashboard-page.php:545
+#: includes/class-cliredas-digest-message.php:69
+msgid "Tablet"
+msgstr ""
+
+#: includes/class-cliredas-assets.php:59
+#: includes/class-cliredas-dashboard-page.php:262
+#: includes/class-cliredas-dashboard-page.php:424
+#: includes/class-cliredas-dashboard-page.php:440
+#: includes/class-cliredas-dashboard-page.php:491
+#: includes/class-cliredas-dashboard-page.php:536
+#: includes/class-cliredas-dashboard-page.php:567
+#: includes/class-cliredas-dashboard-page.php:782
+#: includes/class-cliredas-dashboard-page.php:834
+#: includes/class-cliredas-dashboard-page.php:874
+#: includes/class-cliredas-dashboard-page.php:916
+#: includes/class-cliredas-dashboard-page.php:961
 #: includes/class-cliredas-digest-message.php:48
 msgid "Sessions"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:39
-#: includes/class-cliredas-dashboard-page.php:261
-#: includes/class-cliredas-dashboard-page.php:412
-#: includes/class-cliredas-dashboard-page.php:726
-#: includes/class-cliredas-dashboard-page.php:778
+#: includes/class-cliredas-assets.php:60
+#: includes/class-cliredas-dashboard-page.php:266
+#: includes/class-cliredas-dashboard-page.php:425
+#: includes/class-cliredas-dashboard-page.php:440
+#: includes/class-cliredas-dashboard-page.php:783
+#: includes/class-cliredas-dashboard-page.php:835
 #: includes/class-cliredas-digest-message.php:48
 msgid "Total users"
 msgstr ""
 
 #. translators: %s: signed percentage change, for example +12.4%
-#: includes/class-cliredas-assets.php:41
-#: includes/class-cliredas-dashboard-page.php:1083
+#: includes/class-cliredas-assets.php:62
+#: includes/class-cliredas-dashboard-page.php:1144
 #, php-format
 msgid "%s vs previous period"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:42
-#: includes/class-cliredas-dashboard-page.php:1060
+#: includes/class-cliredas-assets.php:63
+#: includes/class-cliredas-dashboard-page.php:1121
 msgid "New vs previous period"
 msgstr ""
 
 #. translators: %s: chart metric label (e.g. "Sessions" or "Total users").
-#: includes/class-cliredas-assets.php:44
+#: includes/class-cliredas-assets.php:65
 #, php-format
 msgid "%s over time"
 msgstr ""
 
 #. translators: %s: sortable table column label.
-#: includes/class-cliredas-assets.php:46
+#: includes/class-cliredas-assets.php:67
 #, php-format
 msgid "Sort %s ascending"
 msgstr ""
 
 #. translators: %s: sortable table column label.
-#: includes/class-cliredas-assets.php:48
+#: includes/class-cliredas-assets.php:69
 #, php-format
 msgid "Sort %s descending"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:50
-#: includes/class-cliredas-dashboard-page.php:518
-#: includes/class-cliredas-dashboard-page.php:889
+#: includes/class-cliredas-assets.php:71
+#: includes/class-cliredas-dashboard-page.php:574
+#: includes/class-cliredas-dashboard-page.php:946
 #: includes/class-cliredas-digest-message.php:70
 msgid "Organic Search"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:51
-#: includes/class-cliredas-dashboard-page.php:519
-#: includes/class-cliredas-dashboard-page.php:890
+#: includes/class-cliredas-assets.php:72
+#: includes/class-cliredas-dashboard-page.php:575
+#: includes/class-cliredas-dashboard-page.php:947
 #: includes/class-cliredas-digest-message.php:70
 msgid "Direct"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:52
-#: includes/class-cliredas-dashboard-page.php:520
-#: includes/class-cliredas-dashboard-page.php:891
+#: includes/class-cliredas-assets.php:73
+#: includes/class-cliredas-dashboard-page.php:576
+#: includes/class-cliredas-dashboard-page.php:948
 #: includes/class-cliredas-digest-message.php:70
 msgid "Referral"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:53
-#: includes/class-cliredas-dashboard-page.php:521
-#: includes/class-cliredas-dashboard-page.php:892
+#: includes/class-cliredas-assets.php:74
+#: includes/class-cliredas-dashboard-page.php:577
+#: includes/class-cliredas-dashboard-page.php:949
 #: includes/class-cliredas-digest-message.php:70
 msgid "Social"
 msgstr ""
 
-#: includes/class-cliredas-assets.php:54
-#: includes/class-cliredas-dashboard-page.php:522
-#: includes/class-cliredas-dashboard-page.php:893
+#: includes/class-cliredas-assets.php:75
+#: includes/class-cliredas-dashboard-page.php:578
+#: includes/class-cliredas-dashboard-page.php:950
 #: includes/class-cliredas-digest-message.php:70
 msgid "Other"
 msgstr ""
@@ -357,212 +417,253 @@ msgstr ""
 msgid "You do not have permission to view this page."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:265
-#: includes/class-cliredas-dashboard-page.php:727
+#: includes/class-cliredas-dashboard-page.php:270
+#: includes/class-cliredas-dashboard-page.php:784
 #: includes/class-cliredas-digest-message.php:49
 msgid "Pageviews"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:269
-#: includes/class-cliredas-dashboard-page.php:455
+#: includes/class-cliredas-dashboard-page.php:274
+#: includes/class-cliredas-dashboard-page.php:503
 msgid "Avg engagement time"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:291
-#: includes/class-cliredas-dashboard-page.php:667
+#: includes/class-cliredas-dashboard-page.php:302
+#: includes/class-cliredas-dashboard-page.php:724
 msgid "Date range"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:311
+#: includes/class-cliredas-dashboard-page.php:322
 msgid "Export CSV"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:320
+#: includes/class-cliredas-dashboard-page.php:331
 msgid "Clear cache"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:335
+#: includes/class-cliredas-dashboard-page.php:346
 msgid "GA4 is not connected yet, so you are seeing sample data."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:338
+#: includes/class-cliredas-dashboard-page.php:349
 msgid "Connect Google Analytics in Settings"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:341
+#: includes/class-cliredas-dashboard-page.php:352
 msgid "Please ask an administrator to connect Google Analytics in Settings."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:356
+#: includes/class-cliredas-dashboard-page.php:367
 msgid "Open Settings"
 msgstr ""
 
 #. translators: %d: number of cache entries cleared
-#: includes/class-cliredas-dashboard-page.php:374
+#: includes/class-cliredas-dashboard-page.php:385
 #, php-format
 msgid "Cache cleared (%d entries)."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:406
+#: includes/class-cliredas-dashboard-page.php:419
 msgid "Sessions over time"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:409
+#: includes/class-cliredas-dashboard-page.php:422
 msgid "Chart"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:423
-#: includes/class-cliredas-dashboard-page.php:811
-msgid "Top pages"
+#: includes/class-cliredas-dashboard-page.php:431
+msgid "Exact chart values are available in View chart data."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:431
-#: includes/class-cliredas-dashboard-page.php:815
-msgid "Page Title"
+#: includes/class-cliredas-dashboard-page.php:436
+msgid "View chart data"
 msgstr ""
 
 #: includes/class-cliredas-dashboard-page.php:437
-#: includes/class-cliredas-dashboard-page.php:816
+msgid "Chart data table"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:439
+msgid "Daily Sessions and Total users for this report. A dash means unavailable."
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:440
+#: includes/class-cliredas-dashboard-page.php:833
+msgid "Date"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:460
+#: includes/class-cliredas-dashboard-page.php:868
+msgid "Top pages"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:462
+msgid "Filter Top pages"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:465
+msgid "Clear filter"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:467
+msgid "Search titles or URLs in the currently loaded Top pages. Totals and CSV exports are unchanged. The filter resets on page reload."
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:474
+msgid "Top pages for this report, up to 25 rows. A dash means unavailable."
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:479
+#: includes/class-cliredas-dashboard-page.php:872
+msgid "Page Title"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:485
+#: includes/class-cliredas-dashboard-page.php:873
 msgid "URL"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:449
-#: includes/class-cliredas-dashboard-page.php:818
+#: includes/class-cliredas-dashboard-page.php:497
+#: includes/class-cliredas-dashboard-page.php:875
 msgid "Views"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:477
-#: includes/class-cliredas-dashboard-page.php:854
+#: includes/class-cliredas-dashboard-page.php:528
+#: includes/class-cliredas-dashboard-page.php:911
 msgid "Device breakdown"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:482
-#: includes/class-cliredas-dashboard-page.php:858
+#: includes/class-cliredas-dashboard-page.php:532
+msgid "Device sessions for this report"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:535
+#: includes/class-cliredas-dashboard-page.php:915
 msgid "Device"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:501
-#: includes/class-cliredas-dashboard-page.php:885
-#: includes/class-cliredas-dashboard-page.php:899
+#: includes/class-cliredas-dashboard-page.php:555
+#: includes/class-cliredas-dashboard-page.php:942
+#: includes/class-cliredas-dashboard-page.php:956
 msgid "Traffic sources"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:510
-#: includes/class-cliredas-dashboard-page.php:903
+#: includes/class-cliredas-dashboard-page.php:563
+msgid "Traffic-source sessions, also shown in the chart"
+msgstr ""
+
+#: includes/class-cliredas-dashboard-page.php:566
+#: includes/class-cliredas-dashboard-page.php:960
 msgid "Source"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:562
+#: includes/class-cliredas-dashboard-page.php:619
 msgid "GA4 data could not be refreshed. Please ask an administrator to check the connection and reporting status."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:596
-#: includes/class-cliredas-dashboard-page.php:607
+#: includes/class-cliredas-dashboard-page.php:653
+#: includes/class-cliredas-dashboard-page.php:664
 msgid "Last 7 days"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:597
+#: includes/class-cliredas-dashboard-page.php:654
 msgid "Last 30 days"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:598
+#: includes/class-cliredas-dashboard-page.php:655
 msgid "This month"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:599
+#: includes/class-cliredas-dashboard-page.php:656
 msgid "Last month"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:600
+#: includes/class-cliredas-dashboard-page.php:657
 msgid "Last 90 days"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:654
+#: includes/class-cliredas-dashboard-page.php:711
 msgid "Sample data"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:655
+#: includes/class-cliredas-dashboard-page.php:712
 msgid "Google Analytics 4"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:657
+#: includes/class-cliredas-dashboard-page.php:714
 msgid "Metadata"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:661
+#: includes/class-cliredas-dashboard-page.php:718
 msgid "Field"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:662
+#: includes/class-cliredas-dashboard-page.php:719
 msgid "Value"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:671
+#: includes/class-cliredas-dashboard-page.php:728
 msgid "Data source"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:673
+#: includes/class-cliredas-dashboard-page.php:730
 msgid "Data freshness"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:675
+#: includes/class-cliredas-dashboard-page.php:732
 msgid "Resolved dates"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:679
+#: includes/class-cliredas-dashboard-page.php:736
 msgid "Exported at"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:686
-#: includes/class-cliredas-dashboard-page.php:694
+#: includes/class-cliredas-dashboard-page.php:743
+#: includes/class-cliredas-dashboard-page.php:751
 #: includes/class-cliredas-settings.php:577
 msgid "Warning"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:695
+#: includes/class-cliredas-dashboard-page.php:752
 msgid "This export contains sample data, not Google Analytics data."
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:728
-#: includes/class-cliredas-dashboard-page.php:819
+#: includes/class-cliredas-dashboard-page.php:785
+#: includes/class-cliredas-dashboard-page.php:876
 msgid "Avg engagement time (seconds)"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:735
+#: includes/class-cliredas-dashboard-page.php:792
 msgid "KPIs"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:739
+#: includes/class-cliredas-dashboard-page.php:796
 msgid "Metric"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:740
+#: includes/class-cliredas-dashboard-page.php:797
 msgid "Current"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:741
+#: includes/class-cliredas-dashboard-page.php:798
 msgid "Previous"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:742
+#: includes/class-cliredas-dashboard-page.php:799
 msgid "Change"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:772
+#: includes/class-cliredas-dashboard-page.php:829
 msgid "Time series"
 msgstr ""
 
-#: includes/class-cliredas-dashboard-page.php:776
-msgid "Date"
-msgstr ""
-
-#: includes/class-cliredas-dashboard-page.php:934
+#: includes/class-cliredas-dashboard-page.php:991
 #: includes/class-cliredas-digest-message.php:55
 msgid "New"
 msgstr ""
 
 #. translators: %d: number of seconds
-#: includes/class-cliredas-dashboard-page.php:1007
+#: includes/class-cliredas-dashboard-page.php:1064
 #, php-format
 msgid "%d second"
 msgid_plural "%d seconds"
@@ -570,7 +671,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: minutes, 2: seconds
-#: includes/class-cliredas-dashboard-page.php:1014
+#: includes/class-cliredas-dashboard-page.php:1071
 #, php-format
 msgid "%1$dm %2$ds"
 msgstr ""
@@ -720,18 +821,6 @@ msgstr ""
 
 #: includes/class-cliredas-digest-message.php:69
 msgid "Devices (sessions)"
-msgstr ""
-
-#: includes/class-cliredas-digest-message.php:69
-msgid "Desktop"
-msgstr ""
-
-#: includes/class-cliredas-digest-message.php:69
-msgid "Mobile"
-msgstr ""
-
-#: includes/class-cliredas-digest-message.php:69
-msgid "Tablet"
 msgstr ""
 
 #: includes/class-cliredas-digest-message.php:70
@@ -891,24 +980,24 @@ msgstr ""
 msgid "Landing Page"
 msgstr ""
 
-#: includes/class-cliredas-plugin.php:273
+#: includes/class-cliredas-plugin.php:274
 msgid "Unserializing is not allowed."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:43
-msgid "An optional plain-text owner digest can summarize fresh GA4 results every Monday at 08:00 in the site timezone."
+msgid "Filter the currently loaded Top pages by title or URL without changing totals or CSV exports."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:44
-msgid "Weekly delivery is disabled by default and supports one saved recipient, a test-send action, and a direct disable control."
+msgid "Empty, zero-activity and unavailable report blocks now have explanatory messages."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:45
-msgid "Settings shows the next run and safe weekly/test outcomes. Digest sends never use stale or sample data."
+msgid "Keyboard controls, screen-reader feedback and an expandable chart data table improve dashboard accessibility."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:47
-msgid "Enable the weekly digest explicitly in Settings after choosing its recipient. It uses the existing Last 7 days period, including the current day. Missed Mondays are skipped. Scheduling depends on WP-Cron; successful mail handoff does not confirm inbox delivery."
+msgid "The Top pages filter stays active across date-range changes and automatic refreshes, and resets on page reload. Charts have equivalent data tables, and missing data stays distinct from zero activity. Existing reporting, caching and weekly digest settings are preserved."
 msgstr ""
 
 #: includes/class-cliredas-release-notices.php:173
@@ -937,6 +1026,30 @@ msgstr ""
 
 #: includes/class-cliredas-release-notices.php:297
 msgid "Release notes"
+msgstr ""
+
+#: includes/class-cliredas-report-presentation.php:77
+msgid "Data unavailable. Review the reporting status above."
+msgstr ""
+
+#: includes/class-cliredas-report-presentation.php:80
+msgid "No activity recorded for this period. Zero values are shown below."
+msgstr ""
+
+#: includes/class-cliredas-report-presentation.php:81
+msgid "No activity in this chart for the selected metric and period."
+msgstr ""
+
+#: includes/class-cliredas-report-presentation.php:82
+msgid "No pages for this period."
+msgstr ""
+
+#: includes/class-cliredas-report-presentation.php:83
+msgid "No device activity for this period."
+msgstr ""
+
+#: includes/class-cliredas-report-presentation.php:84
+msgid "No traffic-source activity for this period."
 msgstr ""
 
 #: includes/class-cliredas-settings.php:120

@@ -4,9 +4,9 @@ This document tracks implementation status and delivery order for the Free
 plugin. [Product scope](product-scope.md) owns feature placement; the
 [Pro roadmap](pro-roadmap.md) covers the separate planned paid add-on.
 
-The current implementation baseline is **1.9.0**, including FREE-04
-stale-while-revalidate caching and the FREE-02 weekly owner digest. Additional dashboard
-polish, custom dates/year-to-date, chart comparison
+The current implementation baseline is **1.10.0**, including FREE-04
+stale-while-revalidate caching, the FREE-02 weekly owner digest and FREE-06
+dashboard filtering, empty states and accessibility improvements. Custom dates/year-to-date, chart comparison
 overlays, settings portability, and a basic Search Console
 overview are **planned, not shipped**.
 No future release numbers, dates, or effort estimates are assigned here.
@@ -29,6 +29,7 @@ milestones are recorded in Git history.
 | 1.7.0: Security and maintenance (FREE-05) | Authenticated OAuth secret/token encryption where supported, legacy migration and recovery guidance, local diagnostics, administrator-only audit history capped at 100 events, safe OAuth recovery messages, scoped dismissible upgrade announcements, and local release notes. |
 | 1.8.0: Report freshness and recovery (FREE-04) | Bounded last-good GA4 reports, background refresh with renewable locks and failure cooldowns, freshness status and automatic updates, exact-date/connection cache isolation, CSV freshness metadata, and lifecycle cleanup. |
 | 1.9.0: Weekly owner digest (FREE-02) | Administrator opt-in for one recipient; fresh-only plain-text summaries, protected test/disable controls, local Monday scheduling, duplicate prevention, safe outcomes/audit events and lifecycle cleanup. |
+| 1.10.0: Dashboard usability (FREE-06) | Local title/URL filtering with saved sorting, explanatory empty/unavailable states, expandable chart data, keyboard scrolling and focus, safe loading/recovery and polite announcements. |
 
 Encryption uses Sodium secretbox or OpenSSL AES-256-GCM when available. Hosts
 without either retain plaintext compatibility with a warning. Security salt or
@@ -46,11 +47,10 @@ Background reporting must never treat that fallback as real analytics.
 Historical feature IDs are retained so earlier references remain understandable.
 The order below determines delivery, not the numeric ID.
 
-1. **FREE-06:** Dashboard filtering, empty states, and accessibility polish.
-2. **FREE-07:** Custom dates and year-to-date for existing dashboard metrics.
-3. **FREE-08:** Previous-period chart overlay.
-4. **FREE-09:** Basic non-secret settings import/export.
-5. **FREE-10:** Basic Search Console overview (later).
+1. **FREE-07:** Custom dates and year-to-date for existing dashboard metrics.
+2. **FREE-08:** Previous-period chart overlay.
+3. **FREE-09:** Basic non-secret settings import/export.
+4. **FREE-10:** Basic Search Console overview (later).
 
 Trustworthy reporting is the Free foundation: connection diagnostics are already
 delivered in FREE-03/FREE-05; freshness status and last-good recovery are
@@ -144,7 +144,14 @@ using Last 7 days and its preceding comparison period through `wp_mail()`.
 
 ### FREE-06: Dashboard filtering, empty states, and accessibility polish
 
-**Status:** Planned; next after FREE-02 (1.9.0).
+**Status:** Implemented in 1.10.0.
+
+**Behavior:** The local filter searches titles/URLs among the loaded first 25
+pages and composes with saved sorting. It stays across range changes and
+background updates, resets on reload, and never changes totals, CSV or digest
+data. Empty, zero-activity, unavailable, partial, stale and sample reports remain
+distinct. Exact chart values are available in an expandable server-rendered
+table, with keyboard controls, visible focus and polite change announcements.
 
 **Purpose:** Make repeated dashboard use clear and accessible without expanding
 the built-in report into a general BI interface.
@@ -167,7 +174,7 @@ explicit empty states for every block, and clearer loading/warning/error feedbac
 
 ### FREE-07: Custom dates and year-to-date
 
-**Status:** Planned; follows FREE-06. Moved from the former paid date-controls scope.
+**Status:** Planned; next after FREE-06 (1.10.0). Moved from the former paid date-controls scope.
 
 **Purpose:** Let users inspect the period relevant to them by selecting custom
 start/end dates for the existing dashboard metrics without an add-on.

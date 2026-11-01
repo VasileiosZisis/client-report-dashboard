@@ -249,30 +249,41 @@ final class CLIREDAS_Dashboard_Page
 
         // Initial server-rendered report (so the page is usable without JS).
         $report = $this->initial_report($selected_key);
+        $states = array();
+        foreach (array('totals', 'timeseries', 'top_pages', 'devices', 'traffic_sources') as $block) {
+            $states[$block] = CLIREDAS_Report_Presentation::state($report, $block);
+        }
+        $totals = isset($report['totals']) && is_array($report['totals']) ? $report['totals'] : array();
 
         $kpis = apply_filters(
             'cliredas_kpis',
             array(
                 'sessions' => array(
                     'label' => __('Sessions', 'cliredas-analytics-dashboard'),
-                    'value' => number_format_i18n((int) $report['totals']['sessions']),
+                    'value' => number_format_i18n((int) ($totals['sessions'] ?? 0)),
                 ),
                 'users'    => array(
                     'label' => __('Total users', 'cliredas-analytics-dashboard'),
-                    'value' => number_format_i18n((int) $report['totals']['users']),
+                    'value' => number_format_i18n((int) ($totals['users'] ?? 0)),
                 ),
                 'pageviews' => array(
                     'label' => __('Pageviews', 'cliredas-analytics-dashboard'),
-                    'value' => number_format_i18n((int) ($report['totals']['pageviews'] ?? 0)),
+                    'value' => number_format_i18n((int) ($totals['pageviews'] ?? 0)),
                 ),
                 'engagement_time' => array(
                     'label' => __('Avg engagement time', 'cliredas-analytics-dashboard'),
-                    'value' => $this->format_duration((int) $report['totals']['avg_engagement_seconds']),
+                    'value' => $this->format_duration((int) ($totals['avg_engagement_seconds'] ?? 0)),
                 ),
             ),
             $report,
             $selected_key
         );
+
+        foreach (array('sessions' => 'sessions', 'users' => 'users', 'pageviews' => 'pageviews', 'engagement_time' => 'avg_engagement_seconds') as $key => $metric) {
+            if (isset($kpis[$key]) && ! CLIREDAS_Report_Presentation::number($totals[$metric] ?? null)) {
+                $kpis[$key]['value'] = '—';
+            }
+        }
 
         if (isset($report['source']) && 'unavailable' === $report['source']) {
             foreach ($kpis as &$kpi) {
@@ -299,7 +310,7 @@ final class CLIREDAS_Dashboard_Page
                             <?php endforeach; ?>
                         </select>
 
-                        <span class="cliredas-status" id="cliredas-status" aria-live="polite"></span>
+                        <span class="cliredas-status" id="cliredas-status" role="status" aria-live="polite" aria-atomic="true"></span>
                     </div>
 
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="cliredas-export-form">
@@ -324,7 +335,7 @@ final class CLIREDAS_Dashboard_Page
                 </div>
             </div>
 
-            <div id="cliredas-notice" class="notice notice-error is-dismissible" style="display:none;">
+            <div id="cliredas-notice" class="notice notice-error is-dismissible" role="alert" aria-atomic="true" style="display:none;">
                 <p></p>
             </div>
 
@@ -347,7 +358,7 @@ final class CLIREDAS_Dashboard_Page
             <?php
             $ga4_warning_message = ! empty($report['error_message']) ? trim((string) $report['error_message']) : '';
             ?>
-            <p id="cliredas-freshness" class="cliredas-freshness" role="status" aria-live="polite" aria-atomic="true"><?php echo esc_html($this->freshness_text($report)); ?></p>
+            <p id="cliredas-freshness" class="cliredas-freshness"><?php echo esc_html($this->freshness_text($report)); ?></p>
             <div id="cliredas-ga4-warning" class="notice notice-warning is-dismissible" <?php echo ('' === $ga4_warning_message) ? 'style="display:none;"' : ''; ?>>
                 <p>
                     <span class="cliredas-ga4-warning-text"><?php echo esc_html($ga4_warning_message); ?></span>
@@ -382,6 +393,8 @@ final class CLIREDAS_Dashboard_Page
 
             <?php do_action('cliredas_dashboard_before_kpis', $report, $selected_key); ?>
 
+            <div id="cliredas-report-content" aria-busy="false">
+            <p id="cliredas-kpis-message" class="cliredas-block-message" <?php echo 'ready' === $states['totals'] ? 'hidden' : ''; ?>><?php echo esc_html(CLIREDAS_Report_Presentation::message('totals', $states['totals'])); ?></p>
             <div class="cliredas-kpis" id="cliredas-kpis">
                 <?php foreach ($kpis as $kpi_key => $kpi) : ?>
                     <?php $delta = $this->get_kpi_delta($report, $kpi_key); ?>
@@ -405,7 +418,7 @@ final class CLIREDAS_Dashboard_Page
                     <div class="cliredas-card-header">
                         <h2 class="cliredas-card-title" id="cliredas-chart-title"><?php echo esc_html__('Sessions over time', 'cliredas-analytics-dashboard'); ?></h2>
 
-                        <label class="cliredas-inline-control" for="cliredas-chart-metric">
+                        <label class="cliredas-inline-control cliredas-js-only" for="cliredas-chart-metric" hidden>
                             <span class="cliredas-inline-control-label"><?php echo esc_html__('Chart', 'cliredas-analytics-dashboard'); ?></span>
                             <select id="cliredas-chart-metric" class="cliredas-select cliredas-select-compact">
                                 <option value="sessions"><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></option>
@@ -414,44 +427,79 @@ final class CLIREDAS_Dashboard_Page
                         </label>
                     </div>
 
-                    <div class="cliredas-chart-wrap">
-                        <canvas id="cliredas-sessions-chart" height="90"></canvas>
+                    <p id="cliredas-trend-message" class="cliredas-block-message" <?php echo 'ready' === $states['timeseries'] ? 'hidden' : ''; ?>><?php echo esc_html(CLIREDAS_Report_Presentation::message('timeseries', $states['timeseries'])); ?></p>
+                    <p id="cliredas-chart-help"><?php echo esc_html__('Exact chart values are available in View chart data.', 'cliredas-analytics-dashboard'); ?></p>
+                    <div class="cliredas-chart-wrap" id="cliredas-trend-wrap" hidden>
+                        <canvas id="cliredas-sessions-chart" height="90" role="img" aria-labelledby="cliredas-chart-title" aria-describedby="cliredas-chart-help"></canvas>
                     </div>
+                    <details id="cliredas-trend-details">
+                        <summary><?php echo esc_html__('View chart data', 'cliredas-analytics-dashboard'); ?></summary>
+                        <div class="cliredas-table-scroll" tabindex="0" role="region" aria-label="<?php echo esc_attr__('Chart data table', 'cliredas-analytics-dashboard'); ?>">
+                            <table class="widefat striped cliredas-table" id="cliredas-trend-data">
+                                <caption class="screen-reader-text"><?php echo esc_html__('Daily Sessions and Total users for this report. A dash means unavailable.', 'cliredas-analytics-dashboard'); ?></caption>
+                                <thead><tr><th scope="col"><?php echo esc_html__('Date', 'cliredas-analytics-dashboard'); ?></th><th scope="col"><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></th><th scope="col"><?php echo esc_html__('Total users', 'cliredas-analytics-dashboard'); ?></th></tr></thead>
+                                <tbody>
+                                <?php if (! CLIREDAS_Report_Presentation::trend_available($report) || empty($report['timeseries'])) : ?>
+                                    <tr><td colspan="3"><?php echo esc_html(CLIREDAS_Report_Presentation::message('timeseries', $states['timeseries'])); ?></td></tr>
+                                <?php else : ?>
+                                    <?php foreach ($report['timeseries'] as $point) : ?>
+                                        <tr><th scope="row"><?php echo esc_html($point['date']); ?></th>
+                                            <?php foreach (array('sessions', 'users') as $metric) : ?>
+                                                <td><?php echo esc_html(CLIREDAS_Report_Presentation::number($point[$metric] ?? null) ? number_format_i18n((float) $point[$metric]) : '—'); ?></td>
+                                            <?php endforeach; ?>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
                 </div>
 
                 <div class="cliredas-card cliredas-card-wide">
-                    <h2 class="cliredas-card-title"><?php echo esc_html__('Top pages', 'cliredas-analytics-dashboard'); ?></h2>
+                    <h2 class="cliredas-card-title" id="cliredas-top-pages-title"><?php echo esc_html__('Top pages', 'cliredas-analytics-dashboard'); ?></h2>
+                    <div id="cliredas-top-pages-filter" hidden>
+                        <label for="cliredas-page-query"><?php echo esc_html__('Filter Top pages', 'cliredas-analytics-dashboard'); ?></label>
+                        <div class="cliredas-filter-controls">
+                            <input type="search" id="cliredas-page-query" aria-controls="cliredas-top-pages" aria-describedby="cliredas-page-filter-help" autocomplete="off">
+                            <button type="button" class="button" id="cliredas-page-query-clear"><?php echo esc_html__('Clear filter', 'cliredas-analytics-dashboard'); ?></button>
+                        </div>
+                        <p id="cliredas-page-filter-help"><?php echo esc_html__('Search titles or URLs in the currently loaded Top pages. Totals and CSV exports are unchanged. The filter resets on page reload.', 'cliredas-analytics-dashboard'); ?></p>
+                        <p id="cliredas-page-count" role="status" aria-live="polite" aria-atomic="true"></p>
+                        <span id="cliredas-sort-status" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></span>
+                    </div>
 
-                    <div class="cliredas-table-scroll">
+                    <div class="cliredas-table-scroll" tabindex="0" role="region" aria-labelledby="cliredas-top-pages-title">
                         <table class="widefat striped cliredas-table" id="cliredas-top-pages">
+                            <caption class="screen-reader-text"><?php echo esc_html__('Top pages for this report, up to 25 rows. A dash means unavailable.', 'cliredas-analytics-dashboard'); ?></caption>
                             <thead>
                                 <tr>
                                     <th scope="col" aria-sort="none">
-                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="title" data-sort-type="text">
+                                        <button type="button" class="cliredas-sort-button" disabled data-cliredas-sort="title" data-sort-type="text">
                                             <span class="cliredas-sort-label"><?php echo esc_html__('Page Title', 'cliredas-analytics-dashboard'); ?></span>
                                             <span class="dashicons dashicons-sort" aria-hidden="true"></span>
                                         </button>
                                     </th>
                                     <th scope="col" aria-sort="none">
-                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="url" data-sort-type="text">
+                                        <button type="button" class="cliredas-sort-button" disabled data-cliredas-sort="url" data-sort-type="text">
                                             <span class="cliredas-sort-label"><?php echo esc_html__('URL', 'cliredas-analytics-dashboard'); ?></span>
                                             <span class="dashicons dashicons-sort" aria-hidden="true"></span>
                                         </button>
                                     </th>
                                     <th scope="col" aria-sort="none">
-                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="sessions" data-sort-type="number">
+                                        <button type="button" class="cliredas-sort-button" disabled data-cliredas-sort="sessions" data-sort-type="number">
                                             <span class="cliredas-sort-label"><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></span>
                                             <span class="dashicons dashicons-sort" aria-hidden="true"></span>
                                         </button>
                                     </th>
                                     <th scope="col" aria-sort="none">
-                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="views" data-sort-type="number">
+                                        <button type="button" class="cliredas-sort-button" disabled data-cliredas-sort="views" data-sort-type="number">
                                             <span class="cliredas-sort-label"><?php echo esc_html__('Views', 'cliredas-analytics-dashboard'); ?></span>
                                             <span class="dashicons dashicons-sort" aria-hidden="true"></span>
                                         </button>
                                     </th>
                                     <th scope="col" aria-sort="none">
-                                        <button type="button" class="cliredas-sort-button" data-cliredas-sort="avg_engagement_seconds" data-sort-type="number">
+                                        <button type="button" class="cliredas-sort-button" disabled data-cliredas-sort="avg_engagement_seconds" data-sort-type="number">
                                             <span class="cliredas-sort-label"><?php echo esc_html__('Avg engagement time', 'cliredas-analytics-dashboard'); ?></span>
                                             <span class="dashicons dashicons-sort" aria-hidden="true"></span>
                                         </button>
@@ -459,13 +507,16 @@ final class CLIREDAS_Dashboard_Page
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ((array) $report['top_pages'] as $row) : ?>
+                                <?php if ('ready' !== $states['top_pages']) : ?>
+                                    <tr><td colspan="5"><?php echo esc_html(CLIREDAS_Report_Presentation::message('top_pages', $states['top_pages'])); ?></td></tr>
+                                <?php endif; ?>
+                                <?php foreach ('ready' === $states['top_pages'] ? array_slice($report['top_pages'], 0, 25) : array() as $row) : ?>
                                     <tr>
-                                        <td><?php echo esc_html((string) $row['title']); ?></td>
-                                        <td><code><?php echo esc_html((string) $row['url']); ?></code></td>
-                                        <td><?php echo esc_html(number_format_i18n((int) $row['sessions'])); ?></td>
-                                        <td><?php echo esc_html(number_format_i18n((int) ($row['views'] ?? 0))); ?></td>
-                                        <td><?php echo esc_html($this->format_duration((int) ($row['avg_engagement_seconds'] ?? 0))); ?></td>
+                                        <td><?php echo esc_html((string) ($row['title'] ?? '')); ?></td>
+                                        <td><code><?php echo esc_html((string) ($row['url'] ?? '')); ?></code></td>
+                                        <td><?php echo esc_html(CLIREDAS_Report_Presentation::number($row['sessions'] ?? null) ? number_format_i18n((float) $row['sessions']) : '—'); ?></td>
+                                        <td><?php echo esc_html(CLIREDAS_Report_Presentation::number($row['views'] ?? null) ? number_format_i18n((float) $row['views']) : '—'); ?></td>
+                                        <td><?php echo esc_html(CLIREDAS_Report_Presentation::number($row['avg_engagement_seconds'] ?? null) ? $this->format_duration((int) $row['avg_engagement_seconds']) : '—'); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -476,20 +527,23 @@ final class CLIREDAS_Dashboard_Page
                 <div class="cliredas-card">
                     <h2 class="cliredas-card-title"><?php echo esc_html__('Device breakdown', 'cliredas-analytics-dashboard'); ?></h2>
 
+                    <p id="cliredas-devices-message" class="cliredas-block-message" <?php echo 'ready' === $states['devices'] ? 'hidden' : ''; ?>><?php echo esc_html(CLIREDAS_Report_Presentation::message('devices', $states['devices'])); ?></p>
                     <table class="widefat striped cliredas-table" id="cliredas-devices">
+                        <caption class="screen-reader-text"><?php echo esc_html__('Device sessions for this report', 'cliredas-analytics-dashboard'); ?></caption>
                         <thead>
                             <tr>
-                                <th><?php echo esc_html__('Device', 'cliredas-analytics-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></th>
+                                <th scope="col"><?php echo esc_html__('Device', 'cliredas-analytics-dashboard'); ?></th>
+                                <th scope="col"><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (isset($report['source']) && 'unavailable' === $report['source']) : ?>
-                                <tr><td colspan="2"><?php echo esc_html__('Unavailable', 'cliredas-analytics-dashboard'); ?></td></tr>
+                            <?php if ('unavailable' === $states['devices'] || empty($report['devices'])) : ?>
+                                <tr><td colspan="2"><?php echo esc_html(CLIREDAS_Report_Presentation::message('devices', $states['devices'])); ?></td></tr>
                             <?php endif; ?>
-                            <?php foreach ((array) $report['devices'] as $device => $count) : ?>
+                            <?php foreach ('unavailable' !== $states['devices'] && ! empty($report['devices']) ? $report['devices'] : array() as $device => $count) : ?>
                                 <tr>
-                                    <td><?php echo esc_html(ucfirst((string) $device)); ?></td>
+                                    <?php $device_labels = array('desktop' => __('Desktop', 'cliredas-analytics-dashboard'), 'mobile' => __('Mobile', 'cliredas-analytics-dashboard'), 'tablet' => __('Tablet', 'cliredas-analytics-dashboard')); ?>
+                                    <td><?php echo esc_html($device_labels[$device] ?? ucfirst((string) $device)); ?></td>
                                     <td><?php echo esc_html(number_format_i18n((int) $count)); ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -498,17 +552,19 @@ final class CLIREDAS_Dashboard_Page
                 </div>
 
                 <div class="cliredas-card">
-                    <h2 class="cliredas-card-title"><?php echo esc_html__('Traffic sources', 'cliredas-analytics-dashboard'); ?></h2>
+                    <h2 class="cliredas-card-title" id="cliredas-sources-title"><?php echo esc_html__('Traffic sources', 'cliredas-analytics-dashboard'); ?></h2>
 
-                    <div class="cliredas-chart-wrap cliredas-chart-wrap-small">
-                        <canvas id="cliredas-traffic-sources-chart" height="180"></canvas>
+                    <p id="cliredas-sources-message" class="cliredas-block-message" <?php echo 'ready' === $states['traffic_sources'] ? 'hidden' : ''; ?>><?php echo esc_html(CLIREDAS_Report_Presentation::message('traffic_sources', $states['traffic_sources'])); ?></p>
+                    <div class="cliredas-chart-wrap cliredas-chart-wrap-small" id="cliredas-sources-wrap" hidden>
+                        <canvas id="cliredas-traffic-sources-chart" height="180" role="img" aria-labelledby="cliredas-sources-title" aria-describedby="cliredas-sources-caption"></canvas>
                     </div>
 
                     <table class="widefat striped cliredas-table" id="cliredas-traffic-sources">
+                        <caption id="cliredas-sources-caption" class="screen-reader-text"><?php echo esc_html__('Traffic-source sessions, also shown in the chart', 'cliredas-analytics-dashboard'); ?></caption>
                         <thead>
                             <tr>
-                                <th><?php echo esc_html__('Source', 'cliredas-analytics-dashboard'); ?></th>
-                                <th><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></th>
+                                <th scope="col"><?php echo esc_html__('Source', 'cliredas-analytics-dashboard'); ?></th>
+                                <th scope="col"><?php echo esc_html__('Sessions', 'cliredas-analytics-dashboard'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -521,9 +577,9 @@ final class CLIREDAS_Dashboard_Page
                                 'social'         => __('Social', 'cliredas-analytics-dashboard'),
                                 'other'          => __('Other', 'cliredas-analytics-dashboard'),
                             );
-                            if (! empty($report['traffic_sources_unavailable']) || (isset($report['source']) && 'unavailable' === $report['source'])) :
+                            if ('unavailable' === $states['traffic_sources'] || ! $sources) :
                             ?>
-                                <tr><td colspan="2"><?php echo esc_html__('Unavailable', 'cliredas-analytics-dashboard'); ?></td></tr>
+                                <tr><td colspan="2"><?php echo esc_html(CLIREDAS_Report_Presentation::message('traffic_sources', $states['traffic_sources'])); ?></td></tr>
                             <?php
                             else :
                             foreach ($labels as $key => $label) :
@@ -542,6 +598,7 @@ final class CLIREDAS_Dashboard_Page
 
             <?php do_action('cliredas_dashboard_sections', $report, $selected_key); ?>
 
+            </div>
         </div>
 <?php
     }
@@ -1049,6 +1106,10 @@ final class CLIREDAS_Dashboard_Page
         }
 
         $metric_key = $metric_keys[$kpi_key];
+        if (! CLIREDAS_Report_Presentation::number($report['totals'][$metric_key] ?? null)
+            || ! CLIREDAS_Report_Presentation::number($report['comparison']['totals'][$metric_key] ?? null)) {
+            return array('visible' => false, 'text' => '', 'class' => 'is-neutral');
+        }
         $current = isset($report['totals'][$metric_key]) ? (float) $report['totals'][$metric_key] : 0.0;
         $previous = isset($report['comparison']['totals'][$metric_key])
             ? (float) $report['comparison']['totals'][$metric_key]

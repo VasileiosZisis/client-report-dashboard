@@ -150,3 +150,62 @@ calendar boundaries use isolated fixtures; network cleanup and minimum-version
 compatibility were reviewed against the existing per-site lifecycle pattern,
 available APIs and PHP syntax. Mail capture verifies local handoff, not delivery
 through a production mail provider or to an external inbox.
+
+## FREE-06 dashboard presentation regressions
+
+```powershell
+wp --path="C:/path/to/disposable-wordpress" eval-file "C:/path/to/plugin/tests/dashboard-presentation.php"
+node tests/dashboard-presentation.js
+node tests/dashboard-polling.js
+```
+
+The PHP runner injects a local report provider and a preloaded administrator,
+intercepts external HTTP, and exercises the actual renderer with no report/cache
+writes. It restores its actor and filters afterwards. The JavaScript runner uses
+an isolated DOM, storage, clock, Chart stub and fetch fixture to exercise the
+shipped dashboard script, including its actual initialization/event handlers.
+Neither runner uses live Google credentials or sends mail.
+
+Cases cover title/URL matching, whitespace/case, literal matching, first-25
+limits, sorting and stable unknown-value ordering, Clear/Escape/focus, range
+success/failure, reload reset, background replacement and unchanged report/export
+inputs. They distinguish zero/empty/unavailable/partial/sample states, missing
+metrics, escaped HTML-like values, exact chart data, chart destruction/recovery,
+missing Chart.js, safe JSON/transport errors, authorization/context rejection,
+busy state and obsolete responses. Existing polling tests cover timeout,
+hidden-tab pause/resume and retention expiry.
+
+### 1.10.0 validation record
+
+Validated on disposable WordPress 7.1.3 / PHP 8.4.10: **379 PHP assertions** passed
+(42 presentation, 87 security, 78 release notices, 93 cache/provider, 79 digest),
+plus **47 JavaScript presentation assertions** and the existing polling suite.
+PHP/JavaScript syntax checks, PHPCS and Plugin Check passed. PHPCS continues to
+check PHP; modern JavaScript test runners are checked and executed with Node.
+Release regressions verify that a 1.9.0 dismissal does not suppress 1.10.0 and
+fresh installs remain quiet.
+
+Brave checks used the disposable site with intercepted GA4 responses and excluded
+static snapshots of the real renderer. Verified filtering/sorting, range-change
+preservation, Escape/focus, native chart disclosure and exact values, and
+Refreshing-to-Fresh replacement after the owned cron callback. Checked zero
+and unavailable snapshots, a snapshot with all dashboard scripts omitted, and
+another with Chart.js omitted. The latter two retained readable data tables.
+At a 390-pixel viewport the page had no horizontal overflow; the Top pages region
+scrolled horizontally using the keyboard and retained a visible focus outline.
+Screenshots are excluded local artifacts in `build/free06-dashboard.jpg` and
+`build/free06-mobile.jpg`.
+
+Independent read-only `reviewer`, `oauth_security` and `report_integrity` reviews
+were completed. The confirmed unknown-row-metric issue was fixed and passed a
+targeted report-integrity re-review. A proposed CSV fallback change for malformed
+custom-provider reports was outside this display-only scope; the existing CSV
+writer was deliberately preserved. The optional `test_auditor` was not configured.
+
+Real browser zoom could not be verified: browser keyboard forwarding did not
+change zoom, and Windows browser control then stopped because it could not
+reliably determine the active URL. No further UI automation was attempted.
+Native screen-reader speech, real multisite, live Google APIs, and the minimum
+WordPress 6.0/PHP 7.4 runtime were not executed. Screen-reader semantics were
+inspected through markup, the accessibility tree and regression fixtures; this
+is not a claim of a full accessibility conformance audit.

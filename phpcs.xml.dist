@@ -12,6 +12,8 @@
 	<exclude-pattern>*/dist/*</exclude-pattern>
 	<exclude-pattern>*/.git/*</exclude-pattern>
 	<exclude-pattern>*/assets/js/*</exclude-pattern>
+	<!-- Modern JavaScript regression runners use Node syntax checks and assertions. -->
+	<exclude-pattern>*/tests/*.js</exclude-pattern>
 
 	<!-- WordPress plugin-focused standards -->
 	<rule ref="WordPress-Core">

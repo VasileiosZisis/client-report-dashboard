@@ -4,7 +4,7 @@ Tags: google analytics, google analytics dashboard, ga4, wordpress analytics, an
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.9.0
+Stable tag: 1.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -291,6 +291,12 @@ https://policies.google.com/privacy
 
 == Frequently Asked Questions ==
 
+= How does Top pages filtering work? =
+
+Filter Top pages searches the currently loaded first 25 rows by title or URL using trimmed, case-insensitive text. It combines with sorting and makes no Google requests. Clear filter or Escape removes the query; changing the reporting range or completing a background refresh keeps it. Reloading starts with an empty filter. KPI totals, report data, CSV contents and email digests are unchanged.
+
+Zero activity, empty results, unmatched filters, unavailable blocks, sample data and stale reports have distinct explanations. View chart data exposes exact dates, Sessions and Total users even without JavaScript; traffic-source values remain in their table. Without JavaScript, the current report remains readable but local filtering and sorting are unavailable.
+
 = Can I receive a weekly owner summary? =
 
 Yes. Under Settings > Client Report, save one recipient and explicitly enable Weekly owner digest. It is disabled by default, including after upgrades. The initial recipient defaults to the site admin email; later admin-email changes do not silently redirect an enabled digest.
@@ -494,6 +500,13 @@ It does not send analytics reporting data to a separate Cliredas analytics servi
 
 == Changelog ==
 
+= 1.10.0 =
+
+* Added local Top pages filtering by title or URL, composing with saved sorting without changing report data or CSV exports.
+* Added explicit zero-activity, empty and unavailable states across dashboard blocks.
+* Added an expandable chart data table, keyboard-accessible scrolling, visible focus and screen-reader feedback.
+* Improved loading, recovery and access-change handling while preserving freshness and retention limits.
+
 = 1.9.0 =
 
 * Added an administrator opt-in weekly owner digest, disabled by default, for one saved recipient.
@@ -537,6 +550,10 @@ It does not send analytics reporting data to a separate Cliredas analytics servi
 * CSV exports identify sample or fallback data and protect against spreadsheet formula injection.
 
 == Upgrade Notice ==
+
+= 1.10.0 =
+
+Top pages can now be filtered locally without changing totals or CSV exports. Filters persist across range changes and refreshes and reset on page reload. Clearer empty states and accessible chart data tables preserve existing reports, settings and weekly digest behavior.
 
 = 1.9.0 =
 

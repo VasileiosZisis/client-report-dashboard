@@ -35,6 +35,27 @@ final class CLIREDAS_Assets
             'refreshWaiting'         => __('The refresh is taking longer than expected. Reload the dashboard to check again. Background work depends on WP-Cron.', 'cliredas-analytics-dashboard'),
             'reportExpired'          => __('This report has reached its 24-hour retention limit. Reload the dashboard to request current data.', 'cliredas-analytics-dashboard'),
             'blockUnavailable'       => __('Unavailable', 'cliredas-analytics-dashboard'),
+            'unavailableMessage'     => CLIREDAS_Report_Presentation::message('', 'unavailable'),
+            'emptyMessages'          => array(
+                'totals' => CLIREDAS_Report_Presentation::message('totals', 'empty'),
+                'timeseries' => CLIREDAS_Report_Presentation::message('timeseries', 'empty'),
+                'top_pages' => CLIREDAS_Report_Presentation::message('top_pages', 'empty'),
+                'devices' => CLIREDAS_Report_Presentation::message('devices', 'empty'),
+                'traffic_sources' => CLIREDAS_Report_Presentation::message('traffic_sources', 'empty'),
+            ),
+            'noMatches'              => __('No pages match this filter.', 'cliredas-analytics-dashboard'),
+            /* translators: 1: matching rows, 2: loaded rows. */
+            'pageCount'              => __('Showing %1$s of %2$s loaded pages.', 'cliredas-analytics-dashboard'),
+            /* translators: %s: sorted column label. */
+            'sortedAscending'        => __('Sorted %s ascending.', 'cliredas-analytics-dashboard'),
+            /* translators: %s: sorted column label. */
+            'sortedDescending'       => __('Sorted %s descending.', 'cliredas-analytics-dashboard'),
+            'loadingPrevious'        => __('Loading the selected range. Visible values still belong to the previous report.', 'cliredas-analytics-dashboard'),
+            'reportUpdated'          => __('Report updated.', 'cliredas-analytics-dashboard'),
+            'requestFailed'          => __('The report could not be loaded. The previous range has been restored. Check connectivity and try again.', 'cliredas-analytics-dashboard'),
+            'accessChanged'          => __('Access or reporting context changed. Reload the dashboard; ask an administrator to check access if needed.', 'cliredas-analytics-dashboard'),
+            'chartUnavailable'       => __('The chart could not be displayed. Exact values remain available in the data table.', 'cliredas-analytics-dashboard'),
+            'devices'                => array('desktop' => __('Desktop', 'cliredas-analytics-dashboard'), 'mobile' => __('Mobile', 'cliredas-analytics-dashboard'), 'tablet' => __('Tablet', 'cliredas-analytics-dashboard')),
             'sessions'               => __('Sessions', 'cliredas-analytics-dashboard'),
             'totalUsers'             => __('Total users', 'cliredas-analytics-dashboard'),
             /* translators: %s: signed percentage change, for example +12.4% */

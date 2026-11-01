@@ -15,6 +15,8 @@ This repository is the Free version intended for WordPress.org distribution. A s
 - Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
 - Toggle line chart between Sessions over time and Total Users over time
 - Sortable Top pages table with up to 25 rows: Path, Title, Sessions, Views, Avg engagement time (per page)
+- Local Top pages filtering by title or URL, with matching counts and unchanged analytics/CSV data
+- Explicit empty/unavailable states, keyboard scrolling and an expandable exact-values chart table
 - Device breakdown (desktop / mobile / tablet)
 - Traffic sources breakdown (Organic Search / Direct / Referral / Social / Other)
 - CSV export for the current dashboard range, including all built-in report blocks
@@ -27,7 +29,7 @@ This repository is the Free version intended for WordPress.org distribution. A s
 ## Documentation and Roadmaps
 
 - [Product scope](docs/product-scope.md): authoritative Free/Pro feature placement and product boundaries
-- [Free roadmap](docs/free-roadmap.md): implemented `1.9.0` baseline, completed milestones, and planned Free work
+- [Free roadmap](docs/free-roadmap.md): implemented `1.10.0` baseline, completed milestones, and planned Free work
 - [Pro roadmap](docs/pro-roadmap.md): planned separate add-on catalog and client-reporting delivery sequence
 
 Feature placement includes future work; it does not mean a feature has shipped. The Key Features list above describes current Free functionality. Custom dates, year-to-date, chart comparison overlays, settings transfer, and a basic Search Console overview remain planned. All Pro functionality is planned.
@@ -92,6 +94,12 @@ The non-autoloaded `cliredas_audit_log` option retains the latest 100 connection
 
 Release announcements appear only on the plugin Dashboard and Settings pages after upgrades, not fresh installs. Dismissal is remembered per administrator and site in `cliredas_dismissed_release_notices` user meta. The non-autoloaded `cliredas_release_state` option tracks installed and announced releases. Local release notes remain available in Settings; dismissing announcements never hides operational warnings. Both records are removed on uninstall.
 
+### 1.10.0
+
+- Added local title/URL filtering for loaded Top pages, with persistent sorting and unchanged CSV/report contents.
+- Added explanatory empty, zero and unavailable states, accessible chart data, focus and announcement improvements.
+- Improved responsive controls and safe loading/recovery feedback.
+
 ### 1.9.0
 
 - Added a disabled-by-default plain-text weekly owner digest to one saved recipient.
@@ -141,6 +149,23 @@ legacy reports and pending work. Connection/access changes and deactivation
 invalidate reports; uninstall deletes owned storage and events per site.
 CSV exports include freshness and resolved-date metadata; partial source
 failures are labeled unavailable, and sample data remains explicitly labeled.
+
+## Dashboard filtering and accessible data (1.10.0)
+
+The Top pages filter matches a trimmed, case-insensitive substring in titles or
+URLs among the currently loaded first 25 rows. It composes with saved sorting
+and makes no Google requests. Clear filter or Escape clears only the query and
+keeps focus in the field. The query stays across range changes and background
+updates, resets on page reload, and is never stored. KPI totals, report payloads,
+CSV contents and digest emails are unchanged.
+
+Empty periods, unmatched queries, missing/partial data and genuine zero activity
+have distinct explanations. Missing dashboard metrics use a dash; unknown table
+metrics sort after known numbers in either direction. Existing CSV writer
+semantics are preserved. Exact trend dates, Sessions and Total users are available
+under View chart data even without JavaScript. Traffic sources retain their
+equivalent table; missing chart scripts do not hide the tables. Local filtering,
+sorting and metric selection require JavaScript.
 
 ## Weekly owner digest (1.9.0)
 

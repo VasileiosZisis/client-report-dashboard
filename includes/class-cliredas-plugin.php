@@ -183,6 +183,7 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-setup-diagnostics.php';
         require_once __DIR__ . '/class-cliredas-ga4-data-provider.php';
         require_once __DIR__ . '/class-cliredas-provider-factory.php';
+        require_once __DIR__ . '/class-cliredas-report-presentation.php';
         require_once __DIR__ . '/class-cliredas-dashboard-page.php';
         require_once __DIR__ . '/class-cliredas-admin-menu.php';
         require_once __DIR__ . '/class-cliredas-admin-screens.php';

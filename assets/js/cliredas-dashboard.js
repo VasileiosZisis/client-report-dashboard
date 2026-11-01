@@ -12,10 +12,46 @@
     avg_engagement_seconds: { type: 'number', initialDirection: 'descending' },
   };
   let topPagesSort = loadTopPagesSort();
+  let topPagesQuery = '';
   let pollTimer = null;
   let pollController = null;
   let reportEpoch = 0;
   let retentionTimer = null;
+  let pollDeadline = 0;
+  let rangeController = null;
+
+  function validNumber(value) {
+    return (typeof value === 'number' || (typeof value === 'string' && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim()))) && Number.isFinite(Number(value)) && Number(value) >= 0;
+  }
+
+  function blockState(report, block, metric = 'sessions') {
+    const data = report[block];
+    if (report.source === 'unavailable' || !data || typeof data !== 'object' || (block === 'traffic_sources' && report.traffic_sources_unavailable)) return 'unavailable';
+    if (block === 'top_pages') return Array.isArray(data) && data.every(row => row && typeof row === 'object' && !Array.isArray(row)) ? (data.length ? 'ready' : 'empty') : 'unavailable';
+    let values = Object.values(data);
+    if (block === 'totals') values = ['sessions', 'users', 'pageviews', 'avg_engagement_seconds'].map(key => data[key]);
+    if (block === 'timeseries') {
+      if (!Array.isArray(data) || !data.every(row => row && typeof row.date === 'string')) return 'unavailable';
+      values = data.map(row => row[metric]);
+    }
+    if (!values.every(validNumber)) return 'unavailable';
+    return values.some(value => Number(value) > 0) ? 'ready' : 'empty';
+  }
+
+  function blockMessage(block, state) {
+    return state === 'unavailable' ? i18n.unavailableMessage || i18n.blockUnavailable || 'Unavailable' : (i18n.emptyMessages || {})[block] || i18n.noData || 'No data.';
+  }
+
+  function updateText(el, text) {
+    if (el && el.textContent !== text) el.textContent = text;
+  }
+
+  function showBlockMessage(selector, block, state) {
+    const el = $(selector);
+    if (!el) return;
+    el.hidden = state === 'ready';
+    updateText(el, state === 'ready' ? '' : blockMessage(block, state));
+  }
 
   function stopPolling() {
     reportEpoch += 1;
@@ -40,22 +76,27 @@
     if (freshness.last_success_label) {
       text += ' · ' + sprintf(i18n.lastSuccess, freshness.last_success_label);
     }
-    el.textContent = text || '';
+    updateText(el, text || '');
     el.dataset.state = freshness.state || report.source || '';
+    setStatus(text || i18n.reportUpdated || 'Report updated.', true);
   }
 
   function clearDisplayedAnalytics(message) {
     const report = { source: 'unavailable', totals: {}, timeseries: [], top_pages: [], devices: {}, traffic_sources: {}, error_message: message };
     cfg.initialReport = report;
+    setLoading(false);
+    const range = $('#cliredas-date-range');
+    if (range && cfg.selectedRange) range.value = cfg.selectedRange;
     renderAll(report);
   }
 
-  function watchReport(report, range) {
+  function watchReport(report, range, previousDeadline) {
     stopPolling();
     const freshness = report.freshness || {};
     if (!freshness.pending || !freshness.context_id) return;
     const epoch = reportEpoch;
-    const deadline = Date.now() + 180000;
+    const deadline = previousDeadline || Date.now() + 180000;
+    pollDeadline = deadline;
     async function poll() {
       if (epoch !== reportEpoch) return;
       if (freshness.retained_until && Date.now() >= freshness.retained_until * 1000) {
@@ -89,7 +130,7 @@
         }
       } catch (error) {
         if (epoch !== reportEpoch || error.name === 'AbortError') return;
-        if (error.status === 403 || error.status === 409) clearDisplayedAnalytics(error.message);
+        if ([401, 403, 409].includes(error.status)) clearDisplayedAnalytics(error.message);
         else setStatus(i18n.refreshWaiting);
         stopPolling();
         return;
@@ -99,7 +140,10 @@
     pollTimer = setTimeout(poll, 5000);
   }
 
-  window.addEventListener('pagehide', stopPolling);
+  window.addEventListener('pagehide', function () {
+    stopPolling();
+    if (rangeController) rangeController.abort();
+  });
 
   function $(sel, root) {
     return (root || document).querySelector(sel);
@@ -111,7 +155,7 @@
   function sprintf(template, value) {
     template = String(template || '');
     // Support "%s" and "%1$s".
-    return template.replace(/%1\\$s/g, String(value)).replace(/%s/g, String(value));
+    return template.replace(/%1\$s|%s/g, function () { return String(value); });
   }
 
   function onReady(fn) {
@@ -122,10 +166,11 @@
     }
   }
 
-  function setStatus(msg) {
+  function setStatus(msg, quiet = false) {
     const el = $('#cliredas-status');
     if (!el) return;
-    el.textContent = msg || '';
+    if (el.classList) el.classList.toggle('screen-reader-text', quiet);
+    updateText(el, msg || '');
   }
 
   function setLoading(isLoading) {
@@ -135,8 +180,9 @@
     if (controls) controls.classList.toggle('is-loading', !!isLoading);
     if (select) select.disabled = !!isLoading;
     if (exportButton) exportButton.disabled = !!isLoading;
-
-    setStatus(isLoading ? i18n.loading || 'Loading...' : '');
+    const content = $('#cliredas-report-content');
+    if (content) content.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+    if (isLoading) setStatus(i18n.loadingPrevious || i18n.loading || 'Loading...');
   }
 
   function showError(message) {
@@ -272,8 +318,11 @@
   }
 
   function getTopPagesRows(pages) {
+    const query = topPagesQuery.trim().toLowerCase();
     const rows = pages.slice(0, 25).map(function (page, index) {
       return { page: page, originalIndex: index };
+    }).filter(function (row) {
+      return !query || [row.page.title, row.page.url].some(value => String(value || '').toLowerCase().includes(query));
     });
 
     if (!topPagesSort) {
@@ -291,6 +340,10 @@
       let comparison = 0;
 
       if (column.type === 'number') {
+        const leftKnown = validNumber(leftValue);
+        const rightKnown = validNumber(rightValue);
+        if (leftKnown !== rightKnown) return leftKnown ? -1 : 1;
+        if (!leftKnown) return left.originalIndex - right.originalIndex;
         const leftNumber = Number(leftValue) || 0;
         const rightNumber = Number(rightValue) || 0;
         comparison = leftNumber - rightNumber;
@@ -310,6 +363,7 @@
 
   function updateTopPagesSortHeaders() {
     $all('#cliredas-top-pages .cliredas-sort-button').forEach(function (button) {
+      button.disabled = false;
       const key = button.getAttribute('data-cliredas-sort');
       const column = topPagesColumns[key];
       const heading = button.closest('th');
@@ -366,10 +420,35 @@
 
         saveTopPagesSort();
         renderTopPages((cfg && cfg.initialReport) || {});
+        const label = $('.cliredas-sort-label', button);
+        updateText($('#cliredas-sort-status'), sprintf(topPagesSort.direction === 'ascending' ? i18n.sortedAscending : i18n.sortedDescending, label ? label.textContent : key));
       });
     });
 
     updateTopPagesSortHeaders();
+  }
+
+  function initializeTopPagesFiltering() {
+    const container = $('#cliredas-top-pages-filter');
+    const input = $('#cliredas-page-query');
+    const clear = $('#cliredas-page-query-clear');
+    if (!container || !input || !clear) return;
+    input.value = '';
+    container.hidden = false;
+    function reset() {
+      topPagesQuery = '';
+      input.value = '';
+      renderTopPages(cfg.initialReport || {});
+      input.focus();
+    }
+    input.addEventListener('input', function () {
+      topPagesQuery = input.value;
+      renderTopPages(cfg.initialReport || {});
+    });
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') { event.preventDefault(); reset(); }
+    });
+    clear.addEventListener('click', reset);
   }
 
   // ---- Rendering: KPIs, Devices, Top Pages ----
@@ -387,6 +466,7 @@
       report && report.comparison && report.comparison.totals;
 
     if (!metricKey || !totals || !previousTotals) return null;
+    if (!validNumber(totals[metricKey]) || !validNumber(previousTotals[metricKey])) return null;
 
     const current = Number(totals[metricKey]) || 0;
     const previous = Number(previousTotals[metricKey]) || 0;
@@ -437,7 +517,8 @@
       const deltaEl = $('.cliredas-kpi-delta', card);
 
       if (valueEl && typeof map[key] !== 'undefined') {
-        valueEl.textContent = report.source === 'unavailable' ? '—' : map[key];
+        const metric = key === 'engagement_time' ? 'avg_engagement_seconds' : key;
+        valueEl.textContent = report.source === 'unavailable' || !validNumber(totals[metric]) ? '—' : map[key];
       }
 
       if (!deltaEl) return;
@@ -456,18 +537,21 @@
       deltaEl.hidden = false;
       deltaEl.classList.add(delta.className);
     });
+    showBlockMessage('#cliredas-kpis-message', 'totals', blockState(report, 'totals'));
   }
 
   function renderDevices(report) {
     const tbody = $('#cliredas-devices tbody');
     if (!tbody) return;
-    if (report.source === 'unavailable') {
-      tbody.innerHTML = '<tr><td colspan="2">' + escapeHtml(i18n.blockUnavailable) + '</td></tr>';
+    const state = blockState(report, 'devices');
+    showBlockMessage('#cliredas-devices-message', 'devices', state);
+    if (state === 'unavailable' || !Object.keys(report.devices).length) {
+      tbody.innerHTML = '<tr><td colspan="2">' + escapeHtml(blockMessage('devices', state)) + '</td></tr>';
       return;
     }
 
     const devices = report.devices || {};
-    const order = ['desktop', 'mobile', 'tablet'];
+    const order = Object.keys(devices);
 
     tbody.innerHTML = order
       .map(function (k) {
@@ -475,8 +559,7 @@
         return (
           '<tr>' +
           '<td>' +
-          k.charAt(0).toUpperCase() +
-          k.slice(1) +
+          escapeHtml((i18n.devices || {})[k] || k.charAt(0).toUpperCase() + k.slice(1)) +
           '</td>' +
           '<td>' +
           formatNumber(val) +
@@ -491,8 +574,12 @@
     const tbody = $('#cliredas-traffic-sources tbody');
     const canvas = $('#cliredas-traffic-sources-chart');
     if (!tbody || !canvas) return;
-    if (report.source === 'unavailable' || report.traffic_sources_unavailable) {
-      tbody.innerHTML = '<tr><td colspan="2">' + escapeHtml(i18n.blockUnavailable) + '</td></tr>';
+    const state = blockState(report, 'traffic_sources');
+    showBlockMessage('#cliredas-sources-message', 'traffic_sources', state);
+    const wrap = $('#cliredas-sources-wrap');
+    if (wrap) wrap.hidden = true;
+    if (state === 'unavailable' || !Object.keys(report.traffic_sources).length) {
+      tbody.innerHTML = '<tr><td colspan="2">' + escapeHtml(blockMessage('traffic_sources', state)) + '</td></tr>';
       canvas.style.display = 'none';
       if (trafficChart) {
         trafficChart.destroy();
@@ -532,8 +619,6 @@
       })
       .join('');
 
-    if (typeof window.Chart === 'undefined') return;
-
     // No data: hide chart and destroy existing instance.
     if (total <= 0) {
       canvas.style.display = 'none';
@@ -544,7 +629,15 @@
       return;
     }
 
+    if (typeof window.Chart === 'undefined') {
+      showBlockMessage('#cliredas-sources-message', 'traffic_sources', 'ready');
+      const message = $('#cliredas-sources-message');
+      if (message) { message.hidden = false; updateText(message, i18n.chartUnavailable); }
+      return;
+    }
+
     canvas.style.display = 'block';
+    if (wrap) wrap.hidden = false;
 
     const labels = rows.map(function (r) {
       return r.label;
@@ -592,15 +685,20 @@
     const tbody = $('#cliredas-top-pages tbody');
     if (!tbody) return;
 
-    const pages = report.top_pages || [];
+    const state = blockState(report, 'top_pages');
+    const pages = state === 'unavailable' ? [] : report.top_pages;
+    const rows = getTopPagesRows(pages);
+    const count = $('#cliredas-page-count');
+    const template = i18n.pageCount || 'Showing %1$s of %2$s loaded pages.';
+    updateText(count, state === 'unavailable' ? blockMessage('top_pages', state) : template.replace(/%1\$s/g, () => formatNumber(rows.length)).replace(/%2\$s/g, () => formatNumber(Math.min(25, pages.length))));
     updateTopPagesSortHeaders();
-    if (!pages.length) {
-      const noData = escapeHtml(i18n.noData || 'No data.');
+    if (state !== 'ready' || !rows.length) {
+      const noData = escapeHtml(state === 'ready' ? i18n.noMatches : blockMessage('top_pages', state));
       tbody.innerHTML = '<tr><td colspan="5">' + noData + '</td></tr>';
       return;
     }
 
-    tbody.innerHTML = getTopPagesRows(pages)
+    tbody.innerHTML = rows
       .map(function (p) {
         return (
           '<tr>' +
@@ -611,13 +709,13 @@
           escapeHtml(p.url || '') +
           '</code></td>' +
           '<td>' +
-          formatNumber(p.sessions || 0) +
+          (validNumber(p.sessions) ? formatNumber(p.sessions) : '—') +
           '</td>' +
           '<td>' +
-          formatNumber(p.views || 0) +
+          (validNumber(p.views) ? formatNumber(p.views) : '—') +
           '</td>' +
           '<td>' +
-          escapeHtml(formatDuration(p.avg_engagement_seconds || 0)) +
+          (validNumber(p.avg_engagement_seconds) ? escapeHtml(formatDuration(p.avg_engagement_seconds)) : '—') +
           '</td>' +
           '</tr>'
         );
@@ -653,14 +751,11 @@
   }
 
   function renderOrUpdateSessionsChart(report) {
-    const ctx = getChartCtx();
-    if (!ctx) return;
-
-    if (typeof window.Chart === 'undefined') {
-      return;
-    }
-
     const data = buildChartData(report);
+    const state = blockState(report, 'timeseries', data.metric);
+    showBlockMessage('#cliredas-trend-message', 'timeseries', state);
+    const wrap = $('#cliredas-trend-wrap');
+    if (wrap) wrap.hidden = true;
 
     const metricLabel =
       data.metric === 'users'
@@ -672,6 +767,18 @@
       const tmpl = i18n.overTimeTemplate || '%s over time';
       titleEl.textContent = sprintf(tmpl, metricLabel);
     }
+
+    if (state !== 'ready' || typeof window.Chart === 'undefined') {
+      if (sessionsChart) { sessionsChart.destroy(); sessionsChart = null; }
+      if (state === 'ready') {
+        const message = $('#cliredas-trend-message');
+        if (message) { message.hidden = false; updateText(message, i18n.chartUnavailable); }
+      }
+      return;
+    }
+    const ctx = getChartCtx();
+    if (!ctx) return;
+    if (wrap) wrap.hidden = false;
 
     if (!sessionsChart) {
       sessionsChart = new window.Chart(ctx, {
@@ -728,6 +835,18 @@
     sessionsChart.update();
   }
 
+  function renderTrendTable(report) {
+    const tbody = $('#cliredas-trend-data tbody');
+    if (!tbody) return;
+    const series = report.timeseries;
+    if (report.source === 'unavailable' || !Array.isArray(series) || !series.every(row => row && typeof row.date === 'string')) {
+      tbody.innerHTML = '<tr><td colspan="3">' + escapeHtml(blockMessage('timeseries', 'unavailable')) + '</td></tr>';
+      return;
+    }
+    tbody.innerHTML = series.length ? series.map(point => '<tr><th scope="row">' + escapeHtml(point.date) + '</th>' + ['sessions', 'users'].map(key => '<td>' + (validNumber(point[key]) ? formatNumber(point[key]) : '—') + '</td>').join('') + '</tr>').join('')
+      : '<tr><td colspan="3">' + escapeHtml(blockMessage('timeseries', 'empty')) + '</td></tr>';
+  }
+
   // ---- AJAX ----
 
   async function fetchReport(rangeKey, contextId, signal) {
@@ -747,17 +866,11 @@
       signal,
     });
 
-    const json = await res.json();
-    if (!json || !json.success) {
-      const msg =
-        (json && json.data && json.data.message) ||
-        i18n.failedToLoadReport ||
-        'Failed to load report.';
-      const error = new Error(msg);
-      error.status = res.status;
-      throw error;
-    }
-
+    const error = new Error([401, 403, 409].includes(res.status) ? i18n.accessChanged : i18n.requestFailed || i18n.failedToLoadReport);
+    error.status = res.status;
+    let json;
+    try { json = await res.json(); } catch (parseError) { throw error; }
+    if (res.status >= 400 || !json || !json.success || !json.data || !json.data.report || typeof json.data.report !== 'object') throw error;
     return json.data.report;
   }
 
@@ -768,6 +881,7 @@
     renderTrafficSources(report);
     renderDevices(report);
     renderTopPages(report);
+    renderTrendTable(report);
     renderOrUpdateSessionsChart(report);
   }
 
@@ -778,8 +892,10 @@
     if (!rangeSelect) return;
 
     const exportRange = $('#cliredas-export-range');
+    $all('.cliredas-js-only').forEach(function (el) { el.hidden = false; });
 
     initializeTopPagesSorting();
+    initializeTopPagesFiltering();
 
     const chartMetricSelect = $('#cliredas-chart-metric');
     if (chartMetricSelect) {
@@ -814,12 +930,15 @@
       stopPolling();
       const epoch = reportEpoch;
       const range = rangeSelect.value;
+      const previousDeadline = pollDeadline;
+      if (rangeController) rangeController.abort();
+      rangeController = new AbortController();
 
       clearError();
       setLoading(true);
 
       try {
-        const report = await fetchReport(range);
+        const report = await fetchReport(range, null, rangeController.signal);
         if (epoch !== reportEpoch) return;
         // Keep the last loaded report so chart metric toggles don't require refetch.
         if (cfg) cfg.initialReport = report;
@@ -832,9 +951,14 @@
         if (epoch !== reportEpoch) return;
         setLoading(false);
         rangeSelect.value = cfg.selectedRange;
-        showError(
-          e && e.message ? e.message : i18n.errorLoadingReport || 'Error loading report.'
-        );
+        if ([401, 403, 409].includes(e.status)) {
+          clearDisplayedAnalytics(i18n.accessChanged);
+          showError(i18n.accessChanged);
+        } else {
+          showError(i18n.requestFailed || i18n.errorLoadingReport);
+          setStatus(i18n.requestFailed || i18n.errorLoadingReport);
+          watchReport(cfg.initialReport || {}, cfg.selectedRange, previousDeadline);
+        }
       }
     });
 

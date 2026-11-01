@@ -35,16 +35,16 @@ final class CLIREDAS_Release_Notices
      */
     public static function get_release_notes()
     {
-        if ('1.9.0' !== CLIREDAS_VERSION) {
+        if ('1.10.0' !== CLIREDAS_VERSION) {
             return array();
         }
         return array(
             'highlights' => array(
-                __('An optional plain-text owner digest can summarize fresh GA4 results every Monday at 08:00 in the site timezone.', 'cliredas-analytics-dashboard'),
-                __('Weekly delivery is disabled by default and supports one saved recipient, a test-send action, and a direct disable control.', 'cliredas-analytics-dashboard'),
-                __('Settings shows the next run and safe weekly/test outcomes. Digest sends never use stale or sample data.', 'cliredas-analytics-dashboard'),
+                __('Filter the currently loaded Top pages by title or URL without changing totals or CSV exports.', 'cliredas-analytics-dashboard'),
+                __('Empty, zero-activity and unavailable report blocks now have explanatory messages.', 'cliredas-analytics-dashboard'),
+                __('Keyboard controls, screen-reader feedback and an expandable chart data table improve dashboard accessibility.', 'cliredas-analytics-dashboard'),
             ),
-            'detail' => __('Enable the weekly digest explicitly in Settings after choosing its recipient. It uses the existing Last 7 days period, including the current day. Missed Mondays are skipped. Scheduling depends on WP-Cron; successful mail handoff does not confirm inbox delivery.', 'cliredas-analytics-dashboard'),
+            'detail' => __('The Top pages filter stays active across date-range changes and automatic refreshes, and resets on page reload. Charts have equivalent data tables, and missing data stays distinct from zero activity. Existing reporting, caching and weekly digest settings are preserved.', 'cliredas-analytics-dashboard'),
         );
     }
 
