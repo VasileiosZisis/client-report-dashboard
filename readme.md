@@ -4,6 +4,15 @@ Cliredas - Client Dashboard for Google Analytics (GA4) adds a clean, client-frie
 
 This repository is the Free version intended for WordPress.org distribution. A separate Pro add-on is planned.
 
+## Technical highlights
+
+- **Google OAuth:** Read-only Analytics access with administrator-bound, single-use state validation and automatic access-token refresh.
+- **GA4 API integration:** A shared API client handles property discovery and reporting; a data provider turns metrics and dimensions into KPIs, previous-period comparisons, trends, and page/device/source reports.
+- **Credential handling:** Authenticated encryption using Sodium secretbox or OpenSSL AES-256-GCM, with field/site-specific keys derived from WordPress salts and automatic migration of legacy plaintext credentials on supported hosts.
+- **Caching:** Bounded report storage isolates data by site, connection, property, timezone, and resolved dates. Atomic leases coordinate background refreshes, with retry cooldowns after failures.
+- **Report freshness:** Explicit Fresh, Refreshing, and Stale states separate retrieval time from Google's processing completeness. Last-good recovery is limited to 24 hours, and detected authorization loss hides retained reports.
+- **Scheduled digests:** Opt-in WP-Cron delivery reconciles site timezones and DST, requires complete fresh GA4 data, and uses atomic claims to prevent duplicate attempts. Missed weeks are skipped; mail handoff is distinguished from confirmed delivery.
+
 ## Key Features (Free)
 
 - Connect Google Analytics 4 via OAuth (no service account needed)
