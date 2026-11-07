@@ -115,7 +115,8 @@
       }
       pollController = new AbortController();
       try {
-        const next = await fetchReport(range, freshness.context_id, pollController.signal);
+        const result = await fetchReport(range, freshness.context_id, pollController.signal);
+        const next = result.report;
         if (epoch !== reportEpoch) return;
         if (!next.freshness || next.freshness.context_id !== freshness.context_id) {
           clearDisplayedAnalytics(i18n.refreshWaiting);
@@ -180,6 +181,7 @@
     if (controls) controls.classList.toggle('is-loading', !!isLoading);
     if (select) select.disabled = !!isLoading;
     if (exportButton) exportButton.disabled = !!isLoading;
+    ['#cliredas-start-date', '#cliredas-end-date', '#cliredas-apply-dates'].forEach(selector => { const el = $(selector); if (el) el.disabled = !!isLoading; });
     const content = $('#cliredas-report-content');
     if (content) content.setAttribute('aria-busy', isLoading ? 'true' : 'false');
     if (isLoading) setStatus(i18n.loadingPrevious || i18n.loading || 'Loading...');
@@ -854,7 +856,15 @@
     body.set('action', contextId ? 'cliredas_report_status' : 'cliredas_get_report');
     body.set('cliredas_nonce', cfg.cliredasNonce || '');
     body.set('cliredas_range', rangeKey);
-    if (contextId) body.set('cliredas_context', contextId);
+    const period = cfg.selectedPeriod;
+    if (rangeKey === 'custom') {
+      body.set('cliredas_start', contextId && period ? period.dates.startDate : ($('#cliredas-start-date') || {}).value || '');
+      body.set('cliredas_end', contextId && period ? period.dates.endDate : ($('#cliredas-end-date') || {}).value || '');
+    }
+    if (contextId) {
+      body.set('cliredas_context', contextId);
+      if (period) addExpectedDates(body, period);
+    }
 
     const res = await fetch(cfg.ajaxUrl, {
       method: 'POST',
@@ -871,7 +881,38 @@
     let json;
     try { json = await res.json(); } catch (parseError) { throw error; }
     if (res.status >= 400 || !json || !json.success || !json.data || !json.data.report || typeof json.data.report !== 'object') throw error;
-    return json.data.report;
+    if (cfg.selectedPeriod && !contextId && (!json.data.period || json.data.period.key !== rangeKey || !json.data.period.dates || !json.data.period.comparison)) throw error;
+    return { report: json.data.report, period: json.data.period || null };
+  }
+
+  function addExpectedDates(body, period) {
+    body.set('cliredas_expected_start', period.dates.startDate);
+    body.set('cliredas_expected_end', period.dates.endDate);
+    body.set('cliredas_expected_comparison_start', period.comparison.startDate);
+    body.set('cliredas_expected_comparison_end', period.comparison.endDate);
+    body.set('cliredas_timezone', period.timezone);
+  }
+
+  function renderAppliedPeriod(period) {
+    if (!period) return;
+    const values = { start: period.dates.startDate, end: period.dates.endDate, expected_start: period.dates.startDate, expected_end: period.dates.endDate,
+      expected_comparison_start: period.comparison.startDate, expected_comparison_end: period.comparison.endDate, timezone: period.timezone };
+    Object.entries(values).forEach(([key, value]) => { const field = $('#cliredas-export-' + key); if (field) field.value = value; });
+
+  }
+
+  function customDatesError() {
+    const start = ($('#cliredas-start-date') || {}).value || '';
+    const end = ($('#cliredas-end-date') || {}).value || '';
+    function day(value) {
+      if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value) || value.startsWith('0000')) return NaN;
+      const date = new Date(value + 'T00:00:00Z');
+      return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? date.getTime() : NaN;
+    }
+    const first = day(start); const last = day(end);
+    const previous = first - (last - first + 86400000);
+    const valid = Number.isFinite(first) && Number.isFinite(last) && first <= last && last - first < 366 * 86400000 && end <= cfg.siteToday && Number.isFinite(previous) && new Date(previous).getUTCFullYear() >= 1;
+    return valid ? '' : i18n.invalidDates;
   }
 
   function renderAll(report) {
@@ -926,31 +967,64 @@
       watchReport(cfg.initialReport, rangeSelect.value);
     }
 
-    rangeSelect.addEventListener('change', async function () {
+    const periodForm = $('#cliredas-period-form');
+    const customControls = $('#cliredas-custom-dates');
+    const applyButton = $('#cliredas-apply-dates');
+    const dateError = $('#cliredas-date-error');
+    function updateDateControls() {
+      const custom = rangeSelect.value === 'custom';
+      if (customControls) customControls.hidden = !custom;
+      if (applyButton) applyButton.hidden = !custom;
+    }
+    function restoreControls() {
+      rangeSelect.value = cfg.selectedRange;
+      if (cfg.selectedPeriod) {
+        const start = $('#cliredas-start-date'); const end = $('#cliredas-end-date');
+        if (start) start.value = cfg.selectedPeriod.dates.startDate;
+        if (end) end.value = cfg.selectedPeriod.dates.endDate;
+      }
+      updateDateControls();
+    }
+    updateDateControls();
+    renderAppliedPeriod(cfg.selectedPeriod);
+
+    async function loadSelection() {
+      const range = rangeSelect.value;
+      const validation = range === 'custom' ? customDatesError() : '';
+      updateText(dateError, validation || '');
+      ['#cliredas-start-date', '#cliredas-end-date'].forEach(selector => { const el = $(selector); if (el) el.setAttribute('aria-invalid', validation ? 'true' : 'false'); });
+      if (validation) { const start = $('#cliredas-start-date'); if (start) start.focus(); return; }
       stopPolling();
       const epoch = reportEpoch;
-      const range = rangeSelect.value;
       const previousDeadline = pollDeadline;
       if (rangeController) rangeController.abort();
       rangeController = new AbortController();
-
       clearError();
+      const requestFocus = document.activeElement;
+      function restoreRequestFocus() {
+        if (requestFocus && typeof requestFocus.focus === 'function' && (document.activeElement === document.body || document.activeElement === requestFocus)) {
+          const target = requestFocus.hidden || requestFocus.closest('[hidden]') ? rangeSelect : requestFocus;
+          target.focus();
+        }
+      }
       setLoading(true);
-
       try {
-        const report = await fetchReport(range, null, rangeController.signal);
+        const result = await fetchReport(range, null, rangeController.signal);
         if (epoch !== reportEpoch) return;
-        // Keep the last loaded report so chart metric toggles don't require refetch.
-        if (cfg) cfg.initialReport = report;
-        renderAll(report);
-        if (exportRange) exportRange.value = range;
+        cfg.initialReport = result.report;
+        if (result.period) cfg.selectedPeriod = result.period;
         cfg.selectedRange = range;
+        renderAll(result.report);
+        renderAppliedPeriod(cfg.selectedPeriod);
+        if (exportRange) exportRange.value = range;
         setLoading(false);
-        watchReport(report, range);
+        restoreRequestFocus();
+        watchReport(result.report, range);
       } catch (e) {
         if (epoch !== reportEpoch) return;
         setLoading(false);
-        rangeSelect.value = cfg.selectedRange;
+        restoreControls();
+        restoreRequestFocus();
         if ([401, 403, 409].includes(e.status)) {
           clearDisplayedAnalytics(i18n.accessChanged);
           showError(i18n.accessChanged);
@@ -960,7 +1034,22 @@
           watchReport(cfg.initialReport || {}, cfg.selectedRange, previousDeadline);
         }
       }
+    }
+    rangeSelect.addEventListener('change', function () {
+      updateText(dateError, '');
+      if (rangeSelect.value === 'custom') {
+        if (cfg.selectedPeriod) {
+          const start = $('#cliredas-start-date'); const end = $('#cliredas-end-date');
+          if (start) start.value = cfg.selectedPeriod.dates.startDate;
+          if (end) end.value = cfg.selectedPeriod.dates.endDate;
+        }
+        updateDateControls();
+        return;
+      }
+      updateDateControls();
+      return loadSelection();
     });
+    if (periodForm) periodForm.addEventListener('submit', function (event) { event.preventDefault(); return loadSelection(); });
 
     // WP dismissible notice behavior (optional; WP core adds handlers for .is-dismissible)
     const notice = $('#cliredas-notice');

@@ -24,7 +24,7 @@ final class CLIREDAS_Data_Provider
     /**
      * Report cache schema version.
      */
-    private const CACHE_SCHEMA_VERSION = 2;
+    private const CACHE_SCHEMA_VERSION = 3;
 
     /**
      * Get a full report for a date range key.
@@ -34,52 +34,39 @@ final class CLIREDAS_Data_Provider
      */
     public function get_report($range_key)
     {
-        $range_key = sanitize_key($range_key);
-
-        // Future: return cached if available.
-        $cached = $this->get_cached_report($range_key);
-        if (
-            false !== $cached
-            && isset($cached['comparison']['totals'])
-            && is_array($cached['comparison']['totals'])
-        ) {
-            $cached['source'] = 'mock';
-            return $cached;
-        }
-
-        $report = $this->build_mock_report($range_key);
-
-        // Future: cache result.
-        $this->set_cached_report($range_key, $report);
-
-        /**
-         * Filter the generated report.
-         *
-         * Pro can append extra sections/metrics here.
-         *
-         * @param array  $report    Report data.
-         * @param string $range_key Range key.
-         */
-        return apply_filters('cliredas_report', $report, $range_key);
+        $period = CLIREDAS_Report_Period::resolve($range_key);
+        return is_wp_error($period) ? CLIREDAS_Report_Period::unavailable(null, $period->get_error_message()) : $this->get_report_for_period($period);
     }
 
-    /**
-     * Build mock report.
-     *
-     * @param string $range_key Range key.
-     * @return array
-     */
-    private function build_mock_report($range_key)
+    /** Generate sample data for the exact requested dates; never retain it as analytics. */
+    public function get_report_for_period($period)
     {
-        $today = new DateTimeImmutable('today', wp_timezone());
-        $days  = $this->get_mock_range_days($range_key, $today);
-        $start = $this->get_mock_range_start($range_key, $today, $days);
-        $current_period = $this->build_mock_period($start, $days);
-        $comparison_range = $this->get_mock_comparison_range($range_key, $today, $start, $days);
-        $comparison_period = $this->build_mock_period($comparison_range['start'], $comparison_range['days']);
+        $valid = CLIREDAS_Report_Period::validate($period);
+        if (is_wp_error($valid)) {
+            return CLIREDAS_Report_Period::unavailable(null, $valid->get_error_message());
+        }
+        $report = $this->get_cached_report($period);
+        if (false === $report) {
+            $report = $this->build_mock_report($period);
+            $this->set_cached_report($period, $report);
+        }
+        return apply_filters('cliredas_report', $report, $period['key'], $period);
+    }
+
+    /** Build a clearly labeled sample with the shared reporting calendar. */
+    private function build_mock_report($period)
+    {
+        $range_key = $period['key'];
+        $days = $period['days'];
+        $start = new DateTimeImmutable($period['dates']['startDate'], wp_timezone());
+        $previous_start = new DateTimeImmutable($period['comparison']['startDate'], wp_timezone());
+        $previous_end = new DateTimeImmutable($period['comparison']['endDate'], wp_timezone());
+        $new_range = in_array($range_key, array('custom', 'year_to_date'), true);
+        $current_period = $this->build_mock_period($start, $days, $new_range);
+        $comparison_period = $this->build_mock_period($previous_start, (int) $previous_start->diff($previous_end)->days + 1, $new_range);
         $total_sessions = $current_period['totals']['sessions'];
 
-        $top_pages = $this->mock_top_pages($days);
+        $top_pages = $this->mock_top_pages($days, $new_range ? $total_sessions : null);
         $devices   = $this->mock_devices($total_sessions);
         $traffic_sources = $this->mock_traffic_sources($total_sessions);
 
@@ -99,8 +86,8 @@ final class CLIREDAS_Data_Provider
             ),
             'comparison' => array(
                 'range' => array(
-                    'startDate' => $comparison_range['start']->format('Y-m-d'),
-                    'endDate'   => $comparison_range['end']->format('Y-m-d'),
+                    'startDate' => $period['comparison']['startDate'],
+                    'endDate'   => $period['comparison']['endDate'],
                 ),
                 'totals' => $comparison_period['totals'],
             ),
@@ -117,9 +104,10 @@ final class CLIREDAS_Data_Provider
      *
      * @param DateTimeImmutable $start Period start date.
      * @param int               $days Number of days.
+     * @param bool              $stable Whether daily samples are independent of selection length.
      * @return array{totals:array,timeseries:array}
      */
-    private function build_mock_period(DateTimeImmutable $start, $days)
+    private function build_mock_period(DateTimeImmutable $start, $days, $stable = false)
     {
         $days = max(1, (int) $days);
         $timeseries = array();
@@ -129,7 +117,7 @@ final class CLIREDAS_Data_Provider
         for ($i = 0; $i < $days; $i++) {
             $date = $start->modify('+' . $i . ' days');
             $day_number = ((int) $date->format('Y') * 366) + (int) $date->format('z');
-            $base = ($days >= 30) ? 320 : 380;
+            $base = ($stable || $days >= 30) ? 320 : 380;
             $wave = (int) (70 * sin($day_number / 3.0));
             $trend = (($day_number % 13) - 6) * 3;
             $sessions = max(40, $base + $wave + $trend);
@@ -159,105 +147,15 @@ final class CLIREDAS_Data_Provider
     }
 
     /**
-     * Get the previous comparison period for mock data.
-     *
-     * @param string            $range_key Range key.
-     * @param DateTimeImmutable $today Today's date in site timezone.
-     * @param DateTimeImmutable $current_start Current period start date.
-     * @param int               $current_days Current period day count.
-     * @return array{start:DateTimeImmutable,end:DateTimeImmutable,days:int}
-     */
-    private function get_mock_comparison_range($range_key, DateTimeImmutable $today, DateTimeImmutable $current_start, $current_days)
-    {
-        if ('this_month' === $range_key) {
-            $start = $today->modify('first day of last month');
-            $end_day = min((int) $today->format('j'), (int) $start->format('t'));
-            $end = $start->setDate((int) $start->format('Y'), (int) $start->format('n'), $end_day);
-
-            return array(
-                'start' => $start,
-                'end'   => $end,
-                'days'  => $end_day,
-            );
-        }
-
-        if ('last_month' === $range_key) {
-            $end = $current_start->modify('-1 day');
-            $start = $end->modify('first day of this month');
-
-            return array(
-                'start' => $start,
-                'end'   => $end,
-                'days'  => (int) $end->format('t'),
-            );
-        }
-
-        $end = $current_start->modify('-1 day');
-        $days = max(1, (int) $current_days);
-
-        return array(
-            'start' => $end->modify('-' . ($days - 1) . ' days'),
-            'end'   => $end,
-            'days'  => $days,
-        );
-    }
-
-    /**
-     * Get mock report day count for a range key.
-     *
-     * @param string            $range_key Range key.
-     * @param DateTimeImmutable $today Today's date in site timezone.
-     * @return int
-     */
-    private function get_mock_range_days($range_key, DateTimeImmutable $today)
-    {
-        switch ($range_key) {
-            case 'last_90_days':
-                return 90;
-            case 'last_month':
-                return (int) $today->modify('first day of last month')->format('t');
-            case 'this_month':
-                return (int) $today->format('j');
-            case 'last_30_days':
-                return 30;
-            case 'last_7_days':
-            default:
-                return 7;
-        }
-    }
-
-    /**
-     * Get mock report start date for a range key.
-     *
-     * @param string            $range_key Range key.
-     * @param DateTimeImmutable $today Today's date in site timezone.
-     * @param int               $days Number of days in the range.
-     * @return DateTimeImmutable
-     */
-    private function get_mock_range_start($range_key, DateTimeImmutable $today, $days)
-    {
-        switch ($range_key) {
-            case 'last_month':
-                return $today->modify('first day of last month');
-            case 'this_month':
-                return $today->modify('first day of this month');
-            case 'last_90_days':
-            case 'last_30_days':
-            case 'last_7_days':
-            default:
-                return $today->modify('-' . ((int) $days - 1) . ' days');
-        }
-    }
-
-    /**
      * Mock top pages.
      *
-     * @param int $days Days.
+     * @param int      $days Days.
+     * @param int|null $total_sessions Optional total for period-aware sample scaling.
      * @return array<int,array<string,mixed>>
      */
-    private function mock_top_pages($days)
+    private function mock_top_pages($days, $total_sessions = null)
     {
-        $mult = (30 === (int) $days) ? 1.0 : 0.35;
+        $mult = (null !== $total_sessions || 30 === (int) $days) ? 1.0 : 0.35;
 
         $pages = array(
             array('title' => 'Home', 'url' => '/', 'sessions' => (int) round(8200 * $mult)),
@@ -287,12 +185,17 @@ final class CLIREDAS_Data_Provider
             array('title' => 'Accessibility', 'url' => '/accessibility/', 'sessions' => (int) round(220 * $mult)),
         );
 
+        $weight = array_sum(array_column($pages, 'sessions'));
         // Add a views column for UI parity with GA4 provider.
         foreach ($pages as $i => $row) {
             $sessions = isset($row['sessions']) ? (int) $row['sessions'] : 0;
+            if (null !== $total_sessions) {
+                $sessions = (int) floor($sessions * $total_sessions / max(1, $weight));
+                $pages[$i]['sessions'] = $sessions;
+            }
             $pages[$i]['views'] = (int) round($sessions * 1.25);
             // Fake "avg engagement time" (seconds) for UI parity.
-            $pages[$i]['avg_engagement_seconds'] = 40 + ((int) $days * 2) + (($i * 7) % 55);
+            $pages[$i]['avg_engagement_seconds'] = 40 + (null === $total_sessions ? (int) $days * 2 : 0) + (($i * 7) % 55);
         }
 
         usort(
@@ -353,9 +256,9 @@ final class CLIREDAS_Data_Provider
      * @param string $range_key Range key.
      * @return string
      */
-    private function get_cache_key($range_key)
+    private function get_cache_key($period)
     {
-        return 'cliredas_report_v' . self::CACHE_SCHEMA_VERSION . '_' . sanitize_key($range_key);
+        return 'cliredas_report_v' . self::CACHE_SCHEMA_VERSION . '_' . hash('sha256', wp_json_encode(array(get_current_blog_id(), home_url('/'), $period)));
     }
 
     /**
@@ -364,15 +267,15 @@ final class CLIREDAS_Data_Provider
      * @param string $range_key Range key.
      * @return array|false
      */
-    private function get_cached_report($range_key)
+    private function get_cached_report($period)
     {
         // Free mock provider: keep disabled by default (easy toggle later).
-        $enabled = (bool) apply_filters('cliredas_enable_cache', false, $range_key);
+        $enabled = (bool) apply_filters('cliredas_enable_cache', false, $period['key']);
         if (! $enabled) {
             return false;
         }
 
-        $cached = get_transient($this->get_cache_key($range_key));
+        $cached = get_transient($this->get_cache_key($period));
         return is_array($cached) ? $cached : false;
     }
 
@@ -393,6 +296,10 @@ final class CLIREDAS_Data_Provider
 
         if (! in_array($transient_key, $keys, true)) {
             $keys[] = $transient_key;
+            $excess = count($keys) - 20;
+            for ($i = 0; $i < $excess; ++$i) {
+                delete_transient(array_shift($keys));
+            }
             update_option(self::CACHE_INDEX_OPTION, $keys, false);
         }
     }
@@ -444,15 +351,15 @@ final class CLIREDAS_Data_Provider
      * @param array  $report Report.
      * @return void
      */
-    private function set_cached_report($range_key, array $report)
+    private function set_cached_report($period, array $report)
     {
-        $enabled = (bool) apply_filters('cliredas_enable_cache', false, $range_key);
+        $enabled = (bool) apply_filters('cliredas_enable_cache', false, $period['key']);
         if (! $enabled) {
             return;
         }
 
-        $ttl = (int) apply_filters('cliredas_cache_ttl', 15 * MINUTE_IN_SECONDS, $range_key, $report);
-        $key = $this->get_cache_key($range_key);
+        $ttl = (int) apply_filters('cliredas_cache_ttl', 15 * MINUTE_IN_SECONDS, $period['key'], $report);
+        $key = $this->get_cache_key($period);
 
         set_transient($key, $report, $ttl);
 

@@ -155,6 +155,34 @@ final class CLIREDAS_Presentation_Tests
             foreach (array(null, false, '', ' ', '0x10', -1, INF) as $value) {
                 self::check(! CLIREDAS_Report_Presentation::number($value), 'Unknown/invalid metric is not zero');
             }
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Preserve request state for protected form fixtures.
+            $saved_post = $_POST;
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Preserve request state for protected form fixtures.
+            $saved_request = $_REQUEST;
+            try {
+                $_POST = array('cliredas_apply_period' => '1', 'cliredas_range' => 'custom', 'cliredas_start' => '2024-02-01', 'cliredas_end' => '2024-02-29', '_wpnonce' => wp_create_nonce('cliredas_select_period'));
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Pass the fixture nonce to the real protected form handler.
+                $_REQUEST = $_POST;
+                $form_page = new CLIREDAS_Dashboard_Page(new CLIREDAS_Settings(), new CLIREDAS_Data_Provider());
+                ob_start();
+                $form_page->render();
+                $form_html = ob_get_clean();
+                self::check(false === strpos($form_html, 'cliredas-displayed-period') && false !== strpos($form_html, 'value="2024-01-03"'), 'No-JavaScript form omits the removed summary while preserving comparison export dates');
+                self::check(false !== strpos($form_html, 'name="cliredas_expected_end"') && false !== strpos($form_html, 'name="cliredas_timezone"'), 'Server-rendered export captures the applied dates and timezone');
+                self::check(false !== strpos($form_html, 'Sample data') && false !== strpos($form_html, '2024-02-29'), 'No-JavaScript custom samples remain labeled with exact dates');
+                $_POST['cliredas_start'] = '2023-02-29';
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Pass the fixture nonce to the real protected form handler.
+                $_REQUEST = $_POST;
+                $before = $provider->calls;
+                $invalid_page = new CLIREDAS_Dashboard_Page(new CLIREDAS_Settings(), $provider);
+                ob_start();
+                $invalid_page->render();
+                $invalid_html = ob_get_clean();
+                self::check($provider->calls === $before && false !== strpos($invalid_html, 'Choose valid dates'), 'Invalid no-JavaScript input fetches no provider report and shows safe guidance');
+            } finally {
+                $_POST = $saved_post;
+                $_REQUEST = $saved_request;
+            }
             WP_CLI::success('Dashboard PHP presentation regressions passed (' . self::$count . ' assertions).');
         } finally {
             remove_filter('pre_option_cliredas_settings', $settings_filter, 999);

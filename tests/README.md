@@ -209,3 +209,58 @@ Native screen-reader speech, real multisite, live Google APIs, and the minimum
 WordPress 6.0/PHP 7.4 runtime were not executed. Screen-reader semantics were
 inspected through markup, the accessibility tree and regression fixtures; this
 is not a claim of a full accessibility conformance audit.
+
+## FREE-07 date-selection regressions (1.11.0)
+
+```powershell
+wp --path="C:/path/to/disposable-wordpress" eval-file "C:/path/to/plugin/tests/report-period.php"
+wp --path="C:/path/to/disposable-wordpress" eval-file "C:/path/to/plugin/tests/report-cache.php"
+wp --path="C:/path/to/disposable-wordpress" eval-file "C:/path/to/plugin/tests/dashboard-presentation.php"
+node tests/dashboard-presentation.js
+node tests/dashboard-polling.js
+```
+
+The calendar runner is read-only and injects dates directly into the resolver.
+The other runners retain the isolated storage, user/request restoration, and
+intercepted HTTP behavior described above. New cases cover strict date validation,
+one/366-day selections, leap years, Chisinau DST, UTC/site calendar differences,
+YTD prior-calendar-year comparisons, unchanged presets, exact dates in every GA4
+block, distinct custom contexts, saved-context background refresh, obsolete
+relative contexts, sample consistency, third-party provider defaults, pre-1.11
+queued contexts, expected CSV/status dates, and protected no-JavaScript forms.
+The JavaScript suite adds draft versus applied dates, Apply validation, YTD,
+failure recovery, hidden-control focus recovery, preserved filtering, polling
+parameters, export metadata, and reload reset.
+
+### 1.11.0 validation record
+
+Validated on disposable WordPress 7.1.3 / PHP 8.4.10: **492 PHP assertions** passed
+(44 calendar, 158 cache/provider, 46 presentation, 79 digest, 87 security,
+78 release notices), plus **63 JavaScript presentation assertions** and the
+existing polling suite. PHP/JavaScript syntax checks, full configured PHPCS,
+and Plugin Check passed. Release regressions confirm 1.10.0 dismissals do not
+hide 1.11.0 and fresh installations remain quiet. Translation metadata is 1.11.0.
+
+Browser checks used a temporary loopback-only preview in the disposable fixture
+with fake credentials and intercepted GA4 responses; no live Google requests or
+mail were sent. Brave checks covered custom Apply, exact dates, retained filter
+and focus; the in-app browser verified automatic YTD, a full leap-year range,
+current/comparison labels, chart-table values, and a real CSV download containing
+matching dates/freshness metadata. A rendering with all dashboard JavaScript
+omitted submitted the protected custom form and exposed the native chart table.
+At a 390-pixel viewport, content width and scroll width were both 375 pixels,
+and all date controls fit within the viewport. Temporary viewport overrides
+were reset. Desktop/mobile screenshots are local, unshipped visualization artifacts.
+
+Read-only reviewer, oauth_security, and report_integrity reviews completed.
+Confirmed extension-preset compatibility, pre-upgrade cache-context enrichment,
+Custom/YTD sample scaling, and hidden-Apply focus issues were fixed; targeted
+general/reporting re-reviews found no remaining actionable issues. The optional
+test_auditor was not configured. A temporary review usage limit cleared on resume.
+
+Actual browser zoom, native screen-reader speech, live Google APIs, a real
+multisite network, and the minimum WordPress 6.0/PHP 7.4 runtime were not exercised.
+Compatibility was inspected against the APIs and syntax used; simulated calendar,
+site-isolation and access/nonce tests complement the runtime checks. Browser
+checks used the real renderer in a disposable preview rather than an authenticated
+full wp-admin session. No ZIP was built and nothing was published or deployed.

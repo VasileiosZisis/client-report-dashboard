@@ -28,7 +28,7 @@ operations. Pro is one separate add-on; no additional premium packs are planned.
 ## Feature placement
 
 The Free boundary includes both shipped functionality and the planned additions
-in the Free roadmap. The current implementation baseline is **1.10.0**, including FREE-04 reliable
+in the Free roadmap. The current implementation baseline is **1.11.0**, including FREE-04 reliable
 caching, the FREE-02 weekly owner digest and FREE-06 dashboard usability. All Pro functionality remains planned.
 
 | Capability | Placement | Reason |
@@ -116,7 +116,7 @@ for ordinary GA4 reporting is outside scope. Search Console remains the focused
 additional data source; portfolio operations follow the client-reporting core.
 
 The existing in-plugin coming-soon page contains older placement descriptions
-for dates, chart comparisons, settings transfer, and the basic Search Console
+for chart comparisons, settings transfer, and the basic Search Console
 overview. This document supersedes
 that planning copy; it does not change the page or implement those capabilities.
 Align that page, listing copy, screenshots, FAQs, and release notes when the

@@ -21,7 +21,8 @@ This repository is the Free version intended for WordPress.org distribution. A s
 - Dismissible administrator release announcements on plugin pages, with local release notes
 - Select a GA4 Property from a dropdown (one active property per WordPress site)
 - Dashboard KPIs with previous-period deltas: Sessions, Total Users, Pageviews, Avg engagement time
-- Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days
+- Date presets: Last 7 days, Last 30 days, This month, Last month, Last 90 days, and Year to date
+- Custom inclusive reporting dates covering 1–366 days with equal-length preceding comparisons
 - Toggle line chart between Sessions over time and Total Users over time
 - Sortable Top pages table with up to 25 rows: Path, Title, Sessions, Views, Avg engagement time (per page)
 - Local Top pages filtering by title or URL, with matching counts and unchanged analytics/CSV data
@@ -38,10 +39,10 @@ This repository is the Free version intended for WordPress.org distribution. A s
 ## Documentation and Roadmaps
 
 - [Product scope](docs/product-scope.md): authoritative Free/Pro feature placement and product boundaries
-- [Free roadmap](docs/free-roadmap.md): implemented `1.10.0` baseline, completed milestones, and planned Free work
+- [Free roadmap](docs/free-roadmap.md): implemented `1.11.0` baseline, completed milestones, and planned Free work
 - [Pro roadmap](docs/pro-roadmap.md): planned separate add-on catalog and client-reporting delivery sequence
 
-Feature placement includes future work; it does not mean a feature has shipped. The Key Features list above describes current Free functionality. Custom dates, year-to-date, chart comparison overlays, settings transfer, and a basic Search Console overview remain planned. All Pro functionality is planned.
+Feature placement includes future work; it does not mean a feature has shipped. The Key Features list above describes current Free functionality. Chart comparison overlays, settings transfer, and a basic Search Console overview remain planned. All Pro functionality is planned.
 
 ## External Services (Google APIs)
 
@@ -102,6 +103,12 @@ The non-autoloaded `cliredas_audit_log` option retains the latest 100 connection
 ## Changelog
 
 Release announcements appear only on the plugin Dashboard and Settings pages after upgrades, not fresh installs. Dismissal is remembered per administrator and site in `cliredas_dismissed_release_notices` user meta. The non-autoloaded `cliredas_release_state` option tracks installed and announced releases. Local release notes remain available in Settings; dismissing announcements never hides operational warnings. Both records are removed on uninstall.
+
+### 1.11.0
+- Added custom inclusive reporting dates covering 1–366 days and year-to-date.
+- Unified real/sample date resolution, exact-period caching, polling and CSV validation.
+- Added accessible date controls, displayed comparison dates and CSV period metadata.
+- Preserved existing presets, credentials, cache limits and weekly digest settings.
 
 ### 1.10.0
 
@@ -204,3 +211,40 @@ Operational records exclude addresses, report/message bodies and raw errors.
 Audit outcomes share the existing 100-event limit. Disable removes future events
 and cancels preparing work; deactivation stops scheduling and uninstall removes
 owned per-site data. Already handed-off mail cannot be recalled.
+
+## Custom dates and year-to-date (1.11.0)
+
+Choose Custom dates, enter Start date and End date, then Apply. Both endpoints
+are included, selections may cover 1–366 days, and future dates are rejected.
+Custom reports compare with the immediately preceding equal-length period.
+Year to date includes January 1 through today and compares with January 1
+through the same calendar date last year; February 29 clamps to February 28.
+Existing five presets keep their previous comparison rules.
+
+Date edits are drafts until Apply succeeds. The displayed current/comparison
+dates and CSV parameters continue describing the applied report. Successful
+range changes retain Top pages filtering, sorting and chart selection. AJAX
+selections are not stored and reset to Last 7 days on reload. Without JavaScript,
+the same controls submit a protected form; normal browser POST reload/resubmission
+behavior applies. Invalid selections fetch no analytics. If a relative range
+becomes obsolete at midnight, reload and select it again before polling/exporting.
+
+The site timezone determines today's date and calendar boundaries. GA4 daily
+aggregation uses the property's reporting timezone; the plugin does not re-bucket
+GA4 data into the site timezone. Older periods may contain no recorded data or
+be unavailable. Sample reports remain labeled and never become last-good analytics.
+The weekly digest continues using Last 7 days regardless of dashboard selection.
+
+### Provider extension compatibility
+
+`get_report($range_key)` remains available. Built-in providers also implement
+`get_report_for_period($period)`. A validated period contains `key` (`custom`,
+`year_to_date`, or an existing preset), `dates` and `comparison` (each with
+`startDate`/`endDate`), inclusive integer `days`, and site `timezone`.
+Use `CLIREDAS_Report_Period::resolve()` to construct and `validate()` to recheck
+this descriptor. Invalid/obsolete descriptors cannot trigger built-in fetching.
+`cliredas_report` retains its existing report/key arguments and receives the
+resolved period as an optional third argument. Existing cache filters retain
+their arguments. Legacy provider objects continue receiving existing preset
+keys; Custom/YTD explicitly show unsupported until the provider implements
+`get_report_for_period`. No new endpoint or persistent date preference is added.

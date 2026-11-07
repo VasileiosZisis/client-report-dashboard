@@ -4,7 +4,7 @@ Tags: google analytics, google analytics dashboard, ga4, wordpress analytics, an
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.10.0
+Stable tag: 1.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,8 @@ Available date ranges include:
 * This month.
 * Last month.
 * Last 90 days.
+* Year to date.
+* Custom inclusive dates, up to 366 days.
 
 Calendar-based ranges such as This month and Last month use aligned comparison periods.
 
@@ -199,6 +201,7 @@ This can be useful for:
 * This month date range.
 * Last month date range.
 * Last 90 days date range.
+* Year-to-date and custom inclusive dates covering 1-366 days.
 * Sessions-over-time chart.
 * Total-users-over-time chart.
 * Top Pages report with up to 25 pages.
@@ -290,6 +293,14 @@ https://policies.google.com/privacy
 11. Open Client Report to view your Google Analytics dashboard.
 
 == Frequently Asked Questions ==
+
+= How do custom dates and year-to-date compare? =
+Choose Custom dates, enter both dates, then Apply. Both endpoints count, the maximum is 366 days, and future dates are rejected. Comparison uses the immediately preceding equal-length period. Year to date includes January 1 through today and compares with the same calendar dates last year, clamping February 29 to February 28. The five original presets keep their existing rules.
+
+Date drafts do not change the displayed report or CSV until Apply succeeds. Current/comparison dates appear in both dashboard and CSV. AJAX selections reset on reload; the no-JavaScript form follows normal browser POST resubmission behavior. The Top pages filter and saved sort continue working across date changes. Weekly digests stay on Last 7 days.
+
+The WordPress site timezone determines calendar selections. GA4 aggregates daily data using its property reporting timezone; values are not re-bucketed. Historical data may be empty or unavailable. Reload an obsolete relative period after midnight before polling or CSV export. No date preference is stored; requested dates are sent to Google as reporting parameters using the existing connection.
+
 
 = How does Top pages filtering work? =
 
@@ -500,6 +511,12 @@ It does not send analytics reporting data to a separate Cliredas analytics servi
 
 == Changelog ==
 
+= 1.11.0 =
+* Added custom inclusive dates covering 1–366 days and year-to-date for existing metrics.
+* Added shared date validation, exact current/comparison labels and CSV metadata.
+* Preserved preset comparisons, freshness limits, credentials and weekly digest settings.
+
+
 = 1.10.0 =
 
 * Added local Top pages filtering by title or URL, composing with saved sorting without changing report data or CSV exports.
@@ -550,6 +567,10 @@ It does not send analytics reporting data to a separate Cliredas analytics servi
 * CSV exports identify sample or fallback data and protect against spreadsheet formula injection.
 
 == Upgrade Notice ==
+
+= 1.11.0 =
+Custom dates support up to 366 inclusive days with preceding equal-length comparisons. Year-to-date includes today and compares with the same calendar dates last year, clamping leap day. Existing presets, credentials and digest consent remain unchanged. AJAX date selections reset on reload.
+
 
 = 1.10.0 =
 

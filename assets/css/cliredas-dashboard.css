@@ -4,7 +4,7 @@
 
 .cliredas-header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
@@ -41,6 +41,8 @@
 }
 
 .cliredas-header-actions form {
+  display: flex;
+  align-items: center;
   margin: 0;
 }
 
@@ -313,4 +315,15 @@
   .cliredas-wrap .cliredas-select { min-width: 0; max-width: 100%; }
   .cliredas-wrap .cliredas-inline-control { width: 100%; }
   .cliredas-filter-controls input { max-width: 100%; }
+}
+
+/* Date drafts and applied-report dates remain readable at narrow widths. */
+.cliredas-controls { flex-wrap: wrap; }
+.cliredas-date-inputs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cliredas-date-inputs input { max-width: 100%; }
+#cliredas-date-error:empty { display: none; }
+#cliredas-date-error { color: #b32d2e; margin: 0 0 12px; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .cliredas-date-inputs { width: 100%; }
+  .cliredas-date-inputs label { flex-basis: 100%; }
 }

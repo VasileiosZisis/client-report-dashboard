@@ -15,7 +15,7 @@ function report() {
     freshness: { state: 'fresh', label: 'Fresh', last_success_label: '2026-10-31 08:00' } };
 }
 
-function fixture(saved = {}, withChart = true) {
+function fixture(saved = {}, withChart = true, periods = false) {
   const elements = new Map();
   const document = { readyState: 'loading', hidden: false, activeElement: null,
     querySelector: key => elements.get(key) || null,
@@ -34,6 +34,7 @@ function fixture(saved = {}, withChart = true) {
     elements.set(key, node); return node;
   }
   ['#cliredas-freshness', '#cliredas-status', '#cliredas-report-content', '.cliredas-controls', '#cliredas-date-range', '#cliredas-export-csv-button', '#cliredas-export-range', '#cliredas-notice', '#cliredas-notice p', '#cliredas-ga4-warning', '#cliredas-ga4-warning .cliredas-ga4-warning-text', '#cliredas-top-pages-filter', '#cliredas-page-query', '#cliredas-page-query-clear', '#cliredas-page-count', '#cliredas-sort-status', '#cliredas-chart-metric', '#cliredas-chart-title', '#cliredas-kpis-message', '#cliredas-devices-message', '#cliredas-sources-message', '#cliredas-trend-message', '#cliredas-trend-wrap', '#cliredas-sources-wrap', '#cliredas-devices tbody', '#cliredas-traffic-sources tbody', '#cliredas-top-pages tbody', '#cliredas-trend-data tbody', '#cliredas-sessions-chart', '#cliredas-traffic-sources-chart'].forEach(el);
+  if (periods) ['#cliredas-period-form', '#cliredas-custom-dates', '#cliredas-apply-dates', '#cliredas-date-error', '#cliredas-start-date', '#cliredas-end-date', '#cliredas-displayed-period', ...['start','end','expected_start','expected_end','expected_comparison_start','expected_comparison_end','timezone'].map(key => '#cliredas-export-' + key)].forEach(el);
   el('#cliredas-date-range').value = el('#cliredas-export-range').value = 'last_7_days'; el('#cliredas-chart-metric').value = 'sessions';
   const buttons = ['title', 'url', 'sessions', 'views', 'avg_engagement_seconds'].map(key => {
     const button = el('.sort-' + key); button.attributes['data-cliredas-sort'] = key; button.heading = el('.heading-' + key);
@@ -49,16 +50,22 @@ function fixture(saved = {}, withChart = true) {
     emptyMessages: { top_pages: 'No pages for this period.', devices: 'No device activity.', traffic_sources: 'No source activity.', timeseries: 'No chart activity.', totals: 'No activity.' },
     sortedAscending: 'Sorted %s ascending.', sortedDescending: 'Sorted %s descending.', sortAscending: 'Sort %s ascending', sortDescending: 'Sort %s descending',
     loadingPrevious: 'Loading; visible values belong to the previous report.', requestFailed: 'Reload failed safely.', accessChanged: 'Access changed.', reportExpired: 'Expired.', lastSuccess: 'Last success: %s', refreshWaiting: 'Check WP-Cron', blockUnavailable: 'Unavailable', sampleData: 'Sample data', reportUpdated: 'Updated' } };
+  if (periods) {
+    cfg.siteToday = '2026-11-07'; cfg.i18n.invalidDates = 'Invalid dates.';
+    cfg.selectedPeriod = {key:'last_7_days',dates:{startDate:'2026-11-01',endDate:'2026-11-07'},comparison:{startDate:'2026-10-25',endDate:'2026-10-31'},days:7,timezone:'Europe/Chisinau'};
+    el('#cliredas-start-date').value = cfg.selectedPeriod.dates.startDate; el('#cliredas-end-date').value = cfg.selectedPeriod.dates.endDate;
+  }
+  const requests = [];
   const window = { cliredasDashboard: cfg, localStorage: { getItem: key => storage[key] || null, setItem: (key, value) => { storage[key] = value; } }, addEventListener() {} };
   if (withChart) window.Chart = class { constructor(ctx, options) { this.data = options.data; this.options = options.options; charts.push(this); } update() { this.updates = (this.updates || 0) + 1; } destroy() { this.destroyed = true; } };
   let response = async () => ({ status: 200, json: async () => ({ success: true, data: { report: report() } }) });
   const sandbox = { window, document, AbortController, URLSearchParams, URL, Intl, Date: class extends Date { static now() { return now; } },
     setTimeout(fn, delay) { timers.set(++timer, { fn, at: now + delay }); return timer; }, clearTimeout(id) { timers.delete(id); },
-    async fetch(url, options) { calls++; return response(options); } };
+    async fetch(url, options) { calls++; requests.push(new URLSearchParams(options.body)); return response(options); } };
   const code = fs.readFileSync(path.join(__dirname, '../assets/js/cliredas-dashboard.js'), 'utf8')
     .replace(/\}\)\(\);\s*$/, 'window.cliredasTest = {renderAll, blockState, getKpiDelta, watchReport, stopPolling, initializeTopPagesFiltering};})();');
   vm.runInNewContext(code, sandbox); document.ready();
-  return { el, document, cfg, storage, charts, api: window.cliredasTest, get calls() { return calls; }, respond(fn) { response = fn; },
+  return { el, document, cfg, storage, charts, requests, api: window.cliredasTest, get calls() { return calls; }, respond(fn) { response = fn; },
     async search(query) { el('#cliredas-page-query').value = query; await el('#cliredas-page-query').fire('input'); },
     async range(key) { el('#cliredas-date-range').value = key; return el('#cliredas-date-range').fire('change'); },
     async tick(duration) { const end = now + duration; for (;;) { const next = [...timers].filter(([, task]) => task.at <= end).sort((a,b) => a[1].at - b[1].at)[0]; if (!next) break; timers.delete(next[0]); now = next[1].at; await next[1].fn(); } now = end; } };
@@ -117,5 +124,38 @@ function fixture(saved = {}, withChart = true) {
   const busy = fixture(); let finish; busy.respond(() => new Promise(resolve => {finish=resolve;})); const flight = busy.range('last_30_days'); check(busy.el('#cliredas-report-content').attributes['aria-busy'] === 'true' && busy.el('#cliredas-status').textContent.includes('previous'), 'Pending range explains retained content'); busy.api.stopPolling(); finish({status:200,json:async()=>({success:true,data:{report:zero}})}); await flight; check(busy.cfg.initialReport.totals.sessions === 10, 'Obsolete range response is ignored');
   const background = fixture(); await background.search('about'); const pending = report(); pending.freshness = {pending:true, context_id:'context', retained_until:10000, state:'refreshing',label:'Refreshing'}; background.cfg.initialReport = pending; background.api.renderAll(pending); background.respond(async()=>({status:200,json:async()=>({success:true,data:{report:{...report(),freshness:{...pending.freshness,pending:false,state:'fresh',label:'Fresh'}}}})})); background.api.watchReport(pending,'last_7_days'); await background.tick(5000); check(background.el('#cliredas-page-count').textContent.includes('1 of 3') && background.cfg.initialReport.freshness.state === 'fresh', 'Background success preserves filter and replaces report');
   const sample = report(); sample.source='mock'; background.api.renderAll(sample); check(background.el('#cliredas-freshness').textContent.startsWith('Sample data'), 'Sample label overrides real freshness label');
+  const dates = fixture({}, true, true); await dates.search('about');
+  const displayed = dates.el('#cliredas-displayed-period').textContent;
+  await dates.range('custom');
+  check(dates.calls === 0 && !dates.el('#cliredas-custom-dates').hidden && dates.el('#cliredas-start-date').value === '2026-11-01', 'Custom selection opens a draft from the displayed dates without fetching');
+  dates.el('#cliredas-start-date').value = '2024-02-01'; dates.el('#cliredas-end-date').value = '2024-02-29';
+  check(dates.el('#cliredas-export-range').value === 'last_7_days' && dates.el('#cliredas-displayed-period').textContent === displayed, 'Editing a draft never relabels report or export');
+  const customPeriod = {key:'custom',dates:{startDate:'2024-02-01',endDate:'2024-02-29'},comparison:{startDate:'2024-01-03',endDate:'2024-01-31'},days:29,timezone:'Europe/Chisinau'};
+  dates.respond(async () => ({status:200,json:async()=>({success:true,data:{report:report(),period:customPeriod}})}));
+  dates.el('#cliredas-end-date').focus(); await dates.el('#cliredas-period-form').fire('submit', {preventDefault(){}});
+  check(dates.calls === 1 && dates.requests[0].get('cliredas_start') === '2024-02-01' && dates.requests[0].get('cliredas_end') === '2024-02-29', 'Apply sends the validated inclusive custom selection');
+  check(dates.cfg.selectedPeriod === customPeriod && dates.el('#cliredas-export-expected_comparison_start').value === '2024-01-03' && dates.el('#cliredas-export-range').value === 'custom', 'Applied dates and comparisons update export only after success');
+  check(dates.el('#cliredas-page-query').value === 'about' && dates.document.activeElement === dates.el('#cliredas-end-date'), 'Custom replacement preserves filter and focus');
+  for (const [start,end] of [['2023-02-29','2023-03-01'],['2024-01-01','2025-01-01'],['2026-11-08','2026-11-08'],['2024-03-02','2024-03-01'],['','2024-03-01'],['0001-01-01','0001-01-01']]) {
+    dates.el('#cliredas-start-date').value=start; dates.el('#cliredas-end-date').value=end;
+    await dates.el('#cliredas-period-form').fire('submit',{preventDefault(){}});
+    check(dates.calls === 1 && dates.el('#cliredas-date-error').textContent === 'Invalid dates.', 'Invalid custom draft cannot request a report');
+  }
+  dates.el('#cliredas-start-date').value='2024-01-01'; dates.el('#cliredas-end-date').value='2024-12-31';
+  dates.respond(async()=>{throw new Error('fixture network');}); await dates.el('#cliredas-period-form').fire('submit',{preventDefault(){}});
+  check(dates.calls===2 && dates.cfg.selectedPeriod===customPeriod && dates.el('#cliredas-start-date').value==='2024-02-01', 'A full leap-year draft is valid and a failed Apply restores the prior applied custom dates');
+  const pendingCustom = {...report(),freshness:{pending:true,context_id:'custom-context',retained_until:10000,state:'refreshing'}};
+  dates.cfg.initialReport=pendingCustom; dates.respond(async()=>({status:200,json:async()=>({success:true,data:{report:{...pendingCustom,freshness:{...pendingCustom.freshness,pending:false}}}})}));
+  dates.api.watchReport(pendingCustom,'custom'); await dates.tick(5000);
+  const poll=dates.requests[dates.requests.length-1];
+  check(poll.get('action')==='cliredas_report_status' && poll.get('cliredas_start')==='2024-02-01' && poll.get('cliredas_expected_end')==='2024-02-29' && poll.get('cliredas_timezone')==='Europe/Chisinau', 'Custom polling uses applied dates and timezone even while drafts change');
+  const failedDraft=fixture({},true,true); await failedDraft.range('custom');
+  failedDraft.respond(async()=>{throw new Error('fixture');}); failedDraft.el('#cliredas-apply-dates').focus();
+  await failedDraft.el('#cliredas-period-form').fire('submit',{preventDefault(){}});
+  check(failedDraft.el('#cliredas-apply-dates').hidden && failedDraft.document.activeElement===failedDraft.el('#cliredas-date-range'), 'Failed first custom Apply returns focus to the visible preset selector');
+  const ytd={key:'year_to_date',dates:{startDate:'2026-01-01',endDate:'2026-11-07'},comparison:{startDate:'2025-01-01',endDate:'2025-11-07'},days:311,timezone:'Europe/Chisinau'};
+  dates.respond(async()=>({status:200,json:async()=>({success:true,data:{report:report(),period:ytd}})})); await dates.range('year_to_date');
+  check(dates.cfg.selectedPeriod===ytd && dates.el('#cliredas-custom-dates').hidden && dates.el('#cliredas-export-expected_comparison_end').value==='2025-11-07', 'YTD loads automatically and displays actual comparison dates');
+  check(fixture(dates.storage,true,true).cfg.selectedRange==='last_7_days' && !Object.keys(dates.storage).some(key=>key.includes('date')||key.includes('range')), 'Reload resets dates without a persisted range preference');
   console.log('Dashboard presentation regressions passed (' + checks + ' assertions).');
 })().catch(error => { console.error(error); process.exitCode=1; });

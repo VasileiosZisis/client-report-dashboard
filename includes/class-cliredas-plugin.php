@@ -107,6 +107,7 @@ final class CLIREDAS_Plugin
         require_once __DIR__ . '/class-cliredas-credential-store.php';
         require_once __DIR__ . '/class-cliredas-audit-log.php';
         require_once __DIR__ . '/class-cliredas-release-notices.php';
+        require_once __DIR__ . '/class-cliredas-report-period.php';
         require_once __DIR__ . '/class-cliredas-report-cache.php';
         require_once __DIR__ . '/class-cliredas-digest-message.php';
         require_once __DIR__ . '/class-cliredas-weekly-digest.php';

@@ -35,6 +35,18 @@ final class CLIREDAS_Dashboard_Page
      */
     private $initial_reports = array();
 
+    /** One validated initial selection for this request.
+     *
+     * @var array|null
+     */
+    private $initial_period = null;
+
+    /** Safe initial form validation guidance.
+     *
+     * @var string
+     */
+    private $period_error = '';
+
     /**
      * Set up the dashboard page controller.
      *
@@ -67,7 +79,7 @@ final class CLIREDAS_Dashboard_Page
     {
         unset($hook_suffix);
 
-        if (! CLIREDAS_Admin_Screens::is_dashboard_screen()) {
+        if (! CLIREDAS_Admin_Screens::is_dashboard_screen() || ! current_user_can($this->settings->get_required_capability('dashboard'))) {
             return;
         }
 
@@ -79,6 +91,8 @@ final class CLIREDAS_Dashboard_Page
                 'ajaxUrl'       => admin_url('admin-ajax.php'),
                 'cliredasNonce' => wp_create_nonce('cliredas_dashboard'),
                 'selectedRange' => $selected_range,
+                'selectedPeriod' => $this->current_period(),
+                'siteToday' => wp_date('Y-m-d'),
                 'ranges'        => $this->get_date_ranges(),
                 'initialReport' => $initial_report,
             )
@@ -102,20 +116,21 @@ final class CLIREDAS_Dashboard_Page
             );
         }
 
-        $ranges = $this->get_date_ranges();
-        $range_raw = filter_input(INPUT_POST, 'cliredas_range', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $range  = is_string($range_raw) ? sanitize_key($range_raw) : $this->get_current_range_key();
-
-        if (! array_key_exists($range, $ranges)) {
-            $range = $this->get_current_range_key();
+        $period = $this->request_period($_POST);
+        if (is_wp_error($period)) {
+            wp_send_json_error(array('message' => $period->get_error_message()), 400);
         }
-
-        $report = $this->provider->get_report($range);
+        $report = $this->load_period($period);
+        $period = $this->period_for_report($period, $report);
+        if ($this->builtin_range($period['key']) && is_wp_error(CLIREDAS_Report_Period::validate($period))) {
+            wp_send_json_error(array('message' => __('The reporting dates changed. Reload the dashboard.', 'cliredas-analytics-dashboard')), 409);
+        }
         $report = $this->sanitize_report_for_current_user($report);
 
         wp_send_json_success(
             array(
                 'report' => $report,
+                'period' => $period,
             )
         );
     }
@@ -127,6 +142,10 @@ final class CLIREDAS_Dashboard_Page
         if (! current_user_can($this->settings->get_required_capability('dashboard'))) {
             wp_send_json_error(array('message' => __('Permission denied.', 'cliredas-analytics-dashboard')), 403);
         }
+        $period = $this->request_period($_POST, true);
+        if (is_wp_error($period)) {
+            wp_send_json_error(array('message' => $period->get_error_message()), 'cliredas_obsolete_period' === $period->get_error_code() ? 409 : 400);
+        }
         $range = isset($_POST['cliredas_range']) && is_string($_POST['cliredas_range']) ? sanitize_key(wp_unslash($_POST['cliredas_range'])) : '';
         $id = isset($_POST['cliredas_context']) && is_string($_POST['cliredas_context']) ? sanitize_text_field(wp_unslash($_POST['cliredas_context'])) : '';
         if (! array_key_exists($range, $this->get_date_ranges()) || ! preg_match('/^[a-f0-9]{64}$/', $id)) {
@@ -136,7 +155,7 @@ final class CLIREDAS_Dashboard_Page
         if (! $this->provider instanceof CLIREDAS_GA4_Data_Provider) {
             wp_send_json_error(array('message' => __('The report context changed. Reload the dashboard.', 'cliredas-analytics-dashboard')), 409);
         }
-        $context = $this->provider->report_context($range, false);
+        $context = $this->provider->context_for_period($period, false);
         if (! hash_equals($context['id'], $id)) {
             wp_send_json_error(array('message' => __('The report context changed. Reload the dashboard.', 'cliredas-analytics-dashboard')), 409);
         }
@@ -146,10 +165,113 @@ final class CLIREDAS_Dashboard_Page
     /** Reuse one initial snapshot for localization and server-side rendering. */
     private function initial_report($range)
     {
-        if (! isset($this->initial_reports[$range])) {
-            $this->initial_reports[$range] = $this->sanitize_report_for_current_user($this->provider->get_report($range));
+        unset($range);
+        $period = $this->current_period();
+        $key = wp_json_encode($period);
+        if (! isset($this->initial_reports[$key])) {
+            $this->initial_reports[$key] = $this->sanitize_report_for_current_user('' !== $this->period_error ? CLIREDAS_Report_Period::unavailable($period, $this->period_error) : $this->load_period($period));
         }
-        return $this->initial_reports[$range];
+        $this->initial_period = $this->period_for_report($period, $this->initial_reports[$key]);
+        $this->initial_reports[wp_json_encode($this->initial_period)] = $this->initial_reports[$key];
+        return $this->initial_reports[$key];
+    }
+
+    /** Preserve existing provider contracts; new ranges require explicit support. */
+    private function load_period($period)
+    {
+        if ($this->builtin_range($period['key']) && method_exists($this->provider, 'get_report_for_period')) {
+            return $this->provider->get_report_for_period($period);
+        }
+        if (in_array($period['key'], array('custom', 'year_to_date'), true)) {
+            return CLIREDAS_Report_Period::unavailable($period, __('This data provider does not support custom dates or year-to-date. Choose an existing preset or use the built-in provider.', 'cliredas-analytics-dashboard'));
+        }
+        return $this->provider->get_report($period['key']);
+    }
+
+    /** Existing extension keys keep their provider-owned calendar semantics. */
+    private function builtin_range($key)
+    {
+        return in_array($key, array('custom', 'year_to_date', 'last_7_days', 'last_30_days', 'last_90_days', 'this_month', 'last_month'), true);
+    }
+
+    /** Never invent date labels for extension providers. */
+    private function period_for_report($period, $report)
+    {
+        if ($this->builtin_range($period['key'])) {
+            return $period;
+        }
+        foreach (array('dates' => 'range', 'comparison' => 'comparison') as $destination => $source) {
+            $dates = 'comparison' === $source ? ($report['comparison']['range'] ?? array()) : ($report['range'] ?? array());
+            foreach (array('startDate', 'endDate') as $field) {
+                $period[$destination][$field] = isset($dates[$field]) && is_string($dates[$field]) ? $dates[$field] : '';
+            }
+        }
+        return $period;
+    }
+
+    /** Read input only from an already-authorized handler. */
+    private function request_period($input, $expected = false)
+    {
+        $values = array();
+        foreach (array('cliredas_range', 'cliredas_start', 'cliredas_end', 'cliredas_expected_start', 'cliredas_expected_end', 'cliredas_expected_comparison_start', 'cliredas_expected_comparison_end', 'cliredas_timezone') as $key) {
+            $values[$key] = isset($input[$key]) && is_string($input[$key]) ? sanitize_text_field(wp_unslash($input[$key])) : '';
+        }
+        $range = $values['cliredas_range'];
+        if (! array_key_exists($range, $this->get_date_ranges())) {
+            return new WP_Error('cliredas_invalid_period', __('Invalid dashboard date range.', 'cliredas-analytics-dashboard'));
+        }
+        $period = CLIREDAS_Report_Period::resolve($range, $values['cliredas_start'], $values['cliredas_end']);
+        // Existing extension presets remain owned by their providers.
+        if (is_wp_error($period) && ! in_array($range, array('custom', 'year_to_date', 'last_7_days', 'last_30_days', 'last_90_days', 'this_month', 'last_month'), true)) {
+            $period = array('key' => $range, 'dates' => array('startDate' => $values['cliredas_expected_start'], 'endDate' => $values['cliredas_expected_end']), 'comparison' => array('startDate' => $values['cliredas_expected_comparison_start'], 'endDate' => $values['cliredas_expected_comparison_end']), 'days' => 0, 'timezone' => wp_timezone_string());
+        }
+        if ($expected && ! is_wp_error($period) && (
+            $values['cliredas_expected_start'] !== $period['dates']['startDate'] || $values['cliredas_expected_end'] !== $period['dates']['endDate']
+            || $values['cliredas_expected_comparison_start'] !== $period['comparison']['startDate'] || $values['cliredas_expected_comparison_end'] !== $period['comparison']['endDate']
+            || $values['cliredas_timezone'] !== $period['timezone'])) {
+            return new WP_Error('cliredas_obsolete_period', __('The reporting dates changed. Reload the dashboard and select the period again.', 'cliredas-analytics-dashboard'));
+        }
+        return $period;
+    }
+
+    /** Resolve the initial form once, after nonce/capability checks. */
+    private function current_period()
+    {
+        if (null !== $this->initial_period) {
+            return $this->initial_period;
+        }
+        $ranges = $this->get_date_ranges();
+        $keys = array_keys($ranges);
+        $default = (string) reset($keys);
+        $this->initial_period = $this->request_period(array('cliredas_range' => $default));
+        if (is_wp_error($this->initial_period)) {
+            $this->initial_period = CLIREDAS_Report_Period::resolve('last_7_days');
+        }
+        if (isset($_POST['cliredas_apply_period'])) {
+            check_admin_referer('cliredas_select_period');
+        }
+        if (! current_user_can($this->settings->get_required_capability('dashboard'))) {
+            return $this->initial_period;
+        }
+        if (isset($_POST['cliredas_apply_period'])) {
+            $period = $this->request_period($_POST);
+            if (is_wp_error($period)) {
+                $this->period_error = $period->get_error_message();
+            } else {
+                $this->initial_period = $period;
+            }
+        } elseif (isset($_GET['cliredas_range']) || isset($_GET['range'])) {
+            // Preserve existing preset links; privileged custom form input uses POST.
+            $key = isset($_GET['cliredas_range']) && is_string($_GET['cliredas_range']) ? sanitize_key(wp_unslash($_GET['cliredas_range']))
+                : (isset($_GET['range']) && is_string($_GET['range']) ? sanitize_key(wp_unslash($_GET['range'])) : '');
+            if (is_string($key) && ! in_array($key, array('custom'), true)) {
+                $period = $this->request_period(array('cliredas_range' => $key));
+                if (! is_wp_error($period)) {
+                    $this->initial_period = $period;
+                }
+            }
+        }
+        return $this->initial_period;
     }
 
     /**
@@ -170,25 +292,21 @@ final class CLIREDAS_Dashboard_Page
             );
         }
 
-        $range_input = filter_input(INPUT_POST, 'cliredas_range', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        $range_raw = is_string($range_input) ? sanitize_key($range_input) : '';
-        $ranges = $this->get_date_ranges();
-
-        if ('' === $range_raw || ! array_key_exists($range_raw, $ranges)) {
+        $period = $this->request_period($_POST, true);
+        if (is_wp_error($period)) {
             CLIREDAS_Audit_Log::record('csv_export', 'invalid_range');
-            wp_die(
-                esc_html__('Invalid dashboard date range.', 'cliredas-analytics-dashboard'),
-                '',
-                array('response' => 400)
-            );
+            wp_die(esc_html($period->get_error_message()), '', array('response' => 'cliredas_obsolete_period' === $period->get_error_code() ? 409 : 400));
         }
-
-        $report = $this->provider->get_report($range_raw);
-        $report = $this->sanitize_report_for_current_user($report);
-
-        $filename = sanitize_file_name(
-            'cliredas-dashboard-' . $range_raw . '-' . wp_date('Y-m-d') . '.csv'
-        );
+        $range_raw = $period['key'];
+        $ranges = $this->get_date_ranges();
+        $report = $this->sanitize_report_for_current_user($this->load_period($period));
+        if (! $this->builtin_range($range_raw) && $this->period_for_report($period, $report) !== $period) {
+            wp_die(esc_html__('The reporting dates changed. Reload the dashboard.', 'cliredas-analytics-dashboard'), '', array('response' => 409));
+        }
+        if (is_wp_error(CLIREDAS_Report_Period::validate($period)) && in_array($range_raw, array('custom', 'year_to_date', 'last_7_days', 'last_30_days', 'last_90_days', 'this_month', 'last_month'), true)) {
+            wp_die(esc_html__('The reporting dates changed. Reload the dashboard.', 'cliredas-analytics-dashboard'), '', array('response' => 409));
+        }
+        $filename = sanitize_file_name('cliredas-dashboard-' . $range_raw . '-' . $period['dates']['startDate'] . '-' . $period['dates']['endDate'] . '.csv');
 
         if (headers_sent()) {
             CLIREDAS_Audit_Log::record('csv_export', 'output_failed');
@@ -297,12 +415,14 @@ final class CLIREDAS_Dashboard_Page
                 <h1 class="cliredas-title"><?php echo esc_html__('Client Report', 'cliredas-analytics-dashboard'); ?></h1>
 
                 <div class="cliredas-header-actions">
-                    <div class="cliredas-controls">
+                    <form method="post" class="cliredas-controls" id="cliredas-period-form">
+                        <input type="hidden" name="cliredas_apply_period" value="1">
+                        <?php wp_nonce_field('cliredas_select_period'); ?>
                         <label for="cliredas-date-range" class="cliredas-control-label">
                             <?php echo esc_html__('Date range', 'cliredas-analytics-dashboard'); ?>
                         </label>
 
-                        <select id="cliredas-date-range" class="cliredas-select">
+                        <select name="cliredas_range" id="cliredas-date-range" class="cliredas-select">
                             <?php foreach ($ranges as $key => $label) : ?>
                                 <option value="<?php echo esc_attr($key); ?>" <?php selected($selected_key, $key); ?>>
                                     <?php echo esc_html($label); ?>
@@ -310,12 +430,22 @@ final class CLIREDAS_Dashboard_Page
                             <?php endforeach; ?>
                         </select>
 
+                        <span id="cliredas-custom-dates" class="cliredas-date-inputs">
+                            <label for="cliredas-start-date"><?php echo esc_html__('Start date', 'cliredas-analytics-dashboard'); ?></label>
+                            <input type="date" id="cliredas-start-date" name="cliredas_start" value="<?php echo esc_attr($this->current_period()['dates']['startDate']); ?>" max="<?php echo esc_attr(wp_date('Y-m-d')); ?>" aria-describedby="cliredas-date-error">
+                            <label for="cliredas-end-date"><?php echo esc_html__('End date', 'cliredas-analytics-dashboard'); ?></label>
+                            <input type="date" id="cliredas-end-date" name="cliredas_end" value="<?php echo esc_attr($this->current_period()['dates']['endDate']); ?>" max="<?php echo esc_attr(wp_date('Y-m-d')); ?>" aria-describedby="cliredas-date-error">
+                        </span>
+                        <button type="submit" id="cliredas-apply-dates" class="button"><?php echo esc_html__('Apply', 'cliredas-analytics-dashboard'); ?></button>
                         <span class="cliredas-status" id="cliredas-status" role="status" aria-live="polite" aria-atomic="true"></span>
-                    </div>
+                    </form>
 
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="cliredas-export-form">
                         <input type="hidden" name="action" value="cliredas_export_csv">
                         <input type="hidden" name="cliredas_range" id="cliredas-export-range" value="<?php echo esc_attr($selected_key); ?>">
+                        <?php foreach (array('start' => $this->current_period()['dates']['startDate'], 'end' => $this->current_period()['dates']['endDate'], 'expected_start' => $this->current_period()['dates']['startDate'], 'expected_end' => $this->current_period()['dates']['endDate'], 'expected_comparison_start' => $this->current_period()['comparison']['startDate'], 'expected_comparison_end' => $this->current_period()['comparison']['endDate'], 'timezone' => $this->current_period()['timezone']) as $field => $value) : ?>
+                            <input type="hidden" name="cliredas_<?php echo esc_attr($field); ?>" id="cliredas-export-<?php echo esc_attr($field); ?>" value="<?php echo esc_attr($value); ?>">
+                        <?php endforeach; ?>
                         <?php wp_nonce_field('cliredas_export_csv'); ?>
                         <button type="submit" class="button button-secondary cliredas-export-button" id="cliredas-export-csv-button">
                             <span class="dashicons dashicons-download" aria-hidden="true"></span>
@@ -334,6 +464,8 @@ final class CLIREDAS_Dashboard_Page
                     <?php endif; ?>
                 </div>
             </div>
+
+            <p id="cliredas-date-error" role="alert"><?php echo esc_html($this->period_error); ?></p>
 
             <div id="cliredas-notice" class="notice notice-error is-dismissible" role="alert" aria-atomic="true" style="display:none;">
                 <p></p>
@@ -655,6 +787,8 @@ final class CLIREDAS_Dashboard_Page
             'this_month'   => __('This month', 'cliredas-analytics-dashboard'),
             'last_month'   => __('Last month', 'cliredas-analytics-dashboard'),
             'last_90_days' => __('Last 90 days', 'cliredas-analytics-dashboard'),
+            'year_to_date' => __('Year to date', 'cliredas-analytics-dashboard'),
+            'custom' => __('Custom dates', 'cliredas-analytics-dashboard'),
         );
 
         $ranges = apply_filters('cliredas_date_ranges', $ranges);
@@ -675,24 +809,7 @@ final class CLIREDAS_Dashboard_Page
      */
     private function get_current_range_key()
     {
-        $ranges = $this->get_date_ranges();
-        $keys   = array_keys($ranges);
-
-        $default = isset($keys[0]) ? (string) $keys[0] : 'last_7_days';
-
-        $range_raw = filter_input(INPUT_GET, 'cliredas_range', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        if (! is_string($range_raw)) {
-            // Backward compatibility for existing links using ?range=...
-            $range_raw = filter_input(INPUT_GET, 'range', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        }
-
-        $range = is_string($range_raw) ? sanitize_key($range_raw) : $default;
-
-        if (! array_key_exists($range, $ranges)) {
-            $range = $default;
-        }
-
-        return $range;
+        return $this->current_period()['key'];
     }
 
     /**
@@ -730,6 +847,9 @@ final class CLIREDAS_Dashboard_Page
         $this->write_csv_row($output, array(__('Data freshness', 'cliredas-analytics-dashboard'), $this->freshness_text($report)));
         if (isset($report['range']['startDate'], $report['range']['endDate'])) {
             $this->write_csv_row($output, array(__('Resolved dates', 'cliredas-analytics-dashboard'), $report['range']['startDate'] . ' / ' . $report['range']['endDate']));
+        }
+        if (isset($report['comparison']['range']['startDate'], $report['comparison']['range']['endDate'])) {
+            $this->write_csv_row($output, array(__('Comparison dates', 'cliredas-analytics-dashboard'), $report['comparison']['range']['startDate'] . ' / ' . $report['comparison']['range']['endDate']));
         }
         $this->write_csv_row(
             $output,

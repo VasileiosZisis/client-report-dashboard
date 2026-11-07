@@ -76,9 +76,10 @@ final class CLIREDAS_Cache_Tests
             return $alloptions;
         };
         $calls = 0;
+        $expected_period = null;
         $mode = 'success';
         $during_http = null;
-        $http_filter = static function ($pre, $args) use (&$calls, &$mode, &$during_http) {
+        $http_filter = static function ($pre, $args) use (&$calls, &$mode, &$expected_period, &$during_http) {
             ++$calls;
             if (is_callable($during_http)) {
                 $callback = $during_http;
@@ -86,6 +87,12 @@ final class CLIREDAS_Cache_Tests
                 $callback();
             }
             $body = json_decode($args['body'], true);
+            if (is_array($expected_period)) {
+                self::check($body['dateRanges'][0] === $expected_period['dates'], 'Every GA4 block uses the same explicit dates');
+                if (isset($body['dateRanges'][1])) {
+                    self::check($body['dateRanges'][1] === $expected_period['comparison'], 'GA4 comparison uses the resolved period');
+                }
+            }
             $dimension = isset($body['dimensions'][0]['name']) ? $body['dimensions'][0]['name'] : '';
             $status = 'forbidden' === $mode ? 403 : ('quota' === $mode ? 429 : 503);
             if (in_array($mode, array('failure', 'forbidden', 'quota'), true) || ('partial' === $mode && 'sessionDefaultChannelGroup' === $dimension)) {
@@ -105,6 +112,45 @@ final class CLIREDAS_Cache_Tests
         $reset();
         try {
             $provider = new CLIREDAS_GA4_Data_Provider($settings);
+            foreach (array(
+                CLIREDAS_Report_Period::resolve('custom', '2024-02-01', '2024-02-29'),
+                CLIREDAS_Report_Period::resolve('custom', '2024-03-01', '2024-03-29'),
+                CLIREDAS_Report_Period::resolve('year_to_date'),
+            ) as $period) {
+                $expected_period = $period;
+                $before = $calls;
+                $custom = $provider->get_report_for_period($period);
+                self::check('ga4' === $custom['source'] && $custom['range']['startDate'] === $period['dates']['startDate'] && 5 === $calls - $before, 'New selections fetch the exact complete real report');
+                $custom_context = $provider->context_for_period($period);
+                $before = $calls;
+                $provider->get_report_for_period($period);
+                self::check($before === $calls, 'Fresh explicit selection is reused');
+                $db->state['cliredas_report_cache']['entries'][$custom_context['id']]['good']['fresh_until'] = time() - 1;
+                self::check('refreshing' === $provider->get_report_for_period($period)['freshness']['state'] && $calls === $before, 'Stale explicit selection returns while refresh is queued');
+                CLIREDAS_Report_Cache::refresh($custom_context['id']);
+                self::check(5 === $calls - $before && 'fresh' === $provider->cached_response($custom_context)['freshness']['state'], 'Saved custom context refreshes exact dates');
+                $sample = (new CLIREDAS_Data_Provider())->get_report_for_period($period);
+                self::check('mock' === $sample['source'] && $sample['range']['startDate'] === $period['dates']['startDate'] && $sample['comparison']['range'] === $period['comparison'], 'Sample provider shares the exact reporting calendar');
+            }
+            $samples = new CLIREDAS_Data_Provider();
+            $single = $samples->get_report_for_period(CLIREDAS_Report_Period::resolve('custom', '2024-02-01', '2024-02-01'));
+            self::check(max(array_column($single['top_pages'], 'sessions')) <= $single['totals']['sessions'] && array_sum(array_column($single['top_pages'], 'views')) <= $single['totals']['pageviews'], 'One-day sample page metrics fit the report totals');
+            $sample_29 = $samples->get_report_for_period(CLIREDAS_Report_Period::resolve('custom', '2024-02-01', '2024-02-29'));
+            $sample_30 = $samples->get_report_for_period(CLIREDAS_Report_Period::resolve('custom', '2024-02-01', '2024-03-01'));
+            self::check(array_slice($sample_30['timeseries'], 0, 29) === $sample_29['timeseries'], 'Overlapping custom samples keep the same daily values');
+            $share_29 = $sample_29['top_pages'][0]['sessions'] / $sample_29['totals']['sessions'];
+            $share_30 = $sample_30['top_pages'][0]['sessions'] / $sample_30['totals']['sessions'];
+            self::check(0.001 > abs($share_29 - $share_30), 'Sample page shares do not jump at thirty days');
+            $expected_period = null;
+            $before = $calls;
+            $obsolete_period = CLIREDAS_Report_Period::resolve('year_to_date', '', '', new DateTimeImmutable('yesterday', wp_timezone()));
+            $obsolete_context = $provider->context_for_period($obsolete_period);
+            self::check('unavailable' === $provider->refresh_context($obsolete_context)['source'] && $before === $calls, 'A relative period from before midnight cannot refresh or publish');
+            $invalid = CLIREDAS_Report_Period::resolve('custom', '2024-02-01', '2024-02-29');
+            $invalid['comparison']['endDate'] = '2024-01-01';
+            self::check('unavailable' === $provider->get_report_for_period($invalid)['source'] && $calls === $before, 'Tampered comparison dates cannot request Google');
+            $reset();
+            $calls = 0;
             $context = $provider->report_context('last_7_days');
             $report = $provider->get_report('last_7_days');
             self::check(5 === $calls && 'ga4' === $report['source'] && 123 === $report['totals']['sessions'], 'Cold load fetches all five real blocks');
@@ -118,6 +164,18 @@ final class CLIREDAS_Cache_Tests
             $obsolete = $report;
             $obsolete['range']['endDate'] = '2000-01-01';
             self::check(! $provider->is_fresh_report($obsolete, 'last_7_days'), 'Fresh-only validation rejects dates from before a calendar rollover');
+            $legacy_context = $context;
+            unset($legacy_context['period']);
+            $seen_period = null;
+            $period_filter = static function ($data, $key, $period = null) use (&$seen_period) {
+                unset($key);
+                $seen_period = $period;
+                return $data;
+            };
+            add_filter('cliredas_report', $period_filter, 10, 3);
+            $provider->cached_response($legacy_context);
+            self::check($seen_period === $context['period'], 'Pre-upgrade cached contexts are enriched before report filtering');
+            remove_filter('cliredas_report', $period_filter);
             $id = $context['id'];
             $db->state['cliredas_report_cache']['entries'][$id]['good']['fresh_until'] = time() - 1;
             $report = $provider->get_report('last_7_days');
@@ -128,6 +186,7 @@ final class CLIREDAS_Cache_Tests
             self::check($db->state['cron'] === $cron, 'Repeated stale reads do not duplicate scheduled events');
             $provider->cached_response($context);
             self::check(5 === $calls && $cron === $db->state['cron'], 'Status reads make no requests or schedule changes');
+            unset($db->state['cliredas_report_cache']['entries'][$id]['context']['period']);
             CLIREDAS_Report_Cache::refresh($id);
             self::check(10 === $calls && 'fresh' === $provider->cached_response($context)['freshness']['state'], 'Cron-only callback refreshes a stale report');
             CLIREDAS_Report_Cache::refresh($id);
@@ -277,13 +336,10 @@ final class CLIREDAS_Cache_Tests
                 $context = $provider->report_context($range);
                 self::check((bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $context['dates']['startDate']), 'Preset resolves exact dates: ' . $range);
             }
-            $date_method = new ReflectionMethod($provider, 'get_previous_date_range');
-            $date_method->setAccessible(true);
-            $dates = $date_method->invoke($provider, 'this_month', new DateTimeImmutable('2024-03-31', wp_timezone()));
-            self::check('2024-02-29' === $dates['endDate'], 'Comparison clamps correctly in leap year');
-            $absolute = new ReflectionMethod($provider, 'absolute_date');
-            $absolute->setAccessible(true);
-            self::check('2024-03-28' === $absolute->invoke($provider, '6daysAgo', new DateTimeImmutable('2024-04-03', new DateTimeZone('Europe/Chisinau'))), 'Relative days cross DST using calendar dates');
+            $dates = CLIREDAS_Report_Period::resolve('this_month', '', '', new DateTimeImmutable('2024-03-31', wp_timezone()));
+            self::check('2024-02-29' === $dates['comparison']['endDate'], 'Comparison clamps correctly in leap year');
+            $dates = CLIREDAS_Report_Period::resolve('last_7_days', '', '', new DateTimeImmutable('2024-04-03', new DateTimeZone('Europe/Chisinau')));
+            self::check('2024-03-28' === $dates['dates']['startDate'], 'Relative days cross DST using calendar dates');
 
             for ($i = 0; $i < 25; ++$i) {
                 $context = CLIREDAS_Report_Cache::context('last_7_days', 'properties/' . $i, $base['dates'], $base['comparison'], 'fixture');
@@ -350,7 +406,7 @@ final class CLIREDAS_Cache_Tests
             return ob_get_clean();
         };
         try {
-            $_POST = array('cliredas_range' => 'last_7_days', 'cliredas_context' => $context['id']);
+            $_POST = array('cliredas_range' => 'last_7_days', 'cliredas_context' => $context['id'], 'cliredas_expected_start' => $context['dates']['startDate'], 'cliredas_expected_end' => $context['dates']['endDate'], 'cliredas_expected_comparison_start' => $context['comparison']['startDate'], 'cliredas_expected_comparison_end' => $context['comparison']['endDate'], 'cliredas_timezone' => wp_timezone_string());
             $_REQUEST = array('cliredas_nonce' => wp_create_nonce('cliredas_dashboard'));
             $before = $calls;
             $result = json_decode($capture(), true);
@@ -364,6 +420,40 @@ final class CLIREDAS_Cache_Tests
             $_REQUEST['cliredas_nonce'] = wp_create_nonce('cliredas_dashboard');
             $_POST['cliredas_context'] = str_repeat('0', 64);
             self::check(empty(json_decode($capture(), true)['success']), 'Status rejects obsolete context identifiers');
+
+            $selection = new ReflectionMethod($page, 'request_period');
+            $selection->setAccessible(true);
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Reuse already-authorized request fixture for parser checks.
+            $valid_input = $_POST;
+            $valid_input['cliredas_context'] = $context['id'];
+            self::check(! is_wp_error($selection->invoke($page, $valid_input, true)), 'CSV and status share strict expected-period validation');
+            $valid_input['cliredas_expected_comparison_end'] = '2000-01-01';
+            self::check('cliredas_obsolete_period' === $selection->invoke($page, $valid_input, true)->get_error_code(), 'CSV rejects an obsolete comparison period');
+            self::check(is_wp_error($selection->invoke($page, array('cliredas_range' => 'custom', 'cliredas_start' => array()), false)), 'Array-valued custom request dates are rejected');
+            $legacy = new class() {
+                public function get_report($range)
+                {
+                    return array('source' => 'mock', 'requested_key' => $range);
+                }
+            };
+            $legacy_page = new CLIREDAS_Dashboard_Page($settings, $legacy);
+            $loader = new ReflectionMethod($legacy_page, 'load_period');
+            $loader->setAccessible(true);
+            self::check('last_7_days' === $loader->invoke($legacy_page, CLIREDAS_Report_Period::resolve('last_7_days'))['requested_key'], 'Legacy provider still receives its existing preset key');
+            self::check('unavailable' === $loader->invoke($legacy_page, CLIREDAS_Report_Period::resolve('year_to_date'))['source'], 'Legacy provider cannot silently substitute data for YTD');
+
+            $extension = static function ($ranges) {
+                return array('fixture_period' => 'Extension period') + $ranges;
+            };
+            add_filter('cliredas_date_ranges', $extension);
+            $extension_period = $selection->invoke($page, array('cliredas_range' => 'fixture_period'));
+            self::check(! is_wp_error($extension_period) && '' === $extension_period['dates']['startDate'], 'Extension selections do not invent preset dates');
+            self::check('fixture_period' === $loader->invoke($legacy_page, $extension_period)['requested_key'], 'Extension selections retain the legacy provider entry point');
+            $extension_page = new CLIREDAS_Dashboard_Page($settings, $legacy);
+            $current = new ReflectionMethod($extension_page, 'current_period');
+            $current->setAccessible(true);
+            self::check('fixture_period' === $current->invoke($extension_page)['key'], 'Filtered default selection is preserved');
+            remove_filter('cliredas_date_ranges', $extension);
 
             $initial = new ReflectionMethod($page, 'initial_report');
             $initial->setAccessible(true);

@@ -24,6 +24,7 @@ final class CLIREDAS_Assets
     {
         // Provide i18n strings for JS (allow callers to override/extend).
         $i18n_defaults = array(
+            'invalidDates' => __('Choose valid dates in YYYY-MM-DD format, in order, ending no later than today, and covering at most 366 days.', 'cliredas-analytics-dashboard'),
             'loading'                => __('Loading', 'cliredas-analytics-dashboard'),
             'errorGeneric'           => __('An error occurred.', 'cliredas-analytics-dashboard'),
             'failedToLoadReport'     => __('Failed to load report.', 'cliredas-analytics-dashboard'),

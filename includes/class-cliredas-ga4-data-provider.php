@@ -47,20 +47,31 @@ final class CLIREDAS_GA4_Data_Provider
      */
     public function get_report($range_key)
     {
-        $context = $this->report_context($range_key);
+        $period = CLIREDAS_Report_Period::resolve($range_key);
+        return is_wp_error($period) ? CLIREDAS_Report_Period::unavailable(null, $period->get_error_message()) : $this->get_report_for_period($period);
+    }
+
+    /** Get analytics for a validated, explicit reporting period. */
+    public function get_report_for_period($period)
+    {
+        $valid = CLIREDAS_Report_Period::validate($period);
+        if (is_wp_error($valid)) {
+            return CLIREDAS_Report_Period::unavailable(null, $valid->get_error_message());
+        }
+        $context = $this->context_for_period($period);
         $range_key = $context['range'];
         if (! $this->settings->is_ga4_connected() || '' === $context['property']) {
-            return $this->fallback_with_error($range_key, new WP_Error('missing_property', __('Connect Google Analytics and select a property in Settings.', 'cliredas-analytics-dashboard')));
+            return $this->fallback_with_error($context['period'], new WP_Error('missing_property', __('Connect Google Analytics and select a property in Settings.', 'cliredas-analytics-dashboard')));
         }
         $readable = CLIREDAS_Credential_Store::instance()->check_readable();
         if (is_wp_error($readable)) {
             CLIREDAS_Report_Cache::clear();
-            return $this->fallback_with_error($range_key, $readable);
+            return $this->fallback_with_error($context['period'], $readable);
         }
         if (! $this->cache_enabled($range_key)) {
             $report = $this->fetch_report($context);
-            return is_wp_error($report) ? $this->fallback_with_error($range_key, $report)
-                : apply_filters('cliredas_report', $report, $range_key);
+            return is_wp_error($report) ? $this->fallback_with_error($context['period'], $report)
+                : apply_filters('cliredas_report', $report, $range_key, $context['period']);
         }
         $entry = CLIREDAS_Report_Cache::entry($context);
         if ($this->usable($entry)) {
@@ -102,7 +113,7 @@ final class CLIREDAS_GA4_Data_Provider
             }
             $ttl = max(60, (int) apply_filters('cliredas_cache_ttl', 15 * MINUTE_IN_SECONDS, $context['range'], array('provider' => 'ga4', 'property_id' => $context['property'])));
             $report['freshness'] = array('state' => 'fresh', 'context_id' => $context['id'], 'last_success_at' => time(), 'fresh_until' => time() + min(DAY_IN_SECONDS, $ttl), 'pending' => false, 'error_code' => '');
-            $report = apply_filters('cliredas_report', $report, $context['range']);
+            $report = apply_filters('cliredas_report', $report, $context['range'], $context['period']);
         }
         return $this->is_fresh_report($report, $context['range']) ? $report : new WP_Error('cliredas_digest_report_unavailable');
     }
@@ -149,39 +160,39 @@ final class CLIREDAS_GA4_Data_Provider
     /** Resolve both periods once; cache and Google requests use identical dates. */
     public function report_context($range_key, $create = true)
     {
-        $range_key = sanitize_key($range_key);
-        if (! in_array($range_key, array('last_7_days', 'last_30_days', 'last_90_days', 'this_month', 'last_month'), true)) {
-            $range_key = 'last_7_days';
+        $period = CLIREDAS_Report_Period::resolve($range_key);
+        if (is_wp_error($period)) {
+            $period = CLIREDAS_Report_Period::resolve('last_7_days');
         }
-        $today = new DateTimeImmutable('today', wp_timezone());
-        $dates = $this->get_date_range($range_key, $today);
-        $comparison = $this->get_previous_date_range($range_key, $today);
-        foreach (array('startDate', 'endDate') as $key) {
-            $dates[$key] = $this->absolute_date($dates[$key], $today);
-            $comparison[$key] = $this->absolute_date($comparison[$key], $today);
-        }
+        return $this->context_for_period($period, $create);
+    }
+
+    /** Exact periods, rather than the custom key alone, identify background work. */
+    public function context_for_period($period, $create = true)
+    {
         $settings = $this->settings->get_settings();
         $property = isset($settings['ga4_property_id']) ? trim((string) $settings['ga4_property_id']) : '';
-        return CLIREDAS_Report_Cache::context($range_key, $property, $dates, $comparison,
-            CLIREDAS_Report_Cache::connection_identity($settings), $create && $this->cache_enabled($range_key));
+        $context = CLIREDAS_Report_Cache::context($period['key'], $property, $period['dates'], $period['comparison'],
+            CLIREDAS_Report_Cache::connection_identity($settings), $create && $this->cache_enabled($period['key']));
+        $context['period'] = $period;
+        return $context;
+    }
+
+    /** Recompute site/connection and calendar validity without creating storage. */
+    private function current_context($context)
+    {
+        // Pre-1.11 contexts contain only supported presets and exact dates.
+        $period = isset($context['period']) ? $context['period'] : CLIREDAS_Report_Period::resolve($context['range']);
+        if (is_wp_error(CLIREDAS_Report_Period::validate($period))) {
+            return array('id' => '');
+        }
+        return $this->context_for_period($period, false);
     }
 
     /** Cache configuration remains compatible with existing integrations. */
     private function cache_enabled($range_key)
     {
         return (bool) apply_filters('cliredas_enable_cache', true, $range_key);
-    }
-
-    /** Resolve GA4 relative dates in the site's calendar, including DST changes. */
-    private function absolute_date($date, DateTimeImmutable $today)
-    {
-        if ('today' === $date) {
-            return $today->format('Y-m-d');
-        }
-        if (preg_match('/^(\d+)daysAgo$/', $date, $matches)) {
-            return $today->modify('-' . $matches[1] . ' days')->format('Y-m-d');
-        }
-        return $date;
     }
 
     /** A last-good report is never eligible after its retention deadline. */
@@ -193,10 +204,11 @@ final class CLIREDAS_GA4_Data_Provider
     /** Read-only status for polling: no fetching, scheduling or option creation. */
     public function cached_response($context, $source = 'ga4_cache')
     {
-        $current = $this->report_context($context['range'], false);
+        $current = $this->current_context($context);
         if ($current['id'] !== $context['id'] || ! $this->settings->is_ga4_connected()) {
             return $this->unavailable($context, 'context_changed');
         }
+        $context = $current;
         $readable = CLIREDAS_Credential_Store::instance()->check_readable();
         if (is_wp_error($readable)) {
             return $this->unavailable($context, 'credential_decryption_failed');
@@ -211,16 +223,17 @@ final class CLIREDAS_GA4_Data_Provider
         if ('' !== $entry['error']) {
             $report['error_message'] = $this->safe_refresh_message($entry['error']);
         }
-        return apply_filters('cliredas_report', $report, $context['range']);
+        return apply_filters('cliredas_report', $report, $context['range'], $context['period']);
     }
 
     /** Refresh only the current connection and exact saved reporting period. */
     public function refresh_context($context)
     {
-        $current = $this->report_context($context['range'], false);
+        $current = $this->current_context($context);
         if ($current['id'] !== $context['id'] || ! $this->settings->is_ga4_connected() || ! $this->cache_enabled($context['range'])) {
             return $this->unavailable($context, 'context_changed');
         }
+        $context = $current;
         $entry = CLIREDAS_Report_Cache::entry($context);
         if ($this->usable($entry) && $entry['good']['fresh_until'] > time()) {
             return $this->cached_response($context);
@@ -231,7 +244,7 @@ final class CLIREDAS_GA4_Data_Provider
         }
         try {
             $report = $this->fetch_report($context, $owner);
-            $current = $this->report_context($context['range'], false);
+            $current = $this->current_context($context);
             if ($current['id'] !== $context['id']) {
                 return $this->unavailable($context, 'context_changed');
             }
@@ -245,7 +258,7 @@ final class CLIREDAS_GA4_Data_Provider
             $saved = CLIREDAS_Report_Cache::finish($context, $owner, '' === $error ? $report : null, $ttl, $error, $blocked);
             if (! $saved) {
                 if ($blocked) {
-                    return $this->fallback_with_error($context['range'], new WP_Error($error, $this->safe_refresh_message($error)));
+                    return $this->fallback_with_error($context['period'], new WP_Error($error, $this->safe_refresh_message($error)));
                 }
                 $previous = $this->cached_response($context);
                 $previous['error_message'] = $this->safe_refresh_message('storage_failed');
@@ -261,9 +274,9 @@ final class CLIREDAS_GA4_Data_Provider
             }
             if (is_array($report) && ! $blocked) {
                 $report['freshness'] = $this->freshness($context, CLIREDAS_Report_Cache::entry($context));
-                return apply_filters('cliredas_report', $report, $context['range']);
+                return apply_filters('cliredas_report', $report, $context['range'], $context['period']);
             }
-            return $this->fallback_with_error($context['range'], new WP_Error($error, $this->safe_refresh_message($error)));
+            return $this->fallback_with_error($context['period'], new WP_Error($error, $this->safe_refresh_message($error)));
         } catch (Throwable $exception) {
             CLIREDAS_Report_Cache::finish($context, $owner, null, 900, 'refresh_interrupted');
             return $this->cached_response($context);
@@ -359,6 +372,9 @@ final class CLIREDAS_GA4_Data_Provider
             $report['traffic_sources_unavailable'] = true;
             $report['error_message'] = __('Traffic sources are unavailable. Other report blocks contain real GA4 data.', 'cliredas-analytics-dashboard');
         }
+        if ($this->current_context($context)['id'] !== $context['id']) {
+            return new WP_Error('context_changed', $this->safe_refresh_message('context_changed'));
+        }
         return $report;
     }
 
@@ -375,10 +391,13 @@ final class CLIREDAS_GA4_Data_Provider
      * @param \WP_Error $error Error.
      * @return array
      */
-    private function fallback_with_error($range_key, WP_Error $error)
+    private function fallback_with_error($period, WP_Error $error)
     {
         $fallback = new CLIREDAS_Data_Provider();
-        $report = $fallback->get_report($range_key);
+        $report = $fallback->get_report_for_period($period);
+        if ('unavailable' === $report['source']) {
+            return $report;
+        }
 
         $message = trim((string) $error->get_error_message());
         $message = $message ? $message : __('GA4 report failed. Showing mock data.', 'cliredas-analytics-dashboard');
@@ -386,81 +405,6 @@ final class CLIREDAS_GA4_Data_Provider
         $report['error_message'] = $message;
         $report['source'] = 'mock';
         return $report;
-    }
-
-    /**
-     * Map plugin range key to GA4 dateRanges.
-     *
-     * @param string $range_key Range key.
-     * @return array{startDate:string,endDate:string}
-     */
-    private function get_date_range($range_key, DateTimeImmutable $today = null)
-    {
-        $today = $today ? $today : new DateTimeImmutable('today', wp_timezone());
-
-        switch ($range_key) {
-            case 'last_90_days':
-                return array('startDate' => '89daysAgo', 'endDate' => 'today');
-            case 'last_month':
-                $last_month = $today->modify('first day of last month');
-
-                return array(
-                    'startDate' => $last_month->format('Y-m-01'),
-                    'endDate'   => $last_month->format('Y-m-t'),
-                );
-            case 'this_month':
-                return array(
-                    'startDate' => $today->format('Y-m-01'),
-                    'endDate'   => $today->format('Y-m-d'),
-                );
-            case 'last_30_days':
-                return array('startDate' => '29daysAgo', 'endDate' => 'today');
-            case 'last_7_days':
-            default:
-                return array('startDate' => '6daysAgo', 'endDate' => 'today');
-        }
-    }
-
-    /**
-     * Map a plugin range key to its previous comparison period.
-     *
-     * @param string                 $range_key Range key.
-     * @param DateTimeImmutable|null $today Today's date in site timezone.
-     * @return array{startDate:string,endDate:string}
-     */
-    private function get_previous_date_range($range_key, DateTimeImmutable $today = null)
-    {
-        $today = $today ? $today : new DateTimeImmutable('today', wp_timezone());
-
-        switch ($range_key) {
-            case 'last_90_days':
-                return array('startDate' => '179daysAgo', 'endDate' => '90daysAgo');
-            case 'last_month':
-                $previous_month = $today->modify('first day of last month')->modify('-1 month');
-
-                return array(
-                    'startDate' => $previous_month->format('Y-m-01'),
-                    'endDate'   => $previous_month->format('Y-m-t'),
-                );
-            case 'this_month':
-                $previous_month = $today->modify('first day of last month');
-                $end_day        = min((int) $today->format('j'), (int) $previous_month->format('t'));
-                $previous_end   = $previous_month->setDate(
-                    (int) $previous_month->format('Y'),
-                    (int) $previous_month->format('n'),
-                    $end_day
-                );
-
-                return array(
-                    'startDate' => $previous_month->format('Y-m-01'),
-                    'endDate'   => $previous_end->format('Y-m-d'),
-                );
-            case 'last_30_days':
-                return array('startDate' => '59daysAgo', 'endDate' => '30daysAgo');
-            case 'last_7_days':
-            default:
-                return array('startDate' => '13daysAgo', 'endDate' => '7daysAgo');
-        }
     }
 
     /**

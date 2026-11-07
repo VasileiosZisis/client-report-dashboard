@@ -35,16 +35,16 @@ final class CLIREDAS_Release_Notices
      */
     public static function get_release_notes()
     {
-        if ('1.10.0' !== CLIREDAS_VERSION) {
+        if ('1.11.0' !== CLIREDAS_VERSION) {
             return array();
         }
         return array(
             'highlights' => array(
-                __('Filter the currently loaded Top pages by title or URL without changing totals or CSV exports.', 'cliredas-analytics-dashboard'),
-                __('Empty, zero-activity and unavailable report blocks now have explanatory messages.', 'cliredas-analytics-dashboard'),
-                __('Keyboard controls, screen-reader feedback and an expandable chart data table improve dashboard accessibility.', 'cliredas-analytics-dashboard'),
+                __('Choose custom inclusive dates covering up to 366 days for all dashboard metrics.', 'cliredas-analytics-dashboard'),
+                __('Year-to-date compares January 1 through today with the same calendar dates last year.', 'cliredas-analytics-dashboard'),
+                __('See exact current and comparison dates in the dashboard and CSV, with accessible date controls.', 'cliredas-analytics-dashboard'),
             ),
-            'detail' => __('The Top pages filter stays active across date-range changes and automatic refreshes, and resets on page reload. Charts have equivalent data tables, and missing data stays distinct from zero activity. Existing reporting, caching and weekly digest settings are preserved.', 'cliredas-analytics-dashboard'),
+            'detail' => __('Custom dates compare with the immediately preceding equal-length period. Year-to-date includes today and clamps February 29 to February 28 in the previous year. Date selections reset on reload; existing presets, filtering, caching, credentials and weekly digest settings are preserved.', 'cliredas-analytics-dashboard'),
         );
     }
 
